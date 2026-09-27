@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,10 +36,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.asmr.player.ui.common.AsmrAsyncImage
 import com.asmr.player.ui.common.rememberCalmScrollableFlingBehavior
 import com.asmr.player.ui.theme.AsmrTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -120,6 +124,17 @@ fun QueueSheetContent(
                             }
                         }
                         Spacer(modifier = Modifier.width(12.dp))
+                        AsmrAsyncImage(
+                            model = mediaItem.mediaMetadata.artworkUri,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            placeholderCornerRadius = 6,
+                            peekAnySizeForInitial = true,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = title,
@@ -127,7 +142,7 @@ fun QueueSheetContent(
                                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                                 ),
                                 color = if (selected) colorScheme.primary else colorScheme.textPrimary,
-                                maxLines = 1,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
