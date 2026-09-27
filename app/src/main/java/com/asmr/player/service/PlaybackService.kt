@@ -973,9 +973,8 @@ class PlaybackService : MediaSessionService() {
         serviceScope.launch(Dispatchers.Main.immediate) {
             runCatching {
                 syncMediaNotificationControllerState()
-                mediaSession?.let { session ->
+                if (mediaSession != null) {
                     notificationProvider?.refreshNotification()
-                    onUpdateNotification(session, false)
                 }
             }.onFailure {
                 Log.w("PlaybackService", "Failed to refresh media notification", it)

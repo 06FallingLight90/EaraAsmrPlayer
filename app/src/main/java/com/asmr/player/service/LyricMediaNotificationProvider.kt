@@ -1,9 +1,12 @@
 package com.asmr.player.service
 
+import android.app.ForegroundServiceStartNotAllowedException
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.util.LruCache
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.unit.IntSize
@@ -188,14 +191,22 @@ class LyricMediaNotificationProvider(
                 val latest = lastRequest ?: return@withContext
                 val currentUri = latest.mediaSession.player.mediaMetadata.artworkUri
                 if (currentUri != uri || hideSystemControls) return@withContext
-                latest.callback.onNotificationChanged(
-                    createNotification(
-                        latest.mediaSession,
-                        latest.customLayout,
-                        latest.actionFactory,
-                        latest.callback
+                try {
+                    latest.callback.onNotificationChanged(
+                        createNotification(
+                            latest.mediaSession,
+                            latest.customLayout,
+                            latest.actionFactory,
+                            latest.callback
+                        )
                     )
-                )
+                } catch (error: IllegalStateException) {
+                    if (
+                        Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                        error !is ForegroundServiceStartNotAllowedException
+                    ) throw error
+                    Log.w("LyricMediaNotification", "Artwork notification refresh was denied", error)
+                }
             }
         }
     }
