@@ -137,8 +137,7 @@ import com.asmr.player.ui.common.FlatActionDialog
 import com.asmr.player.ui.common.FlatDialogAction
 import com.asmr.player.ui.common.FlatDialogActionTone
 import com.asmr.player.ui.common.FlatTextFieldDialog
-import com.asmr.player.ui.common.EdgeToEdgeFullHeightSheet
-import com.asmr.player.ui.common.PlayerModalSheet
+import com.asmr.player.ui.common.RoundedTopSheet
 import com.asmr.player.ui.common.EaraTopBarContainer
 import com.asmr.player.ui.common.EaraMainTopBarHeight
 import com.asmr.player.ui.common.EaraTopBarIconButton
@@ -1055,6 +1054,7 @@ fun MainContainer(
     }
     var nowPlayingPlaylistPickerRequest by remember { mutableStateOf<PlaylistPickerRequest?>(null) }
     var albumBatchPlaylistPickerRequest by remember { mutableStateOf<BatchPlaylistPickerRequest?>(null) }
+    var libraryGroupPickerAlbumId by remember { mutableStateOf<Long?>(null) }
     val hideStatusBarForImmersivePage = shouldHideStatusBarForImmersivePage(
         currentRoute = currentRoute
             .takeUnless { albumDetailExitInProgress }
@@ -1692,8 +1692,7 @@ fun MainContainer(
                                         "library" -> currentRoute == route || isAlbumDetailFromLibrary
                                         "search" -> currentRoute == route || isAlbumDetailFromSearch
                                         "groups" -> currentRoute == route ||
-                                            currentRoute?.startsWith("group/") == true ||
-                                            currentRoute?.startsWith("group_picker") == true
+                                            currentRoute?.startsWith("group/") == true
                                         "playlist_system/favorites" -> {
                                             currentRoute == "playlist_system/{type}" &&
                                                 navBackStackEntry?.arguments?.getString("type") == "favorites"
@@ -2186,7 +2185,7 @@ fun MainContainer(
                                                     albumBatchPlaylistPickerRequest = BatchPlaylistPickerRequest(listOf(item))
                                                 },
                                                 onOpenGroupPicker = { albumId ->
-                                                    navController.navigateSingleTop("group_picker?albumId=$albumId")
+                                                    libraryGroupPickerAlbumId = albumId
                                                 },
                                                 onOpenFilterScreen = { navController.navigateSingleTop("library_filter") },
                                                 onSearchKeyword = ::submitMetaSearchKeyword,
@@ -2856,23 +2855,6 @@ fun MainContainer(
                     }
                 }
                 composable(
-                    route = "group_picker?albumId={albumId}",
-                    arguments = listOf(
-                        navArgument("albumId") { type = NavType.LongType; defaultValue = 0L }
-                    )
-                ) { backStackEntry ->
-                    val albumId = backStackEntry.arguments?.getLong("albumId") ?: 0L
-                    val albumGroupsViewModel: AlbumGroupsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    SecondaryPageBackground(topPadding = secondaryPageTopPadding) {
-                        com.asmr.player.ui.groups.AlbumGroupPickerScreen(
-                            windowSizeClass = windowSizeClass,
-                            albumId = albumId,
-                            onBack = { navController.popBackStack() },
-                            viewModel = albumGroupsViewModel
-                        )
-                    }
-                }
-                composable(
                     route = "playlist/{playlistId}/{playlistName}",
                     arguments = listOf(
                         navArgument("playlistId") { type = NavType.LongType; defaultValue = 0L },
@@ -3160,58 +3142,19 @@ fun MainContainer(
                 )
                 nowPlayingPlaylistPickerRequest?.let { request ->
                     val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    PlayerModalSheet(onDismissRequest = { nowPlayingPlaylistPickerRequest = null }) { sheetMaxHeight ->
-                        Box(modifier = Modifier.fillMaxWidth().heightIn(max = sheetMaxHeight)) {
-                            PlaylistPickerScreen(
-                                windowSizeClass = windowSizeClass,
-                                items = request.items,
-                                onBack = { nowPlayingPlaylistPickerRequest = null },
-                                embeddedInDialog = true,
-                                viewModel = playlistsViewModel
-                            )
-                        }
+                    RoundedTopSheet(onDismissRequest = { nowPlayingPlaylistPickerRequest = null }) {
+                        PlaylistPickerScreen(
+                            windowSizeClass = windowSizeClass,
+                            items = request.items,
+                            onBack = { nowPlayingPlaylistPickerRequest = null },
+                            embeddedInDialog = true,
+                            viewModel = playlistsViewModel
+                        )
                     }
                 }
                 albumBatchPlaylistPickerRequest?.let { request ->
                     val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    EdgeToEdgeFullHeightSheet(
-                        onDismissRequest = { albumBatchPlaylistPickerRequest = null },
-                        containerColor = colorScheme.background.copy(alpha = 0.96f),
-                        contentColor = colorScheme.onBackground
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .windowInsetsPadding(StableWindowInsets.statusBars)
-                                .windowInsetsPadding(StableWindowInsets.navigationBars)
-                        ) {
-                            PlaylistPickerScreen(
-                                windowSizeClass = windowSizeClass,
-                                items = request.items,
-                                onBack = { albumBatchPlaylistPickerRequest = null },
-                                embeddedInDialog = true,
-                                viewModel = playlistsViewModel
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        if (!nowPlayingVisible) {
-            albumBatchPlaylistPickerRequest?.let { request ->
-                val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                EdgeToEdgeFullHeightSheet(
-                    onDismissRequest = { albumBatchPlaylistPickerRequest = null },
-                    containerColor = colorScheme.background.copy(alpha = 0.96f),
-                    contentColor = colorScheme.onBackground
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .windowInsetsPadding(StableWindowInsets.statusBars)
-                            .windowInsetsPadding(StableWindowInsets.navigationBars)
-                    ) {
+                    RoundedTopSheet(onDismissRequest = { albumBatchPlaylistPickerRequest = null }) {
                         PlaylistPickerScreen(
                             windowSizeClass = windowSizeClass,
                             items = request.items,
@@ -3221,6 +3164,34 @@ fun MainContainer(
                         )
                     }
                 }
+            }
+        }
+
+        if (!nowPlayingVisible) {
+            albumBatchPlaylistPickerRequest?.let { request ->
+                val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
+                RoundedTopSheet(onDismissRequest = { albumBatchPlaylistPickerRequest = null }) {
+                    PlaylistPickerScreen(
+                        windowSizeClass = windowSizeClass,
+                        items = request.items,
+                        onBack = { albumBatchPlaylistPickerRequest = null },
+                        embeddedInDialog = true,
+                        viewModel = playlistsViewModel
+                    )
+                }
+            }
+        }
+
+        libraryGroupPickerAlbumId?.let { albumId ->
+            val albumGroupsViewModel: AlbumGroupsViewModel = hiltViewModel(activityViewModelStoreOwner)
+            RoundedTopSheet(onDismissRequest = { libraryGroupPickerAlbumId = null }) {
+                com.asmr.player.ui.groups.AlbumGroupPickerScreen(
+                    windowSizeClass = windowSizeClass,
+                    albumId = albumId,
+                    onBack = { libraryGroupPickerAlbumId = null },
+                    embeddedInDialog = true,
+                    viewModel = albumGroupsViewModel
+                )
             }
         }
 
