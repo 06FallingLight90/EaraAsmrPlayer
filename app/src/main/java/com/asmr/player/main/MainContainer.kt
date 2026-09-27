@@ -1,5 +1,10 @@
 package com.asmr.player
 
+import com.asmr.player.translation.LocalPageTranslationHeader
+import com.asmr.player.translation.PageTranslationAction
+import com.asmr.player.translation.PageTranslationHeaderAction
+import com.asmr.player.translation.PageTranslationHeaderState
+import com.asmr.player.translation.PageTranslationHost
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.Choreographer
@@ -83,7 +88,7 @@ import com.asmr.player.ui.library.LibraryFilterScreen
 import com.asmr.player.ui.library.LibraryScreen
 import com.asmr.player.ui.library.LibraryViewModel
 import com.asmr.player.ui.library.BulkPhase
-import com.asmr.player.data.remote.scraper.resolveRecommendedWorkCoverUrl
+import com.asmr.player.data.remote.scraper.resolveRecommendedWorkHeroCoverUrl
 import com.asmr.player.performance.UiFrameWorkCoordinator
 import com.asmr.player.ui.player.MiniPlayer
 import com.asmr.player.ui.player.NowPlayingMotionLayout
@@ -132,7 +137,7 @@ import com.asmr.player.ui.common.FlatActionDialog
 import com.asmr.player.ui.common.FlatDialogAction
 import com.asmr.player.ui.common.FlatDialogActionTone
 import com.asmr.player.ui.common.FlatTextFieldDialog
-import com.asmr.player.ui.common.EdgeToEdgeFullHeightSheet
+import com.asmr.player.ui.common.RoundedTopSheet
 import com.asmr.player.ui.common.EaraTopBarContainer
 import com.asmr.player.ui.common.EaraMainTopBarHeight
 import com.asmr.player.ui.common.EaraTopBarIconButton
@@ -267,7 +272,10 @@ private const val SecondaryPageExitDurationMs = 420
 private const val SecondaryPageTouchBlockDurationMs = 320
 private const val AlbumDetailPresentedStateKey = "album_detail_presented"
 private const val PrimaryPagerSnapThreshold = 0.16f
+private const val PrimaryPageSwitchDurationMs = 320
+private const val PrimaryPageSwitchQuietTailMs = 120L
 private val SecondaryPageSlideEasing = CubicBezierEasing(0.215f, 0.61f, 0.355f, 1f)
+private val PrimaryPageSwitchEasing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)
 private val PrimaryPageParallaxOffset = 120.dp
 private val AlbumDetailTopBarButtonShape = CircleShape
 private val AlbumDetailBackTouchPassThroughWidth = 88.dp
@@ -379,6 +387,7 @@ private fun AlbumDetailRouteFrame(
     onPopBackStack: (String?) -> Unit,
     onPageOffsetReader: (() -> Float) -> Unit,
     onExitStateChanged: (Boolean) -> Unit,
+    onLocalAlbumRemoved: (AlbumDetailUiState.Removed) -> Unit = {},
     onEditRj: (String) -> Unit,
     content: @Composable (AlbumDetailViewModel, AlbumHeroBlurLayerCache) -> Unit
 ) {
@@ -411,6 +420,7 @@ private fun AlbumDetailRouteFrame(
     var exitRequested by remember(backStackEntry.id) { mutableStateOf(false) }
     val currentPopBackStack by rememberUpdatedState(onPopBackStack)
     val currentExitStateChanged by rememberUpdatedState(onExitStateChanged)
+    val currentLocalAlbumRemoved by rememberUpdatedState(onLocalAlbumRemoved)
     val closeAlbumDetail = {
         if (!exitRequested) {
             UiFrameWorkCoordinator.markFrameCritical(
@@ -424,6 +434,13 @@ private fun AlbumDetailRouteFrame(
             viewModel.cancelOnlineLoadsForExit()
             exitRequested = true
         }
+    }
+    LaunchedEffect(viewModel) {
+        val removed = viewModel.uiState
+            .filter { it is AlbumDetailUiState.Removed }
+            .first() as AlbumDetailUiState.Removed
+        currentLocalAlbumRemoved(removed)
+        closeAlbumDetail()
     }
     BackHandler(enabled = !exitRequested, onBack = closeAlbumDetail)
 
@@ -479,33 +496,35 @@ private fun AlbumDetailRouteFrame(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .graphicsLayer {
-                val width = size.width.toFloat().coerceAtLeast(1f)
-                val offset = width * pageOffsetProgress.value.coerceIn(0f, 1f)
-                val visibleRight = if (offset >= width - 0.5f) {
-                    // 保留屏外预绘制帧，避免动画起点改变。
-                    width
-                } else {
-                    (width - offset).coerceIn(0f, width)
-                }
-                // 位移和裁剪都只更新 RenderNode 属性，避免逐帧重新录制整张详情页。
-                translationX = offset
-                shape = HorizontalRectClipShape(0f, visibleRight)
-                clip = true
-            }
-    ) {
-        content(viewModel, heroBlurLayerCache)
-        AlbumDetailRouteTopBar(
-            viewModel = viewModel,
-            onBack = closeAlbumDetail,
-            onEditRj = onEditRj,
+    PageTranslationHost(active = !exitRequested) {
+        Box(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .zIndex(2f)
-        )
+                .fillMaxSize()
+                .graphicsLayer {
+                    val width = size.width.toFloat().coerceAtLeast(1f)
+                    val offset = width * pageOffsetProgress.value.coerceIn(0f, 1f)
+                    val visibleRight = if (offset >= width - 0.5f) {
+                        // 保留屏外预绘制帧，避免动画起点改变。
+                        width
+                    } else {
+                        (width - offset).coerceIn(0f, width)
+                    }
+                    // 位移和裁剪都只更新 RenderNode 属性，避免逐帧重新录制整张详情页。
+                    translationX = offset
+                    shape = HorizontalRectClipShape(0f, visibleRight)
+                    clip = true
+                }
+        ) {
+            content(viewModel, heroBlurLayerCache)
+            AlbumDetailRouteTopBar(
+                viewModel = viewModel,
+                onBack = closeAlbumDetail,
+                onEditRj = onEditRj,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .zIndex(2f)
+            )
+        }
     }
 }
 
@@ -547,6 +566,13 @@ private fun AlbumDetailRouteTopBar(
                 }
             },
             actions = {
+                PageTranslationAction(
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .albumDetailTopBarButtonSurface(true),
+                    contentColor = Color.White,
+                    activeContentColor = Color.White,
+                )
                 if (showManualBind) {
                     EaraTopBarIconButton(
                         onClick = {
@@ -741,6 +767,7 @@ private fun PrimaryBottomChrome(
     lockedRoute: String?,
     miniPlayerVisible: Boolean,
     miniPlayerDisplayMode: MiniPlayerDisplayMode,
+    miniPlayerPlayFeedbackSignal: Long,
     onMiniPlayerDisplayModeChange: (MiniPlayerDisplayMode) -> Unit,
     onOpenNowPlaying: () -> Unit,
     onOpenQueue: () -> Unit,
@@ -771,6 +798,7 @@ private fun PrimaryBottomChrome(
         selectionProgresses = selectionProgresses,
         miniPlayerVisible = miniPlayerVisible,
         miniPlayerDisplayMode = miniPlayerDisplayMode,
+        miniPlayerPlayFeedbackSignal = miniPlayerPlayFeedbackSignal,
         onMiniPlayerDisplayModeChange = onMiniPlayerDisplayModeChange,
         onOpenNowPlaying = onOpenNowPlaying,
         onOpenQueue = onOpenQueue,
@@ -801,7 +829,7 @@ fun MainContainer(
     coverBackgroundClarity: Float,
     coverPreviewMode: CoverPreviewMode,
     nowPlayingHomeLayoutMode: NowPlayingHomeLayoutMode,
-    nowPlayingHomeLayoutHintDismissed: Boolean,
+    nowPlayingHomeLayoutHintDismissed: Boolean?,
     nowPlayingLyricsSettings: NowPlayingLyricsSettings,
     lyricsPageSettings: LyricsPageSettings,
     forceImmersive: Boolean,
@@ -876,6 +904,10 @@ fun MainContainer(
         initialValue = MiniPlayerDisplayMode.CoverOnly.name
     )
     var miniPlayerDisplayMode by rememberSaveable { mutableStateOf(MiniPlayerDisplayMode.CoverOnly) }
+    var miniPlayerPlayFeedbackSignal by remember { mutableLongStateOf(0L) }
+    fun requestMiniPlayerPlayFeedback() {
+        miniPlayerPlayFeedbackSignal += 1L
+    }
     val primaryPagerRoutes = remember(bottomNavItems) { bottomNavItems.map { it.route } }
     val primaryPagerBeyondBoundsPageCount = remember(primaryPagerRoutes) {
         resolvePrimaryPagerBeyondBoundsPageCount(primaryPagerRoutes.size)
@@ -1022,6 +1054,7 @@ fun MainContainer(
     }
     var nowPlayingPlaylistPickerRequest by remember { mutableStateOf<PlaylistPickerRequest?>(null) }
     var albumBatchPlaylistPickerRequest by remember { mutableStateOf<BatchPlaylistPickerRequest?>(null) }
+    var libraryGroupPickerAlbumId by remember { mutableStateOf<Long?>(null) }
     val hideStatusBarForImmersivePage = shouldHideStatusBarForImmersivePage(
         currentRoute = currentRoute
             .takeUnless { albumDetailExitInProgress }
@@ -1143,10 +1176,16 @@ fun MainContainer(
         val requestId = primaryNavigationRequestId
         if (targetPage >= 0 && currentPrimaryRoute != null) {
             pendingPrimaryNavigationRoute = route
+            UiFrameWorkCoordinator.markFrameCritical(
+                PrimaryPageSwitchDurationMs + PrimaryPageSwitchQuietTailMs
+            )
             primaryNavigationJob = scope.launch {
                 var completed = false
                 try {
                     primaryPagerState.stopScroll(MutatePriority.PreventUserInput)
+                    // 相邻页已由 Pager 保留在屏外。先提交 active/data-active 状态，让它在
+                    // 可见动画前完成一次状态恢复，避免数据订阅与动画首帧争抢主线程。
+                    withFrameNanos { }
                     val currentPage = primaryPagerState.currentPage
                     resolvePrimaryPagerApproachPage(
                         currentPage = currentPage,
@@ -1154,7 +1193,16 @@ fun MainContainer(
                     )?.let { approachPage ->
                         primaryPagerState.scrollToPage(approachPage)
                     }
-                    primaryPagerState.animateScrollToPage(targetPage)
+                    UiFrameWorkCoordinator.markFrameCritical(
+                        PrimaryPageSwitchDurationMs + PrimaryPageSwitchQuietTailMs
+                    )
+                    primaryPagerState.animateScrollToPage(
+                        page = targetPage,
+                        animationSpec = tween(
+                            durationMillis = PrimaryPageSwitchDurationMs,
+                            easing = PrimaryPageSwitchEasing
+                        )
+                    )
                     if (currentPrimaryRouteState.value != route) {
                         navController.navigatePrimaryRoute(route)
                     }
@@ -1644,8 +1692,7 @@ fun MainContainer(
                                         "library" -> currentRoute == route || isAlbumDetailFromLibrary
                                         "search" -> currentRoute == route || isAlbumDetailFromSearch
                                         "groups" -> currentRoute == route ||
-                                            currentRoute?.startsWith("group/") == true ||
-                                            currentRoute?.startsWith("group_picker") == true
+                                            currentRoute?.startsWith("group/") == true
                                         "playlist_system/favorites" -> {
                                             currentRoute == "playlist_system/{type}" &&
                                                 navBackStackEntry?.arguments?.getString("type") == "favorites"
@@ -1737,9 +1784,11 @@ fun MainContainer(
         val bottomChromeBottomPadding = 24.dp + navigationBarBottomPadding
         val bottomOverlayPadding = bottomChromeOverlayHeight(useLargeBottomChrome) + navigationBarBottomPadding
         var secondaryPageTopPadding by remember { mutableStateOf(0.dp) }
+        val pageTranslationHeader = remember { PageTranslationHeaderState() }
         CompositionLocalProvider(
             LocalBottomOverlayPadding provides bottomOverlayPadding,
-            LocalRightPanelExpandedState provides rightPanelExpandedState
+            LocalRightPanelExpandedState provides rightPanelExpandedState,
+            LocalPageTranslationHeader provides pageTranslationHeader,
         ) {
             Box(
                 modifier = Modifier
@@ -1897,6 +1946,7 @@ fun MainContainer(
                                                             }
                                                         }
                                                         val activeTaskCount = activeDownloadCount + activeSubtitleTaskCount
+                                                        PageTranslationHeaderAction(headerActionRoute, Modifier.padding(end = 4.dp))
                                                         Box {
                                                             EaraTopBarIconButton(
                                                                 onClick = { navController.navigate("downloads") },
@@ -2102,8 +2152,15 @@ fun MainContainer(
                                     val primaryRouteDataActiveState = rememberUpdatedState(
                                         primaryRouteDataActive
                                     )
-                                    primaryContentStateHolder.SaveableStateProvider("primary_route:$route") {
-                                        when (route) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            // 页面内容使用独立 RenderNode 保留 display list；Pager 滚动时
+                                            // 只更新图层位置，避免逐帧重录复杂列表和设置页的绘制命令。
+                                            .graphicsLayer { clip = false }
+                                    ) {
+                                        primaryContentStateHolder.SaveableStateProvider("primary_route:$route") {
+                                            when (route) {
                                         Routes.Library -> {
                                             LibraryScreen(
                                                 windowSizeClass = windowSizeClass,
@@ -2119,14 +2176,16 @@ fun MainContainer(
                                                 },
                                                 onPlayTracks = { album, tracks, startTrack ->
                                                     scope.launch {
-                                                        playerViewModel.playTracksPrepared(album, tracks, startTrack)
+                                                        if (playerViewModel.playTracksPrepared(album, tracks, startTrack)) {
+                                                            requestMiniPlayerPlayFeedback()
+                                                        }
                                                     }
                                                 },
                                                 onOpenPlaylistPicker = { item ->
                                                     albumBatchPlaylistPickerRequest = BatchPlaylistPickerRequest(listOf(item))
                                                 },
                                                 onOpenGroupPicker = { albumId ->
-                                                    navController.navigateSingleTop("group_picker?albumId=$albumId")
+                                                    libraryGroupPickerAlbumId = albumId
                                                 },
                                                 onOpenFilterScreen = { navController.navigateSingleTop("library_filter") },
                                                 onSearchKeyword = ::submitMetaSearchKeyword,
@@ -2230,7 +2289,11 @@ fun MainContainer(
                                                 scrollToTopSignal = favoritesScrollToTopSignal,
                                                 onPlayAll = { items, startItem ->
                                                     playerViewModel.playPlaylistItems(items, startItem)
-                                                    if (startItem.isVideoPlaybackItem()) openNowPlaying()
+                                                    if (startItem.isVideoPlaybackItem()) {
+                                                        openNowPlaying()
+                                                    } else {
+                                                        requestMiniPlayerPlayFeedback()
+                                                    }
                                                 },
                                                 viewModel = playlistsViewModel
                                             )
@@ -2314,6 +2377,7 @@ fun MainContainer(
                                             )
                                         }
 
+                                        }
                                     }
                                 }
                             }
@@ -2530,12 +2594,19 @@ fun MainContainer(
                                 .toAlbumDetailInitialTab(),
                             onPlayTracks = { album, tracks, startTrack ->
                                 scope.launch {
-                                    playerViewModel.playTracksPrepared(album, tracks, startTrack)
+                                    if (playerViewModel.playTracksPrepared(album, tracks, startTrack)) {
+                                        requestMiniPlayerPlayFeedback()
+                                    }
                                 }
                             },
                             onPlayMediaItems = { items, startIndex ->
                                 playerViewModel.playMediaItems(items, startIndex)
-                                if (items.getOrNull(startIndex).isVideoPlaybackItem()) openNowPlaying()
+                                val startItem = items.getOrNull(startIndex)
+                                if (startItem.isVideoPlaybackItem()) {
+                                    openNowPlaying()
+                                } else if (startItem != null) {
+                                    requestMiniPlayerPlayFeedback()
+                                }
                             },
                             onAddToQueue = { album, track ->
                                 playerViewModel.addTrackToQueue(album, track)
@@ -2556,7 +2627,7 @@ fun MainContainer(
                                     rjCode = targetRj,
                                     title = work?.title,
                                     circle = null,
-                                    coverUrl = resolveRecommendedWorkCoverUrl(targetRj, work?.coverUrl)
+                                    coverUrl = resolveRecommendedWorkHeroCoverUrl(targetRj, work?.coverUrl)
                                 )
                                 navigator.openAlbumDetailByRjStacked(targetRj)
                             },
@@ -2596,6 +2667,9 @@ fun MainContainer(
                             }
                         },
                         onExitStateChanged = { albumDetailExitInProgress = it },
+                        onLocalAlbumRemoved = { removed ->
+                            playerViewModel.removeAlbumFromQueue(removed.albumId, removed.mediaIds)
+                        },
                         onEditRj = { currentRj ->
                             manualRjInput = currentRj
                             showManualRjDialog = true
@@ -2610,12 +2684,19 @@ fun MainContainer(
                                 .toAlbumDetailInitialTab(),
                             onPlayTracks = { album, tracks, startTrack ->
                                 scope.launch {
-                                    playerViewModel.playTracksPrepared(album, tracks, startTrack)
+                                    if (playerViewModel.playTracksPrepared(album, tracks, startTrack)) {
+                                        requestMiniPlayerPlayFeedback()
+                                    }
                                 }
                             },
                             onPlayMediaItems = { items, startIndex ->
                                 playerViewModel.playMediaItems(items, startIndex)
-                                if (items.getOrNull(startIndex).isVideoPlaybackItem()) openNowPlaying()
+                                val startItem = items.getOrNull(startIndex)
+                                if (startItem.isVideoPlaybackItem()) {
+                                    openNowPlaying()
+                                } else if (startItem != null) {
+                                    requestMiniPlayerPlayFeedback()
+                                }
                             },
                             onAddToQueue = { album, track ->
                                 playerViewModel.addTrackToQueue(album, track)
@@ -2636,7 +2717,7 @@ fun MainContainer(
                                     rjCode = targetRj,
                                     title = work?.title,
                                     circle = null,
-                                    coverUrl = resolveRecommendedWorkCoverUrl(targetRj, work?.coverUrl)
+                                    coverUrl = resolveRecommendedWorkHeroCoverUrl(targetRj, work?.coverUrl)
                                 )
                                 navigator.openAlbumDetailByRjStacked(targetRj)
                             },
@@ -2681,12 +2762,19 @@ fun MainContainer(
                             rjCode = rj,
                             onPlayTracks = { album, tracks, startTrack ->
                                 scope.launch {
-                                    playerViewModel.playTracksPrepared(album, tracks, startTrack)
+                                    if (playerViewModel.playTracksPrepared(album, tracks, startTrack)) {
+                                        requestMiniPlayerPlayFeedback()
+                                    }
                                 }
                             },
                             onPlayMediaItems = { items, startIndex ->
                                 playerViewModel.playMediaItems(items, startIndex)
-                                if (items.getOrNull(startIndex).isVideoPlaybackItem()) openNowPlaying()
+                                val startItem = items.getOrNull(startIndex)
+                                if (startItem.isVideoPlaybackItem()) {
+                                    openNowPlaying()
+                                } else if (startItem != null) {
+                                    requestMiniPlayerPlayFeedback()
+                                }
                             },
                             onAddToQueue = { album, track ->
                                 playerViewModel.addTrackToQueue(album, track)
@@ -2701,7 +2789,7 @@ fun MainContainer(
                                     rjCode = targetRj,
                                     title = work?.title,
                                     circle = null,
-                                    coverUrl = resolveRecommendedWorkCoverUrl(targetRj, work?.coverUrl)
+                                    coverUrl = resolveRecommendedWorkHeroCoverUrl(targetRj, work?.coverUrl)
                                 )
                                 navigator.openAlbumDetailByRjStacked(targetRj)
                             },
@@ -2756,25 +2844,13 @@ fun MainContainer(
                             title = groupName,
                             onPlayMediaItems = { items, startIndex ->
                                 playerViewModel.playMediaItems(items, startIndex)
-                                if (items.getOrNull(startIndex).isVideoPlaybackItem()) openNowPlaying()
+                                val startItem = items.getOrNull(startIndex)
+                                if (startItem.isVideoPlaybackItem()) {
+                                    openNowPlaying()
+                                } else if (startItem != null) {
+                                    requestMiniPlayerPlayFeedback()
+                                }
                             }
-                        )
-                    }
-                }
-                composable(
-                    route = "group_picker?albumId={albumId}",
-                    arguments = listOf(
-                        navArgument("albumId") { type = NavType.LongType; defaultValue = 0L }
-                    )
-                ) { backStackEntry ->
-                    val albumId = backStackEntry.arguments?.getLong("albumId") ?: 0L
-                    val albumGroupsViewModel: AlbumGroupsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    SecondaryPageBackground(topPadding = secondaryPageTopPadding) {
-                        com.asmr.player.ui.groups.AlbumGroupPickerScreen(
-                            windowSizeClass = windowSizeClass,
-                            albumId = albumId,
-                            onBack = { navController.popBackStack() },
-                            viewModel = albumGroupsViewModel
                         )
                     }
                 }
@@ -2794,7 +2870,11 @@ fun MainContainer(
                             title = playlistName,
                             onPlayAll = { items, startItem ->
                                 playerViewModel.playPlaylistItems(items, startItem)
-                                if (startItem.isVideoPlaybackItem()) openNowPlaying()
+                                if (startItem.isVideoPlaybackItem()) {
+                                    openNowPlaying()
+                                } else {
+                                    requestMiniPlayerPlayFeedback()
+                                }
                             }
                         )
                     }
@@ -2810,7 +2890,11 @@ fun MainContainer(
                                 windowSizeClass = windowSizeClass,
                                 onPlayAll = { items, startItem ->
                                     playerViewModel.playPlaylistItems(items, startItem)
-                                    if (startItem.isVideoPlaybackItem()) openNowPlaying()
+                                    if (startItem.isVideoPlaybackItem()) {
+                                        openNowPlaying()
+                                    } else {
+                                        requestMiniPlayerPlayFeedback()
+                                    }
                                 },
                                 viewModel = playlistsViewModel
                             )
@@ -2944,6 +3028,7 @@ fun MainContainer(
                         lockedRoute = pendingPrimaryNavigationRoute,
                         miniPlayerVisible = miniPlayerVisible,
                         miniPlayerDisplayMode = miniPlayerDisplayMode,
+                        miniPlayerPlayFeedbackSignal = miniPlayerPlayFeedbackSignal,
                         largeLayout = useLargeBottomChrome,
                         navItems = bottomNavItems,
                         onMiniPlayerDisplayModeChange = { nextMode ->
@@ -3039,6 +3124,9 @@ fun MainContainer(
                     coverPreviewMode = coverPreviewMode,
                     nowPlayingHomeLayoutMode = nowPlayingHomeLayoutMode,
                     nowPlayingHomeLayoutHintDismissed = nowPlayingHomeLayoutHintDismissed,
+                    onNowPlayingHomeLayoutHintShown = {
+                        scope.launch { settingsDataStore.setNowPlayingHomeLayoutHintDismissed() }
+                    },
                     onNowPlayingHomeLayoutModeChange = { mode ->
                         scope.launch {
                             settingsDataStore.setNowPlayingHomeLayoutMode(mode, dismissHint = true)
@@ -3054,67 +3142,19 @@ fun MainContainer(
                 )
                 nowPlayingPlaylistPickerRequest?.let { request ->
                     val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    EdgeToEdgeFullHeightSheet(
-                        onDismissRequest = { nowPlayingPlaylistPickerRequest = null },
-                        containerColor = colorScheme.background.copy(alpha = 0.96f),
-                        contentColor = colorScheme.onBackground
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .windowInsetsPadding(StableWindowInsets.statusBars)
-                                .windowInsetsPadding(StableWindowInsets.navigationBars)
-                        ) {
-                            PlaylistPickerScreen(
-                                windowSizeClass = windowSizeClass,
-                                items = request.items,
-                                onBack = { nowPlayingPlaylistPickerRequest = null },
-                                embeddedInDialog = true,
-                                viewModel = playlistsViewModel
-                            )
-                        }
+                    RoundedTopSheet(onDismissRequest = { nowPlayingPlaylistPickerRequest = null }) {
+                        PlaylistPickerScreen(
+                            windowSizeClass = windowSizeClass,
+                            items = request.items,
+                            onBack = { nowPlayingPlaylistPickerRequest = null },
+                            embeddedInDialog = true,
+                            viewModel = playlistsViewModel
+                        )
                     }
                 }
                 albumBatchPlaylistPickerRequest?.let { request ->
                     val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    EdgeToEdgeFullHeightSheet(
-                        onDismissRequest = { albumBatchPlaylistPickerRequest = null },
-                        containerColor = colorScheme.background.copy(alpha = 0.96f),
-                        contentColor = colorScheme.onBackground
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .windowInsetsPadding(StableWindowInsets.statusBars)
-                                .windowInsetsPadding(StableWindowInsets.navigationBars)
-                        ) {
-                            PlaylistPickerScreen(
-                                windowSizeClass = windowSizeClass,
-                                items = request.items,
-                                onBack = { albumBatchPlaylistPickerRequest = null },
-                                embeddedInDialog = true,
-                                viewModel = playlistsViewModel
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        if (!nowPlayingVisible) {
-            albumBatchPlaylistPickerRequest?.let { request ->
-                val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                EdgeToEdgeFullHeightSheet(
-                    onDismissRequest = { albumBatchPlaylistPickerRequest = null },
-                    containerColor = colorScheme.background.copy(alpha = 0.96f),
-                    contentColor = colorScheme.onBackground
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .windowInsetsPadding(StableWindowInsets.statusBars)
-                            .windowInsetsPadding(StableWindowInsets.navigationBars)
-                    ) {
+                    RoundedTopSheet(onDismissRequest = { albumBatchPlaylistPickerRequest = null }) {
                         PlaylistPickerScreen(
                             windowSizeClass = windowSizeClass,
                             items = request.items,
@@ -3124,6 +3164,34 @@ fun MainContainer(
                         )
                     }
                 }
+            }
+        }
+
+        if (!nowPlayingVisible) {
+            albumBatchPlaylistPickerRequest?.let { request ->
+                val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
+                RoundedTopSheet(onDismissRequest = { albumBatchPlaylistPickerRequest = null }) {
+                    PlaylistPickerScreen(
+                        windowSizeClass = windowSizeClass,
+                        items = request.items,
+                        onBack = { albumBatchPlaylistPickerRequest = null },
+                        embeddedInDialog = true,
+                        viewModel = playlistsViewModel
+                    )
+                }
+            }
+        }
+
+        libraryGroupPickerAlbumId?.let { albumId ->
+            val albumGroupsViewModel: AlbumGroupsViewModel = hiltViewModel(activityViewModelStoreOwner)
+            RoundedTopSheet(onDismissRequest = { libraryGroupPickerAlbumId = null }) {
+                com.asmr.player.ui.groups.AlbumGroupPickerScreen(
+                    windowSizeClass = windowSizeClass,
+                    albumId = albumId,
+                    onBack = { libraryGroupPickerAlbumId = null },
+                    embeddedInDialog = true,
+                    viewModel = albumGroupsViewModel
+                )
             }
         }
 

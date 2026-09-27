@@ -100,6 +100,7 @@ import com.asmr.player.ui.common.AppVolumeWarningSessionState
 import com.asmr.player.playback.AppVolume
 import com.asmr.player.playback.PlaybackSnapshot
 import com.asmr.player.ui.common.EqualizerPanel
+import com.asmr.player.ui.common.PlayerModalSheet
 import com.asmr.player.ui.common.rememberProtectedAppVolumeChangeState
 import com.asmr.player.ui.common.DiscPlaceholder
 import com.asmr.player.ui.common.smoothScrollToIndex
@@ -143,6 +144,10 @@ private val NowPlayingHomeRegularMinCoverWidth = 240.dp
 private val NowPlayingHomeClassicRegularMaxCoverWidth = 360.dp
 private val NowPlayingPortraitIdentityMaxWidth = 320.dp
 private val NowPlayingPhoneLandscapeCompactHeight = 360.dp
+internal val NowPlayingPortraitArtworkCornerRadius = 16.dp
+internal val NowPlayingCompactLandscapeArtworkCornerRadius = 10.dp
+internal val NowPlayingPhoneLandscapeArtworkCornerRadius = 12.dp
+internal val NowPlayingTabletLandscapeArtworkCornerRadius = 14.dp
 private const val NowPlayingHomeClassicCompactCoverScale = 0.92f
 
 internal data class NowPlayingPortraitLayoutMetrics(
@@ -199,7 +204,7 @@ internal fun nowPlayingLandscapeLayoutMetrics(
             lyricsTopPadding = 76.dp,
             progressHeight = 64.dp,
             controlsHeight = 80.dp,
-            artworkCornerRadius = 18.dp,
+            artworkCornerRadius = NowPlayingTabletLandscapeArtworkCornerRadius,
             artworkMaxSize = 336.dp,
             progressMaxWidth = 380.dp,
             spectrumHeight = 112.dp
@@ -222,7 +227,7 @@ internal fun nowPlayingLandscapeLayoutMetrics(
             lyricsTopPadding = 48.dp,
             progressHeight = 60.dp,
             controlsHeight = 72.dp,
-            artworkCornerRadius = 14.dp,
+            artworkCornerRadius = NowPlayingCompactLandscapeArtworkCornerRadius,
             artworkMaxSize = 260.dp,
             progressMaxWidth = 300.dp,
             spectrumHeight = 88.dp
@@ -242,7 +247,7 @@ internal fun nowPlayingLandscapeLayoutMetrics(
             lyricsTopPadding = 56.dp,
             progressHeight = 62.dp,
             controlsHeight = 80.dp,
-            artworkCornerRadius = 16.dp,
+            artworkCornerRadius = NowPlayingPhoneLandscapeArtworkCornerRadius,
             artworkMaxSize = 292.dp,
             progressMaxWidth = 340.dp,
             spectrumHeight = 88.dp
@@ -1184,7 +1189,8 @@ internal fun NowPlayingScreen(
     coverBackgroundClarity: Float,
     coverPreviewMode: CoverPreviewMode,
     nowPlayingHomeLayoutMode: NowPlayingHomeLayoutMode,
-    nowPlayingHomeLayoutHintDismissed: Boolean,
+    nowPlayingHomeLayoutHintDismissed: Boolean?,
+    onNowPlayingHomeLayoutHintShown: () -> Unit,
     onNowPlayingHomeLayoutModeChange: (NowPlayingHomeLayoutMode) -> Unit,
     nowPlayingLyricsSettings: NowPlayingLyricsSettings,
     lyricsPageSettings: LyricsPageSettings,
@@ -1253,6 +1259,8 @@ internal fun NowPlayingScreen(
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     var homeLayoutHintDismissedInSession by rememberSaveable { mutableStateOf(false) }
+    var homeLayoutHintShownInSession by rememberSaveable { mutableStateOf(false) }
+    var homeLayoutHintMediaId by remember { mutableStateOf<String?>(null) }
     var homeLayoutLyricsVisible by remember { mutableStateOf(true) }
     var homeLayoutChangeJob by remember { mutableStateOf<Job?>(null) }
     val homeLayoutHintScope = rememberCoroutineScope()
@@ -1261,26 +1269,22 @@ internal fun NowPlayingScreen(
             homeLayoutChangeJob?.cancel()
         }
     }
-    LaunchedEffect(nowPlayingHomeLayoutHintDismissed) {
-        if (nowPlayingHomeLayoutHintDismissed) {
-            homeLayoutHintDismissedInSession = true
-        }
-    }
     val changeNowPlayingHomeLayoutMode = remember(
         haptic,
         nowPlayingHomeLayoutMode,
-        nowPlayingHomeLayoutHintDismissed,
         homeLayoutHintDismissedInSession,
+        homeLayoutHintMediaId,
         homeLayoutHintScope,
         onNowPlayingHomeLayoutModeChange
     ) {
         { mode: NowPlayingHomeLayoutMode ->
             if (mode != nowPlayingHomeLayoutMode) {
                 homeLayoutChangeJob?.cancel()
-                if (!nowPlayingHomeLayoutHintDismissed && !homeLayoutHintDismissedInSession) {
+                if (homeLayoutHintMediaId != null && !homeLayoutHintDismissedInSession) {
                     homeLayoutHintScope.launch {
                         delay(NowPlayingHomeLayoutAnimationDurationMillis.toLong())
                         homeLayoutHintDismissedInSession = true
+                        homeLayoutHintMediaId = null
                     }
                 }
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -2063,9 +2067,24 @@ internal fun NowPlayingScreen(
             val classicTrackInfoTargetHeight = nowPlayingClassicTrackInfoHeight(
                 metrics = portraitLayoutMetrics
             )
-            val homeLayoutSwipeHintAllowed = !nowPlayingHomeLayoutHintDismissed &&
-                !homeLayoutHintDismissedInSession &&
-                !isVideo
+            val hintMediaId = item?.mediaId
+            val markHomeLayoutHintShown by rememberUpdatedState(onNowPlayingHomeLayoutHintShown)
+            LaunchedEffect(hintMediaId, nowPlayingHomeLayoutHintDismissed, expandedHomeLayout, isVideo) {
+                if (homeLayoutHintMediaId != null && homeLayoutHintMediaId != hintMediaId) {
+                    homeLayoutHintMediaId = null
+                }
+                if (hintMediaId != null && !isVideo && !expandedHomeLayout &&
+                    nowPlayingHomeLayoutHintDismissed == false &&
+                    !homeLayoutHintShownInSession && !homeLayoutHintDismissedInSession
+                ) {
+                    homeLayoutHintShownInSession = true
+                    homeLayoutHintMediaId = hintMediaId
+                    markHomeLayoutHintShown()
+                }
+            }
+            val homeLayoutSwipeHintAllowed = hintMediaId != null &&
+                homeLayoutHintMediaId == hintMediaId &&
+                !homeLayoutHintDismissedInSession && !isVideo
             val portraitContentHorizontalPadding = portraitLayoutMetrics.contentHorizontalPadding
             val homeBezier = remember { CubicBezierEasing(0.20f, 0f, 0f, 1f) }
             val homeLayoutDurationMillis = NowPlayingHomeLayoutAnimationDurationMillis
@@ -2157,7 +2176,7 @@ internal fun NowPlayingScreen(
                 },
                 label = "nowPlayingHomeCoverCornerRadius"
             ) { expanded ->
-                if (expanded) 0.dp else 28.dp
+                if (expanded) 0.dp else NowPlayingPortraitArtworkCornerRadius
             }
             val homeLayoutSettled = homeLayoutTransition.currentState == homeLayoutTransition.targetState
             LaunchedEffect(expandedHomeLayout) {
@@ -2206,6 +2225,7 @@ internal fun NowPlayingScreen(
                             .clipToBounds()
                     ) {
                         val portraitTopContentMaxHeight = maxHeight
+                        val portraitDensity = LocalDensity.current
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -2269,9 +2289,21 @@ internal fun NowPlayingScreen(
                                             lyricsReserveHeight = if (expanded) {
                                                 portraitLayoutMetrics.expandedLyricsReserveHeight
                                             } else {
-                                                portraitLayoutMetrics.classicLyricsReserveHeight
+                                                if (nowPlayingLyricsSettings.multilineEnabled && !isVideo) {
+                                                    multilineLyricsReserveHeight(
+                                                        availableHeight = portraitTopContentMaxHeight,
+                                                        lineHeight = with(portraitDensity) {
+                                                            nowPlayingLyricTypographyMetrics(
+                                                                largeTypography = widthClass != WindowWidthSizeClass.Compact,
+                                                                highlightFontSizeSp = nowPlayingLyricsSettings.highlightFontSizeSp
+                                                            ).currentLineHeightSp.sp.toDp()
+                                                        }
+                                                    )
+                                                } else portraitLayoutMetrics.classicLyricsReserveHeight
                                             },
-                                            minimumCoverWidth = portraitLayoutMetrics.minimumCoverWidth
+                                            minimumCoverWidth = if (!expanded && nowPlayingLyricsSettings.multilineEnabled && !isVideo) {
+                                                1.dp
+                                            } else portraitLayoutMetrics.minimumCoverWidth
                                         )
                                     }
                                     Box(
@@ -2397,6 +2429,7 @@ internal fun NowPlayingScreen(
                                                     colors = lyricColors,
                                                     interactionEnabled = lyricsClassicInteractionEnabled,
                                                     highlightFontSizeSp = nowPlayingLyricsSettings.highlightFontSizeSp,
+                                                    multilineEnabled = nowPlayingLyricsSettings.multilineEnabled,
                                                     compactHeight = portraitLayoutMetrics.compact,
                                                     largeTypography = widthClass != WindowWidthSizeClass.Compact,
                                                     upcomingCount = upcomingCount,
@@ -2551,19 +2584,11 @@ internal fun NowPlayingScreen(
         }
 
         if (showSliceSheet) {
-            val sheetMinHeight = (configuration.screenHeightDp.dp * 0.66f).coerceAtLeast(320.dp)
-            ModalBottomSheet(
-                onDismissRequest = dismissSliceSheet,
-                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-                containerColor = colorScheme.surface,
-                contentColor = colorScheme.onSurface,
-                windowInsets = WindowInsets(0, 0, 0, 0)
-            ) {
+            PlayerModalSheet(onDismissRequest = dismissSliceSheet) { sheetMaxHeight ->
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = sheetMinHeight)
-                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .heightIn(max = sheetMaxHeight)
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Row(
@@ -2750,18 +2775,12 @@ internal fun NowPlayingScreen(
                     equalizerVolumeOverlayBounds = null
                 }
             }
-            ModalBottomSheet(
-                onDismissRequest = { showEqualizer = false },
-                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-                containerColor = colorScheme.surface,
-                contentColor = colorScheme.onSurface,
-                windowInsets = WindowInsets(0, 0, 0, 0)
-            ) {
+            PlayerModalSheet(onDismissRequest = { showEqualizer = false }) { sheetMaxHeight ->
                 val scrollState = rememberScrollState()
                 Box(
                     modifier = Modifier
-                        .fillMaxHeight()
-                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .fillMaxWidth()
+                        .heightIn(max = sheetMaxHeight)
                         .focusRequester(equalizerFocusRequester)
                         .focusable()
                         .onPreviewKeyEvent { event ->

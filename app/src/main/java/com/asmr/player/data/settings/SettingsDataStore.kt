@@ -24,6 +24,7 @@ object SettingsKeys {
     val SEARCH_BLOCKED_KEYWORDS = stringPreferencesKey("search_blocked_keywords")
     val DOWNLOAD_DIRECTORY_TREE_URI = stringPreferencesKey("download_directory_tree_uri")
     val DOWNLOAD_DIRECTORY_LABEL = stringPreferencesKey("download_directory_label")
+    val GENERATED_SUBTITLE_FILE_BACKFILL_VERSION = intPreferencesKey("generated_subtitle_file_backfill_version")
 
     val PLAY_MODE = intPreferencesKey("play_mode")
 
@@ -40,7 +41,6 @@ object SettingsKeys {
     val FLOATING_LYRICS_ENABLED = booleanPreferencesKey("floating_lyrics_enabled")
     val FLOATING_LYRICS_COLOR = intPreferencesKey("floating_lyrics_color")
     val FLOATING_LYRICS_SIZE = floatPreferencesKey("floating_lyrics_size")
-    val FLOATING_LYRICS_OPACITY = floatPreferencesKey("floating_lyrics_opacity")
     val FLOATING_LYRICS_X = intPreferencesKey("floating_lyrics_x")
     val FLOATING_LYRICS_Y = intPreferencesKey("floating_lyrics_y")
     val FLOATING_LYRICS_ALIGN = intPreferencesKey("floating_lyrics_align")

@@ -140,7 +140,7 @@ private enum class SettingsSection(
     Appearance("外观", "调整主题、主题色与播放页背景", Icons.Rounded.Palette),
     Playback("播放设置", "管理迷你播放栏、音频输出与淡入淡出", Icons.Rounded.Headphones),
     Lyrics("歌词", "配置歌词页与悬浮歌词的显示效果", Icons.Rounded.Lyrics),
-    Translation("翻译配置", "管理本地字幕模型与 DeepSeek 翻译", Icons.Rounded.Translate),
+    Translation("翻译配置", "管理页面翻译、字幕模型与 DeepSeek 翻译", Icons.Rounded.Translate),
     SupportStatus("服务状态与代理", "测试服务连通性并配置代理与 DNS", Icons.Rounded.Router),
     AppCache("APP 缓存", "设置缓存容量上限并清理缓存", Icons.Rounded.Storage),
     About("关于", "查看版本信息并检查应用更新", Icons.Rounded.Info),
@@ -773,6 +773,29 @@ fun SettingsScreen(
                                 onToggleTip = { key -> activeTipKey = if (activeTipKey == key) null else key }
                             )
                             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.14f))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(
+                                    role = androidx.compose.ui.semantics.Role.Button,
+                                    onClick = viewModel::openSystemAudioEffects
+                                )
+                                .heightIn(min = 48.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "系统音效：部分系统会默认开启杜比全景声效果，可自行选择是否开启",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colorScheme.textPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(
+                                imageVector = Icons.Rounded.ChevronRight,
+                                contentDescription = null,
+                                tint = colorScheme.textSecondary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                         SettingsToggleRow(
                             text = "断开扬声器、有线/蓝牙耳机或蓝牙关闭时立刻暂停播放",
                             checked = pauseOnOutputDisconnect,
@@ -887,14 +910,6 @@ fun SettingsScreen(
                             )
 
                             SettingsSliderRow(
-                                text = "背景透明度: ${(floatingSettings.opacity * 100).toInt()}%",
-                                value = floatingSettings.opacity,
-                                range = 0f..1f,
-                                onValueChange = { viewModel.updateFloatingLyricsSettings(floatingSettings.copy(opacity = it)) },
-                                onHorizontalControlInteractionChanged = onHorizontalControlInteractionChanged
-                            )
-
-                            SettingsSliderRow(
                                 text = "垂直位置 (Y轴)",
                                 value = floatingSettings.yOffset.toFloat(),
                                 range = 0f..2000f,
@@ -976,8 +991,17 @@ fun SettingsScreen(
                 }
                 }
                 if (currentSection == SettingsSection.Translation) {
+                    item(key = "group:page_translation") {
+                        SettingsDetailCard { PageTranslationSettingsSection(isActive = translationDataActive) }
+                    }
                     item(key = "group:translation_config") {
                         SettingsDetailCard {
+                        Text(
+                            text = "字幕翻译",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colorScheme.textPrimary,
+                        )
                         SubtitleModelSettingsSection(
                             state = subtitleModelState,
                             selectedSourceIds = subtitleModelSourceIds,
@@ -1249,6 +1273,16 @@ private fun NowPlayingLyricsSettingsSection(
     onHorizontalControlInteractionChanged: (Boolean) -> Unit = {}
 ) {
     Text("播放页歌词", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+    SettingsToggleRow(
+        text = "多行完整显示",
+        checked = settings.multilineEnabled,
+        onCheckedChange = { onSettingsChange(settings.copy(multilineEnabled = it)) }
+    )
+    Text(
+        text = "竖屏经典布局使用固定字幕区，悬浮歌词按实际行数调整高度。超长字幕可上下滑动阅读；悬浮歌词可拖动字幕区域边缘调整位置，开启点击穿透后无法滑动。",
+        style = MaterialTheme.typography.bodySmall,
+        color = AsmrTheme.colorScheme.textSecondary
+    )
     SettingsSliderRow(
         text = "高亮字体大小: ${settings.highlightFontSizeSp.toInt()}sp",
         value = settings.highlightFontSizeSp,

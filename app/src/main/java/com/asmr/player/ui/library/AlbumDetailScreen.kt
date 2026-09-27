@@ -1,5 +1,7 @@
 package com.asmr.player.ui.library
 
+import com.asmr.player.translation.translatedPageText
+
 import android.content.Intent
 import android.graphics.PathMeasure as AndroidPathMeasure
 import android.graphics.RenderEffect
@@ -166,11 +168,13 @@ import com.asmr.player.ui.common.DiscPlaceholder
 import com.asmr.player.ui.common.AsmrAsyncImage
 import com.asmr.player.ui.common.AsmrImageLoadingPlaceholder
 import com.asmr.player.ui.common.EaraLogoLoadingIndicator
+import com.asmr.player.ui.common.NoImageLoadingIndicator
 import com.asmr.player.ui.common.ImagePreviewDialog
 import com.asmr.player.ui.common.ImagePreviewRequest
 import com.asmr.player.ui.common.LocalBottomOverlayPadding
 import com.asmr.player.ui.common.consumeTapThrough
 import com.asmr.player.ui.groups.AlbumGroupsViewModel
+import com.asmr.player.ui.common.RoundedTopSheet
 import com.asmr.player.ui.groups.AlbumGroupPickerScreen
 import com.asmr.player.ui.playlists.PlaylistPickerScreen
 import com.asmr.player.ui.playlists.PlaylistsViewModel
@@ -654,6 +658,7 @@ fun AlbumDetailScreen(
                         EaraLogoLoadingIndicator(tint = AsmrTheme.colorScheme.primary)
                     }
                 }
+                is AlbumDetailUiState.Removed -> Unit
                 is AlbumDetailUiState.Success -> {
                     LaunchedEffect(screenKey) {
                         if (viewModel.isInitialIntroSettled()) return@LaunchedEffect
@@ -1427,6 +1432,16 @@ fun AlbumDetailScreen(
                                             viewModel.persistListScrollPosition(asmrOneScrollStateKey, index, offset)
                                         },
                                         onListStateAvailable = { landscapeActiveListState = it },
+                                        showPortraitSimilarWorks = !useLandscapeArtworkTide,
+                                        portraitSimilarWorksContent = {
+                                            AlbumDetailPortraitSimilarWorksRow(
+                                                seedRjCode = model.baseRjCode.ifBlank { model.rjCode },
+                                                seedMetadata = model.dlsiteInfo ?: model.displayAlbum,
+                                                isRouteReady = isInitialRouteReady,
+                                                onOpenAlbumByRj = onOpenAlbumByRj,
+                                                viewModel = viewModel
+                                            )
+                                        },
                                         dlsiteRecommendations = model.dlsiteRecommendations,
                                         onOpenAlbumByRj = onOpenAlbumByRj,
                                         loadRemoteFileSize = { viewModel.loadRemoteFileSize(it) }
@@ -1627,7 +1642,7 @@ fun AlbumDetailScreen(
                 }
 
                 groupPickerAlbumId?.let { targetAlbumId ->
-                    AlbumDetailPickerSheet(
+                    RoundedTopSheet(
                         onDismissRequest = { groupPickerAlbumId = null },
                         color = MaterialTheme.colorScheme.background,
                         contentColor = colorScheme.textPrimary
@@ -1642,23 +1657,17 @@ fun AlbumDetailScreen(
                 }
 
                 batchPlaylistItems?.let { items ->
-                    AlbumDetailPickerSheet(
+                    RoundedTopSheet(
                         onDismissRequest = { batchPlaylistItems = null },
-                        color = colorScheme.background.copy(alpha = 0.96f),
+                        color = MaterialTheme.colorScheme.background,
                         contentColor = colorScheme.textPrimary
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 12.dp)
-                        ) {
-                            PlaylistPickerScreen(
-                                windowSizeClass = windowSizeClass,
-                                items = items,
-                                onBack = { batchPlaylistItems = null },
-                                embeddedInDialog = true
-                            )
-                        }
+                        PlaylistPickerScreen(
+                            windowSizeClass = windowSizeClass,
+                            items = items,
+                            onBack = { batchPlaylistItems = null },
+                            embeddedInDialog = true
+                        )
                     }
                 }
 
@@ -2340,7 +2349,7 @@ private fun AlbumDetailLandscapeIdentity(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text(
-            text = identity.title,
+            text = translatedPageText(identity.title),
             modifier = Modifier.clickable { copyMeta("标题", identity.title) },
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
@@ -2499,6 +2508,112 @@ private fun AlbumDetailLandscapeSimilarWorksPane(
 }
 
 @Composable
+private fun AlbumDetailPortraitSimilarWorksRow(
+    seedRjCode: String,
+    seedMetadata: Album,
+    isRouteReady: Boolean,
+    onOpenAlbumByRj: (String, DlsiteRecommendedWork?) -> Unit,
+    viewModel: AlbumDetailViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme = AsmrTheme.colorScheme
+    val state by viewModel.similarWorksState.collectAsStateWithLifecycle()
+    val seedFeatures = remember(
+        seedRjCode,
+        seedMetadata.circle,
+        seedMetadata.cv,
+        seedMetadata.tags
+    ) {
+        buildAlbumDetailRecommendationSeedFeatures(seedRjCode, seedMetadata)
+    }
+
+    LaunchedEffect(seedRjCode, seedFeatures, isRouteReady, viewModel) {
+        if (isRouteReady) {
+            viewModel.ensureSimilarWorksLoaded(
+                seedRjCode = seedRjCode,
+                seedFeatures = seedFeatures
+            )
+        }
+    }
+    DisposableEffect(seedRjCode, viewModel) {
+        onDispose(viewModel::cancelSimilarWorksLoad)
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = AlbumDetailHorizontalPadding, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        AlbumDetailSectionHeading(title = "相似作品推荐")
+        when {
+            (!isRouteReady && state.works.isEmpty()) ||
+                (state.isLoading && state.works.isEmpty()) -> {
+                DlsiteRecommendationLoadingCards()
+            }
+
+            state.works.isEmpty() -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 76.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = if (state.failed) "相似作品加载失败" else "暂时没有相似作品推荐",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colorScheme.textSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                    if (state.failed) {
+                        TextButton(
+                            onClick = {
+                                viewModel.ensureSimilarWorksLoaded(
+                                    seedRjCode = seedRjCode,
+                                    seedFeatures = seedFeatures,
+                                    force = true
+                                )
+                            }
+                        ) {
+                            Text("重试")
+                        }
+                    }
+                }
+            }
+
+            else -> {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(
+                        items = state.works,
+                        key = AlbumDetailSimilarWork::rjCode
+                    ) { work ->
+                        val recommendedWork = DlsiteRecommendedWork(
+                            rjCode = work.rjCode,
+                            title = work.title,
+                            coverUrl = work.coverUrl
+                        )
+                        DlsiteRecommendedWorkCard(
+                            work = recommendedWork,
+                            displayRj = work.rjCode,
+                            onClick = {
+                                onOpenAlbumByRj(
+                                    work.rjCode,
+                                    recommendedWork
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun AlbumDetailSimilarWorkCard(
     work: AlbumDetailSimilarWork,
     onClick: () -> Unit
@@ -2532,6 +2647,7 @@ private fun AlbumDetailSimilarWorkCard(
             contentScale = ContentScale.Crop,
             placeholderCornerRadius = 0,
             peekAnySizeForInitial = true,
+            loading = NoImageLoadingIndicator,
             modifier = Modifier
                 .size(76.dp)
                 .clip(RoundedCornerShape(topStart = 10.dp, bottomStart = 10.dp))
@@ -2543,7 +2659,7 @@ private fun AlbumDetailSimilarWorkCard(
             verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             Text(
-                text = work.title,
+                text = translatedPageText(work.title),
                 style = MaterialTheme.typography.labelMedium,
                 color = colorScheme.textPrimary,
                 maxLines = 2,
@@ -2905,7 +3021,7 @@ private fun AlbumHeroIdentityOverlay(
         verticalArrangement = Arrangement.spacedBy(9.dp)
     ) {
         Text(
-            text = identity.title,
+            text = translatedPageText(identity.title),
             modifier = Modifier.clickable { copyMeta("标题", identity.title) },
             style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.Bold,

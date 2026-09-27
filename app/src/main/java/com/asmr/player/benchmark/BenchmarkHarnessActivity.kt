@@ -29,6 +29,7 @@ import androidx.media3.common.MediaItem
 import com.asmr.player.data.repository.AlbumGroupRepository
 import com.asmr.player.data.repository.PlaylistRepository
 import com.asmr.player.ui.groups.AlbumGroupDetailContent
+import com.asmr.player.ui.common.RoundedTopSheet
 import com.asmr.player.ui.groups.AlbumGroupPickerScreen
 import com.asmr.player.ui.groups.AlbumGroupsScreen
 import com.asmr.player.ui.downloads.DownloadsScreen
@@ -84,6 +85,12 @@ class BenchmarkHarnessActivity : ComponentActivity() {
             }
         }
 
+        if (scenario == BenchmarkScenario.MultilineLyrics || scenario == BenchmarkScenario.FloatingMultilineLyrics) {
+            window.attributes = window.attributes.apply { preferredRefreshRate = 120f }
+            uiState = BenchmarkHarnessUiState.Ready(BenchmarkSeedSummary())
+            return
+        }
+
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
                 DiscPlaceholderBitmapCache.preload(
@@ -121,28 +128,46 @@ private fun BenchmarkHarnessRoot(
         }
 
         is BenchmarkHarnessUiState.Ready -> {
-            Box(modifier = Modifier.fillMaxSize()) {
-                BenchmarkScenarioScreen(
-                    scenario = scenario,
-                    windowSizeClass = windowSizeClass,
-                    seedSummary = uiState.seedSummary,
-                    playlistRepository = playlistRepository,
-                    albumGroupRepository = albumGroupRepository
-                )
-                Text(
-                    text = "benchmark-ready:${scenario.value}",
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(8.dp)
-                        .background(Color.Black.copy(alpha = 0.24f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                    color = Color.White.copy(alpha = 0.72f),
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+            val content: @Composable () -> Unit = {
+                BenchmarkReadyContent(scenario, windowSizeClass, uiState.seedSummary, playlistRepository, albumGroupRepository)
+            }
+            if (scenario == BenchmarkScenario.PlaylistPicker || scenario == BenchmarkScenario.GroupPicker) {
+                RoundedTopSheet(onDismissRequest = {}, content = content)
+            } else {
+                content()
             }
         }
+    }
+}
+
+@Composable
+private fun BenchmarkReadyContent(
+    scenario: BenchmarkScenario,
+    windowSizeClass: WindowSizeClass,
+    seedSummary: BenchmarkSeedSummary,
+    playlistRepository: PlaylistRepository,
+    albumGroupRepository: AlbumGroupRepository
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        BenchmarkScenarioScreen(
+            scenario = scenario,
+            windowSizeClass = windowSizeClass,
+            seedSummary = seedSummary,
+            playlistRepository = playlistRepository,
+            albumGroupRepository = albumGroupRepository
+        )
+        Text(
+            text = "benchmark-ready:${scenario.value}",
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(8.dp)
+                .background(Color.Black.copy(alpha = 0.24f))
+                .padding(horizontal = 6.dp, vertical = 2.dp),
+            color = Color.White.copy(alpha = 0.72f),
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -155,6 +180,9 @@ private fun BenchmarkScenarioScreen(
     albumGroupRepository: AlbumGroupRepository
 ) {
     when (scenario) {
+        BenchmarkScenario.MultilineLyrics -> MultilineLyricsBenchmarkScreen()
+        BenchmarkScenario.FloatingMultilineLyrics -> MultilineLyricsBenchmarkScreen(floating = true)
+
         BenchmarkScenario.LibraryAlbums,
         BenchmarkScenario.LibraryTracks,
         BenchmarkScenario.PerformancePlayback -> {
@@ -229,7 +257,8 @@ private fun BenchmarkScenarioScreen(
                         )
                         .build()
                 ),
-                onBack = {}
+                onBack = {},
+                embeddedInDialog = true
             )
         }
 
@@ -265,7 +294,8 @@ private fun BenchmarkScenarioScreen(
             AlbumGroupPickerScreen(
                 windowSizeClass = windowSizeClass,
                 albumId = seedSummary.sampleAlbumId,
-                onBack = {}
+                onBack = {},
+                embeddedInDialog = true
             )
         }
 

@@ -1,5 +1,7 @@
 package com.asmr.player.ui.library
 
+import com.asmr.player.translation.translatedPageText
+
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
@@ -133,6 +135,7 @@ import com.asmr.player.ui.common.AudioItemSubtitleStampSpacing
 import com.asmr.player.ui.common.DiscPlaceholder
 import com.asmr.player.ui.common.AsmrAsyncImage
 import com.asmr.player.ui.common.AsmrShimmerPlaceholder
+import com.asmr.player.ui.common.NoImageLoadingIndicator
 import com.asmr.player.ui.common.CvChipsFlow
 import com.asmr.player.ui.common.EaraLogoLoadingIndicator
 import com.asmr.player.ui.common.ImagePreviewItem
@@ -510,15 +513,13 @@ internal fun buildDirectoryImagePreviewRequest(
 }
 
 internal fun buildGalleryImagePreviewRequest(
-    galleryUrls: List<String>,
-    clickedUrl: String,
-    toPreviewItem: (String) -> ImagePreviewItem?
+    galleryItems: List<ImagePreviewItem>,
+    clickedKey: String
 ): ImagePreviewRequest? {
-    val items = galleryUrls.mapNotNull(toPreviewItem)
-    if (items.isEmpty()) return null
-    val initialIndex = galleryUrls.indexOfFirst { it == clickedUrl }
+    if (galleryItems.isEmpty()) return null
+    val initialIndex = galleryItems.indexOfFirst { it.key == clickedKey }
     if (initialIndex < 0) return null
-    return ImagePreviewRequest(items = items, initialIndex = initialIndex)
+    return ImagePreviewRequest(items = galleryItems, initialIndex = initialIndex)
 }
 
 internal fun buildBreadcrumbSegments(currentPath: String): List<DirectoryBreadcrumbSegment> {
@@ -1199,6 +1200,50 @@ internal fun buildRemoteTreeIndex(
     return RemoteTreeIndex(root = root)
 }
 
+private fun RemoteTreeNode.toDirectoryFileItem(): DirectoryFileItem {
+    return DirectoryFileItem(
+        path = path,
+        title = name.substringBeforeLast('.'),
+        fileType = fileType,
+        isPlayable = fileType == TreeFileType.Audio || fileType == TreeFileType.Video,
+        isOnline = true,
+        durationSeconds = durationSeconds,
+        sizeSource = if (url.isNotBlank()) FileSizeSource.Remote(url) else FileSizeSource.None,
+        absolutePath = url,
+        url = url,
+        playlistTarget = playlistTarget,
+        subtitleSources = subtitleSources,
+        showSubtitleStamp = subtitleSources.isNotEmpty(),
+        dlsitePlayImageCrypt = dlsitePlayImageCrypt,
+        dlsitePlayImageWidth = dlsitePlayImageWidth,
+        dlsitePlayImageHeight = dlsitePlayImageHeight,
+        dlsitePlayOptimizedName = dlsitePlayOptimizedName
+    )
+}
+
+internal fun collectRemoteTreeImageFiles(index: RemoteTreeIndex): List<DirectoryFileItem> {
+    val images = mutableListOf<DirectoryFileItem>()
+
+    fun collect(node: RemoteTreeNode) {
+        val children = node.children.values
+        children.asSequence()
+            .filter { it.children.isNotEmpty() }
+            .sortedBy { SmartSortKey.of(it.name) }
+            .forEach(::collect)
+        children.asSequence()
+            .filter { child ->
+                child.children.isEmpty() &&
+                    child.fileType == TreeFileType.Image &&
+                    child.url.isNotBlank()
+            }
+            .sortedBy { SmartSortKey.of(it.name) }
+            .mapTo(images) { it.toDirectoryFileItem() }
+    }
+
+    collect(index.root)
+    return images
+}
+
 internal fun buildRemoteDirectoryBrowser(
     index: RemoteTreeIndex,
     currentPath: String
@@ -1220,26 +1265,7 @@ internal fun buildRemoteDirectoryBrowser(
         .asSequence()
         .filter { it.children.isEmpty() && it.url.isNotBlank() && it.fileType != TreeFileType.Subtitle && it.fileType != TreeFileType.Other }
         .sortedBy { SmartSortKey.of(it.name) }
-        .map { child ->
-            DirectoryFileItem(
-                path = child.path,
-                title = child.name.substringBeforeLast('.'),
-                fileType = child.fileType,
-                isPlayable = child.fileType == TreeFileType.Audio || child.fileType == TreeFileType.Video,
-                isOnline = true,
-                durationSeconds = child.durationSeconds,
-                sizeSource = if (child.url.isNotBlank()) FileSizeSource.Remote(child.url) else FileSizeSource.None,
-                absolutePath = child.url,
-                url = child.url,
-                playlistTarget = child.playlistTarget,
-                subtitleSources = child.subtitleSources,
-                showSubtitleStamp = child.subtitleSources.isNotEmpty(),
-                dlsitePlayImageCrypt = child.dlsitePlayImageCrypt,
-                dlsitePlayImageWidth = child.dlsitePlayImageWidth,
-                dlsitePlayImageHeight = child.dlsitePlayImageHeight,
-                dlsitePlayOptimizedName = child.dlsitePlayOptimizedName
-            )
-        }
+        .map(RemoteTreeNode::toDirectoryFileItem)
         .toList()
     return DirectoryBrowserResult(
         currentPath = normalizedPath,
@@ -1643,7 +1669,7 @@ internal fun buildLocalTreeIndexByScanning(
                 }
             }
             if (rootDocId.isNotBlank()) {
-                query(rootDocId, "")
+                runCatching { query(rootDocId, "") }
             }
         } else {
             val rootDir = java.io.File(albumPath)
@@ -2144,7 +2170,7 @@ internal fun DirectoryBreadcrumbBar(
                 onClick = { onNavigate(crumb.path) },
                 label = {
                     Text(
-                        text = crumb.label,
+                        text = translatedPageText(crumb.label),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -2207,7 +2233,7 @@ internal fun CompactDirectoryBreadcrumbBar(
                     )
                 } else {
                     CompactBreadcrumbNode(
-                        text = crumb.label,
+                        text = translatedPageText(crumb.label),
                         selected = crumb.path == currentPath,
                         onClick = { onNavigate(crumb.path) }
                     )
@@ -2300,7 +2326,7 @@ internal fun CompactDirectoryBreadcrumbContent(
                 )
             } else {
                 CompactBreadcrumbNode(
-                    text = crumb.label,
+                    text = translatedPageText(crumb.label),
                     selected = crumb.path == currentPath,
                     onClick = { onNavigate(crumb.path) }
                 )
@@ -2562,7 +2588,7 @@ internal fun CompactDirectoryBreadcrumbContentV2(
                 )
             } else {
                 CompactBreadcrumbNode(
-                    text = crumb.label,
+                    text = translatedPageText(crumb.label),
                     selected = crumb.path == currentPath,
                     onClick = { onNavigate(crumb.path) }
                 )
@@ -2593,7 +2619,7 @@ internal fun DirectoryFolderRowV2(
         )
         Spacer(modifier = Modifier.width(10.dp))
         Text(
-            text = title,
+            text = translatedPageText(title),
             modifier = Modifier.weight(1f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -2894,7 +2920,7 @@ internal fun DirectoryFolderRow(
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = title,
+                text = translatedPageText(title),
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -2957,7 +2983,7 @@ internal fun CompactDirectoryBreadcrumbContentV3(
                 )
             } else {
                 CompactBreadcrumbNode(
-                    text = crumb.label,
+                    text = translatedPageText(crumb.label),
                     selected = crumb.path == currentPath,
                     onClick = { onNavigate(crumb.path) }
                 )
@@ -2996,7 +3022,7 @@ internal fun DirectoryFolderRowV3(
         }
         Spacer(modifier = Modifier.width(11.dp))
         Text(
-            text = title,
+            text = translatedPageText(title),
             modifier = Modifier.weight(1f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -3638,7 +3664,8 @@ internal fun DirectoryFileRow(
                             .size(42.dp)
                             .clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop,
-                        placeholderCornerRadius = 8
+                        placeholderCornerRadius = 8,
+                        loading = NoImageLoadingIndicator
                     )
                 } else {
                     Box(
@@ -3660,7 +3687,7 @@ internal fun DirectoryFileRow(
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
-                    text = file.title,
+                    text = translatedPageText(file.title, fileName = true),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     color = colorScheme.textPrimary,
@@ -3879,7 +3906,7 @@ internal fun TreeFolderRow(
         ListItem(
             headlineContent = { 
                 Text(
-                    title, 
+                    translatedPageText(title, fileName = true),
                     maxLines = 1, 
                     overflow = TextOverflow.Ellipsis,
                     color = colorScheme.textPrimary,
@@ -3950,7 +3977,7 @@ internal fun TreeFileRow(
         ListItem(
             headlineContent = { 
                 Text(
-                    title, 
+                    translatedPageText(title, fileName = true),
                     maxLines = 1, 
                     overflow = TextOverflow.Ellipsis,
                     color = colorScheme.textSecondary,
@@ -3976,6 +4003,7 @@ internal fun TreeFileRow(
                                 .clip(RoundedCornerShape(6.dp)),
                             contentScale = ContentScale.Crop,
                             placeholderCornerRadius = 6,
+                            loading = NoImageLoadingIndicator,
                         )
                     } else {
                         Icon(

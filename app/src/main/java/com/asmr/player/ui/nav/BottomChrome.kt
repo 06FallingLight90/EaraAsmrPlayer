@@ -347,7 +347,6 @@ fun resolvePrimaryRoute(
         currentRoute == "playlist_system/{type}" && playlistSystemType == "favorites" -> "playlist_system/favorites"
         currentRoute == "playlist/{playlistId}/{playlistName}" -> "playlists"
         currentRoute == "group/{groupId}/{groupName}" -> "groups"
-        currentRoute?.startsWith("group_picker") == true -> "groups"
         currentRoute == "library_filter" -> Routes.Library
         currentRoute?.startsWith("album_detail") == true -> lastPrimaryRoute ?: Routes.Library
         else -> lastPrimaryRoute ?: Routes.Library
@@ -532,6 +531,7 @@ fun BottomChrome(
     onOpenNowPlaying: () -> Unit,
     onOpenQueue: () -> Unit,
     onNavigate: (String) -> Unit,
+    miniPlayerPlayFeedbackSignal: Long = 0L,
     largeLayout: Boolean = false,
     modifier: Modifier = Modifier,
     navItems: List<BottomChromeNavItem> = bottomChromeNavItems(),
@@ -666,6 +666,7 @@ fun BottomChrome(
                             onDisplayModeChange = onMiniPlayerDisplayModeChange,
                             onOpenNowPlaying = onOpenNowPlaying,
                             onOpenQueue = onOpenQueue,
+                            playFeedbackSignal = miniPlayerPlayFeedbackSignal,
                             largeLayout = largeLayout,
                             compactScale = compactScale,
                             modifier = miniPlayerModifier
