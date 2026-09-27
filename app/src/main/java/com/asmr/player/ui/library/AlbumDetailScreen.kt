@@ -174,6 +174,7 @@ import com.asmr.player.ui.common.ImagePreviewRequest
 import com.asmr.player.ui.common.LocalBottomOverlayPadding
 import com.asmr.player.ui.common.consumeTapThrough
 import com.asmr.player.ui.groups.AlbumGroupsViewModel
+import com.asmr.player.ui.common.RoundedTopSheet
 import com.asmr.player.ui.groups.AlbumGroupPickerScreen
 import com.asmr.player.ui.playlists.PlaylistPickerScreen
 import com.asmr.player.ui.playlists.PlaylistsViewModel
@@ -1641,7 +1642,7 @@ fun AlbumDetailScreen(
                 }
 
                 groupPickerAlbumId?.let { targetAlbumId ->
-                    AlbumDetailPickerSheet(
+                    RoundedTopSheet(
                         onDismissRequest = { groupPickerAlbumId = null },
                         color = MaterialTheme.colorScheme.background,
                         contentColor = colorScheme.textPrimary
@@ -1656,23 +1657,17 @@ fun AlbumDetailScreen(
                 }
 
                 batchPlaylistItems?.let { items ->
-                    AlbumDetailPickerSheet(
+                    RoundedTopSheet(
                         onDismissRequest = { batchPlaylistItems = null },
-                        color = colorScheme.background.copy(alpha = 0.96f),
+                        color = MaterialTheme.colorScheme.background,
                         contentColor = colorScheme.textPrimary
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 12.dp)
-                        ) {
-                            PlaylistPickerScreen(
-                                windowSizeClass = windowSizeClass,
-                                items = items,
-                                onBack = { batchPlaylistItems = null },
-                                embeddedInDialog = true
-                            )
-                        }
+                        PlaylistPickerScreen(
+                            windowSizeClass = windowSizeClass,
+                            items = items,
+                            onBack = { batchPlaylistItems = null },
+                            embeddedInDialog = true
+                        )
                     }
                 }
 

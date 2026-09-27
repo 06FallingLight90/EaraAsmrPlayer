@@ -1,53 +1,19 @@
 package com.asmr.player.ui.groups
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.asmr.player.ui.common.rememberCalmScrollableFlingBehavior
-import com.asmr.player.ui.theme.AsmrTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.asmr.player.ui.common.CollectionPickerContent
+import com.asmr.player.ui.common.CollectionPickerRow
 
 @Composable
 fun AlbumGroupPickerScreen(
@@ -58,158 +24,61 @@ fun AlbumGroupPickerScreen(
     viewModel: AlbumGroupsViewModel = hiltViewModel()
 ) {
     val groups by viewModel.groups.collectAsStateWithLifecycle()
-    val colorScheme = AsmrTheme.colorScheme
-    val listState = rememberLazyListState()
     val screenActive = remember { mutableStateOf(true) }
     var createName by rememberSaveable { mutableStateOf("") }
-    var addingGroupId by rememberSaveable { mutableStateOf<Long?>(null) }
-    val canCreate = remember(createName) { createName.trim().isNotBlank() }
-    val isAdding = addingGroupId != null
+    var addingId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val isAdding = addingId != null
 
     BackHandler(enabled = isAdding) {}
-
     DisposableEffect(Unit) {
         onDispose { screenActive.value = false }
     }
 
-    val isCompact = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Transparent),
-        contentAlignment = Alignment.TopCenter
+    CollectionPickerContent(
+        windowSizeClass = windowSizeClass,
+        title = "选择分组",
+        createPlaceholder = "新建分组名称",
+        createName = createName,
+        onCreateNameChange = { createName = it },
+        onCreate = {
+            val trimmed = createName.trim()
+            if (trimmed.isNotBlank()) {
+                viewModel.createGroup(trimmed)
+                createName = ""
+            }
+        },
+        onBack = onBack,
+        embeddedInDialog = embeddedInDialog,
+        isAdding = isAdding,
+        isEmpty = groups.isEmpty(),
+        emptyText = "暂无可选分组",
     ) {
-        Column(
-            modifier = if (isCompact) {
-                Modifier.fillMaxSize()
-            } else {
-                Modifier
-                    .fillMaxHeight()
-                    .widthIn(max = 720.dp)
-                    .fillMaxWidth()
-            }
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = if (embeddedInDialog) 6.dp else 16.dp,
-                        vertical = if (embeddedInDialog) 8.dp else 12.dp
-                    ),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                if (embeddedInDialog) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = onBack,
-                            enabled = !isAdding
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                                contentDescription = "返回",
-                                tint = colorScheme.textPrimary
-                            )
-                        }
-                        Text(
-                            text = "选择分组",
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = colorScheme.textPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.size(48.dp))
-                    }
-                } else {
-                    Text(
-                        text = "选择分组",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = colorScheme.textPrimary
-                    )
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
-                        value = createName,
-                        onValueChange = { createName = it },
-                        modifier = Modifier.weight(1f),
-                        enabled = !isAdding,
-                        singleLine = true,
-                        placeholder = { Text("新建分组名称") }
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    TextButton(
-                        onClick = {
-                            val trimmed = createName.trim()
-                            if (trimmed.isBlank()) return@TextButton
-                            viewModel.createGroup(trimmed)
-                            createName = ""
+        items(groups, key = { it.id }) { group ->
+            CollectionPickerRow(
+                name = group.name,
+                artworkUri = group.firstArtworkUri,
+                summary = "共 ${group.albumCount} 张专辑 · ${group.itemCount} 首",
+                enabled = !isAdding,
+                isAdding = addingId == group.id,
+                onClick = {
+                    addingId = group.id
+                    viewModel.addAlbumToGroupInBackground(
+                        groupId = group.id,
+                        albumId = albumId,
+                        onComplete = {
+                            if (screenActive.value) {
+                                addingId = null
+                                onBack()
+                            }
                         },
-                        enabled = canCreate && !isAdding,
-                        colors = ButtonDefaults.textButtonColors(contentColor = colorScheme.primary)
-                    ) {
-                        Text("创建")
-                    }
-                }
-            }
-
-            if (groups.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 18.dp)
-                ) {
-                    Text("暂无可选分组", color = colorScheme.textSecondary)
-                }
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    flingBehavior = rememberCalmScrollableFlingBehavior(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(groups, key = { it.id }) { group ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(colorScheme.surface.copy(alpha = 0.5f))
-                                .clickable(enabled = !isAdding) {
-                                    addingGroupId = group.id
-                                    viewModel.addAlbumToGroupInBackground(
-                                        groupId = group.id,
-                                        albumId = albumId,
-                                        onComplete = {
-                                            if (screenActive.value) {
-                                                addingGroupId = null
-                                                onBack()
-                                            }
-                                        },
-                                        onFailure = {
-                                            if (screenActive.value) {
-                                                addingGroupId = null
-                                            }
-                                        }
-                                    )
-                                }
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                        ) {
-                            Text(
-                                text = group.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = colorScheme.textPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                        onFailure = {
+                            if (screenActive.value) {
+                                addingId = null
+                            }
                         }
-                    }
-                    item { Spacer(modifier = Modifier.padding(bottom = 12.dp)) }
+                    )
                 }
-            }
+            )
         }
     }
 }

@@ -122,9 +122,8 @@ import com.asmr.player.ui.common.DiscPlaceholder
 import com.asmr.player.ui.common.AsmrAsyncImage
 import com.asmr.player.ui.common.AsmrShimmerPlaceholder
 import com.asmr.player.ui.common.CvChipsFlow
-import com.asmr.player.ui.common.EdgeToEdgeFullHeightSheet
+import com.asmr.player.ui.common.RoundedTopSheet
 import com.asmr.player.ui.common.EaraLogoLoadingIndicator
-import com.asmr.player.ui.common.StableWindowInsets
 import com.asmr.player.ui.common.collapsibleHeaderUiState
 import com.asmr.player.ui.common.rememberCollapsibleHeaderState
 import com.asmr.player.ui.common.rememberCalmScrollableFlingBehavior
@@ -136,40 +135,6 @@ import com.asmr.player.ui.theme.dynamicPageContainerColor
 import com.asmr.player.util.Formatting
 import com.asmr.player.util.MessageManager
 import com.asmr.player.util.RemoteSubtitleSource
-
-private val AlbumDetailPickerSheetTopRadius = 28.dp
-private val AlbumDetailPickerSheetTopGap = 11.dp
-private val AlbumDetailPickerSheetContentTopInset = 12.dp
-
-@Composable
-internal fun AlbumDetailPickerSheet(
-    onDismissRequest: () -> Unit,
-    color: Color = MaterialTheme.colorScheme.background,
-    contentColor: Color = MaterialTheme.colorScheme.onBackground,
-    content: @Composable () -> Unit
-) {
-    EdgeToEdgeFullHeightSheet(
-        onDismissRequest = onDismissRequest,
-        modifier = Modifier
-            .fillMaxHeight()
-            .padding(top = AlbumDetailPickerSheetTopGap),
-        shape = RoundedCornerShape(
-            topStart = AlbumDetailPickerSheetTopRadius,
-            topEnd = AlbumDetailPickerSheetTopRadius
-        ),
-        containerColor = color,
-        contentColor = contentColor
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = AlbumDetailPickerSheetContentTopInset)
-                .windowInsetsPadding(StableWindowInsets.navigationBars)
-        ) {
-            content()
-        }
-    }
-}
 
 @Composable
 internal fun AsmrOneDownloadDialog(
@@ -189,7 +154,7 @@ internal fun AsmrOneDownloadDialog(
     }
     val listState = rememberLazyListState()
 
-    AlbumDetailPickerSheet(
+    RoundedTopSheet(
         onDismissRequest = onDismiss
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -451,7 +416,7 @@ internal fun OnlineSaveDialog(
     }
     val listState = rememberLazyListState()
 
-    AlbumDetailPickerSheet(
+    RoundedTopSheet(
         onDismissRequest = onDismiss
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
