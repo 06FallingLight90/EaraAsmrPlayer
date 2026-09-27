@@ -1189,7 +1189,8 @@ internal fun NowPlayingScreen(
     coverBackgroundClarity: Float,
     coverPreviewMode: CoverPreviewMode,
     nowPlayingHomeLayoutMode: NowPlayingHomeLayoutMode,
-    nowPlayingHomeLayoutHintDismissed: Boolean,
+    nowPlayingHomeLayoutHintDismissed: Boolean?,
+    onNowPlayingHomeLayoutHintShown: () -> Unit,
     onNowPlayingHomeLayoutModeChange: (NowPlayingHomeLayoutMode) -> Unit,
     nowPlayingLyricsSettings: NowPlayingLyricsSettings,
     lyricsPageSettings: LyricsPageSettings,
@@ -1258,6 +1259,8 @@ internal fun NowPlayingScreen(
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     var homeLayoutHintDismissedInSession by rememberSaveable { mutableStateOf(false) }
+    var homeLayoutHintShownInSession by rememberSaveable { mutableStateOf(false) }
+    var homeLayoutHintMediaId by remember { mutableStateOf<String?>(null) }
     var homeLayoutLyricsVisible by remember { mutableStateOf(true) }
     var homeLayoutChangeJob by remember { mutableStateOf<Job?>(null) }
     val homeLayoutHintScope = rememberCoroutineScope()
@@ -1266,26 +1269,22 @@ internal fun NowPlayingScreen(
             homeLayoutChangeJob?.cancel()
         }
     }
-    LaunchedEffect(nowPlayingHomeLayoutHintDismissed) {
-        if (nowPlayingHomeLayoutHintDismissed) {
-            homeLayoutHintDismissedInSession = true
-        }
-    }
     val changeNowPlayingHomeLayoutMode = remember(
         haptic,
         nowPlayingHomeLayoutMode,
-        nowPlayingHomeLayoutHintDismissed,
         homeLayoutHintDismissedInSession,
+        homeLayoutHintMediaId,
         homeLayoutHintScope,
         onNowPlayingHomeLayoutModeChange
     ) {
         { mode: NowPlayingHomeLayoutMode ->
             if (mode != nowPlayingHomeLayoutMode) {
                 homeLayoutChangeJob?.cancel()
-                if (!nowPlayingHomeLayoutHintDismissed && !homeLayoutHintDismissedInSession) {
+                if (homeLayoutHintMediaId != null && !homeLayoutHintDismissedInSession) {
                     homeLayoutHintScope.launch {
                         delay(NowPlayingHomeLayoutAnimationDurationMillis.toLong())
                         homeLayoutHintDismissedInSession = true
+                        homeLayoutHintMediaId = null
                     }
                 }
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -2068,9 +2067,24 @@ internal fun NowPlayingScreen(
             val classicTrackInfoTargetHeight = nowPlayingClassicTrackInfoHeight(
                 metrics = portraitLayoutMetrics
             )
-            val homeLayoutSwipeHintAllowed = !nowPlayingHomeLayoutHintDismissed &&
-                !homeLayoutHintDismissedInSession &&
-                !isVideo
+            val hintMediaId = item?.mediaId
+            val markHomeLayoutHintShown by rememberUpdatedState(onNowPlayingHomeLayoutHintShown)
+            LaunchedEffect(hintMediaId, nowPlayingHomeLayoutHintDismissed, expandedHomeLayout, isVideo) {
+                if (homeLayoutHintMediaId != null && homeLayoutHintMediaId != hintMediaId) {
+                    homeLayoutHintMediaId = null
+                }
+                if (hintMediaId != null && !isVideo && !expandedHomeLayout &&
+                    nowPlayingHomeLayoutHintDismissed == false &&
+                    !homeLayoutHintShownInSession && !homeLayoutHintDismissedInSession
+                ) {
+                    homeLayoutHintShownInSession = true
+                    homeLayoutHintMediaId = hintMediaId
+                    markHomeLayoutHintShown()
+                }
+            }
+            val homeLayoutSwipeHintAllowed = hintMediaId != null &&
+                homeLayoutHintMediaId == hintMediaId &&
+                !homeLayoutHintDismissedInSession && !isVideo
             val portraitContentHorizontalPadding = portraitLayoutMetrics.contentHorizontalPadding
             val homeBezier = remember { CubicBezierEasing(0.20f, 0f, 0f, 1f) }
             val homeLayoutDurationMillis = NowPlayingHomeLayoutAnimationDurationMillis

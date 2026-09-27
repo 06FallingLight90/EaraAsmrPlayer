@@ -198,6 +198,10 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setNowPlayingHomeLayoutHintDismissed() {
+        context.settingsDataStore.edit { it[nowPlayingHomeLayoutHintDismissedKey] = true }
+    }
+
     suspend fun setLyricsPageSettings(settings: LyricsPageSettings) {
         context.settingsDataStore.edit {
             it[lyricsPageFontSizeKey] = settings.fontSizeSp

@@ -830,7 +830,7 @@ fun MainContainer(
     coverBackgroundClarity: Float,
     coverPreviewMode: CoverPreviewMode,
     nowPlayingHomeLayoutMode: NowPlayingHomeLayoutMode,
-    nowPlayingHomeLayoutHintDismissed: Boolean,
+    nowPlayingHomeLayoutHintDismissed: Boolean?,
     nowPlayingLyricsSettings: NowPlayingLyricsSettings,
     lyricsPageSettings: LyricsPageSettings,
     forceImmersive: Boolean,
@@ -3142,6 +3142,9 @@ fun MainContainer(
                     coverPreviewMode = coverPreviewMode,
                     nowPlayingHomeLayoutMode = nowPlayingHomeLayoutMode,
                     nowPlayingHomeLayoutHintDismissed = nowPlayingHomeLayoutHintDismissed,
+                    onNowPlayingHomeLayoutHintShown = {
+                        scope.launch { settingsDataStore.setNowPlayingHomeLayoutHintDismissed() }
+                    },
                     onNowPlayingHomeLayoutModeChange = { mode ->
                         scope.launch {
                             settingsDataStore.setNowPlayingHomeLayoutMode(mode, dismissHint = true)
