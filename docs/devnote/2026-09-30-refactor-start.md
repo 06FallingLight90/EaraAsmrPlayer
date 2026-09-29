@@ -67,3 +67,41 @@
 - 迁移：10 处重复定义删除，20 处用点改为共享函数（DirectorySupport×12、Dialogs×4、ViewModel×3、ViewModelSupport×1）。
 - profile 同步：baseline-prof.txt 删 3 条 `$sanitize` 本地函数死条目，补 1 条 `sanitizeFolderName` HSPL。
 - 不同域的相似函数**刻意不动**：`Formatting.sanitizeFilename`（去字符+trim）、`sanitizeDlsiteTrialFileBaseName`（先截扩展名、fallback 参数化）、`AppErrorMessageFormatter.sanitize`、`sanitizeWorkNo`、`sanitizeTitle`×2。
+
+## S7 落地快照
+
+- 新文件 `ui/library/AlbumMetadataSupport.kt`：`buildTagsToken` / `parseAlbumTags` / `isLikelyPlaceholderCover` 三个顶层 internal 纯函数；锁定测试 `AlbumMetadataSupportTest`（7 用例）。
+- 两 VM 各删 3 个逐字重复的私有函数，**调用点零改动**（同包同名顶层函数自动接管）；baseline-prof.txt 同步 parseAlbumTags 类归属。
+- 注意：commit 655cf88 信息里写「853 tests」为笔误，实测 **852**（845+7；当时把 8 用例记成 8）。
+- 双 VM 中仍存在的近似重复（计划范围外，未动）：`upsertAlbumFtsIndex` 两版仅差日志 tag（DB 触碰型，非纯函数，留待后续）；`ensureAlbumCoverSaved` 家族结构相似但细节不同，不属逐字重复。
+
+---
+
+# 2026-09-30 S8 断点存档（Backlog，下次续接）
+
+> 用户决定：今日到此休息，S8 中途暂停。本节是冷启动续接材料。分支 `refactor/architecture-cleanup`，HEAD = 655cf88，工作区干净（本文档提交后）。
+
+## 已定方向（用户批准的「证据修正版」）
+
+原计划 S8 的「ContentSource 统一搜索入口」前提与代码现状不符（差异清单见下）。用户 2026-09-30 批准调整为：
+
+- **S8a 镜像 API 收敛**：AsmrOneApi/Asmr100Api/Asmr200Api/Asmr300Api 四 Retrofit 接口合并 + NetworkModule 三个重复 Retrofit 提供合并（L228/239/250）；AsmrOneCrawler 内部私有 `AsmrSelectedApi` 适配层（L175，`asSelected()` 包装 L194/210/230/250）上提为统一形态。纯结构重整，行为保持。
+- **S8b 死枚举处置**：`domain/model/SearchSource.kt`（DLSite/AsmrOne）全仓唯一真实使用 = MainContainer.kt:2809 路由参数默认值；`SearchSource.AsmrOne` 零使用；`album_detail_online/{source}/{workId}` 路由的 `{source}` 参数无消费者（AlbumDetailViewModel 不读 savedStateHandle "source"）。删枚举 + 简化路由（动手前先 grep 核实 `album_detail_online` 路由全部消费点）。
+- **S8c 详情加载接口化（TDD）**：以专辑详情三路加载为 seam 抽 `OnlineWorkSource` 接口（`ensureDlsiteLoaded/ensureAsmrOneLoaded/ensureDlsitePlayLoaded` + `albumDetailOnlineLoadPlan`，AlbumDetailScreen.kt L449-477 + L1187-1204），MockWebServer 契约测试红→绿；**SearchViewModel 的 fetchPage 四分支编排保持不动**。
+- **S8d fake source 走查**：模拟新增源走查 git diff，新增源改动面目标 4-5 文件，如实验收（不强凑 ≤4）。
+
+## 差异清单要点（子代理 2026-09-30 调查，报告未落盘，关键事实浓缩于此）
+
+- **fetchPage 四分支**（SearchViewModel.kt L527-639，优先级 A>B>C>D 短路）：A purchasedOnly→`dlsitePlayLibraryClient.searchPurchased`（凭据门控 L222/277）；B collectedOnly→`asmrOneAvailabilityApi.search`（**Eara 自建后端** `BuildConfig.LISTEN_TOGETHER_BASE_URL`，非 asmr.one 直连）+ RJ 合成占位 + `resolvedDetailRjCodes`；C 直接RJ号→`dlsiteScraper.getWorkInfo` 四级 locale 回退；D 默认→`dlsiteScraper.search`。分页契约三样（offset/页码/内存分页）、排序枚举两套（`SearchSortOption.dlsiteOrder` 喂 D、`SearchCollectedSortOption.backendSort` 喂 B）。
+- **asmrOneCrawler 在搜索主路径缺席**，仅 enrich：L939 `getDetailsFromMain` 反查收录条目 RJ；L1113 批量标记 hasAsmrOne。
+- **client 调用图**：AsmrOneCrawler→SearchViewModel(1处)/AlbumDetailViewModel(searchWithTrace L344、getTracksWithTrace L387/396、getDetails L1271/1789/1838、selectedEndpoint L1737)/Support(传参)；DLSiteScraper→Search/AlbumDetail/Library 三 VM + Support；DlsitePlayLibraryClient→仅 SearchViewModel。隐藏第 4/5 client：`DlsiteProductInfoClient`/`DlsitePlayWorkClient` 直入 AlbumDetailViewModel 构造器（L141-142）。
+- **镜像 API 实测**（亲自核对四接口源码）：`getWorkDetails`/`getTracks` 四接口逐字相同；`search` 分两型——主站 AsmrOneApi（order 默认 `release`、无 pageSize/includeTranslationWorks、返回 `SearchResponse{works,pagination}`）vs 三镜像（order 默认 `create_date`、多 pageSize/includeTranslationWorks、返回简化 `Asmr200SearchResponse{works}`）。镜像搜索结果需 `mapMirrorSearchResponse`（AsmrOneCrawler L297）转标准型。三镜像接口彼此逐字相同，仅 BASE_URL 不同（asmr-100/200/300.com）。
+- **镜像切换**：AsmrOneCrawler `selectedApi()`（L281-295）when 映射；BACKUP 无直连 API（走详情页 L1737 后端 trackTree 路径）。`AsmrOneEndpoint`（枚举 MAIN/100/200/300/BACKUP + directBaseUrl）。
+- **DI**：三 client 均 @Singleton @Inject 构造注入，di/ 无绑定；NetworkModule 单 Retrofit（L212，主站）+ 镜像各重复 new（L228/239/250）。
+- **返回型**：`SearchPageResult`（SearchViewModel private，L1322）、`DlsiteSearchResult{items,canGoNext}`、`PurchasedSearchPage{items,page,pageSize,totalCount,canGoNext}`、`WorkDetailsResponse`（AsmrOneApi.kt L44）。
+- **安全网**：既有 `AlbumDetailAsmrOneBackupEndpointTest` / `AlbumDetailAsmrOneLanguageTargetTest` 覆盖端点选择语义；全量基线 **852 tests / 0 failures / 4 skipped**。
+- 子代理（Explore）ID `28d92dee-c574-4bfe-af75-2c3c38272e9f` 可 resume 复用。
+
+## 下次开工顺序
+
+S8a（先核对 BackupEndpoint/LanguageTarget 测试覆盖面，缺镜像选择锁定测试则补）→ S8b → S8c → S8d → 阶段2 门禁（全量测试 + 子代理审查 `git diff refactor/phase-1..HEAD` + 报告落盘 docs/iteration/phase-2-review.md + tag `refactor/phase-2`）→ S9。
