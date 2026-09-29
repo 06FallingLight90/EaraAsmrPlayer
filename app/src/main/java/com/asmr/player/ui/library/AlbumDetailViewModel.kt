@@ -2797,7 +2797,6 @@ class AlbumDetailViewModel @Inject constructor(
 
     private fun flattenOnlineSaveLeaves(tree: List<AsmrOneTrackNodeResponse>): List<OnlineSaveLeaf> {
         val out = mutableListOf<OnlineSaveLeaf>()
-        fun sanitize(name: String): String = name.trim().ifEmpty { "item" }.replace(Regex("""[\\/:*?"<>|]"""), "_")
         val subtitleExts = setOf("lrc", "srt", "vtt")
 
         data class LeafFile(
@@ -2820,7 +2819,7 @@ class AlbumDetailViewModel @Inject constructor(
                 val children = node.children.orEmpty()
                 val rawTitle = node.title?.trim().orEmpty().ifBlank { "item" }
                 val url = node.mediaDownloadUrl ?: node.streamUrl
-                val safeTitle = sanitize(rawTitle)
+                val safeTitle = sanitizeFolderName(rawTitle)
                 val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
                 if (children.isNotEmpty() || url.isNullOrBlank()) {
                     if (children.isNotEmpty()) collectSubtitleCandidates(children, path)
@@ -2847,7 +2846,7 @@ class AlbumDetailViewModel @Inject constructor(
                 val rawTitle = node.title?.trim().orEmpty().ifBlank { "item" }
                 val url = node.mediaDownloadUrl ?: node.streamUrl
                 if (children.isNotEmpty() || url.isNullOrBlank()) return@mapNotNull null
-                val safeTitle = sanitize(rawTitle)
+                val safeTitle = sanitizeFolderName(rawTitle)
                 val fileType = treeFileTypeForNode(rawTitle, url, node.type)
                 if (!isLibraryResourceSavableTreeFileType(fileType)) return@mapNotNull null
                 LeafFile(
@@ -2897,7 +2896,7 @@ class AlbumDetailViewModel @Inject constructor(
                 val children = node.children.orEmpty()
                 if (children.isEmpty()) return@forEach
                 val rawTitle = node.title?.trim().orEmpty().ifBlank { "item" }
-                val safeTitle = sanitize(rawTitle)
+                val safeTitle = sanitizeFolderName(rawTitle)
                 val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
                 walk(children, path)
             }

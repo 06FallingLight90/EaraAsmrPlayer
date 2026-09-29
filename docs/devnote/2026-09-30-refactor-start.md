@@ -38,3 +38,32 @@
 ## 待验证
 
 - S1 的「CI 全绿」完成标准需 push 分支后由 GitHub Actions 验证（push 时机由用户决定）
+
+---
+
+# 2026-09-30 阶段2：S6 sanitize 收敛踩坑
+
+## 踩坑记录（现象 → 根因 → 解法）
+
+### 1. Edit 工具容错匹配：old_string 与文件不完全一致也能替换成功
+
+- **现象**：删除本地 `sanitize` 定义时，old_string 里的正则漏写了字符类的 `]`（`[\\/:*?"<>|"""` vs 实际 `[\\/:*?"<>|]"""`），Edit 仍报「替换成功」。
+- **根因**：Edit 工具做了容错/模糊匹配，不严格逐字节比对。
+- **解法**：对源码的每次批量替换后，必须用 `git diff` 核对实际改动是否与意图一致；不放心处用 Read 复核。本次 diff 核实改动全部正确。
+
+### 2. PowerShell `Set-Content -Encoding UTF8` 给文件加 BOM
+
+- **现象**：重写 baseline-prof.txt 后 `git diff` 第一行出现 `﻿`（U+FEFF）前缀。
+- **根因**：Windows PowerShell 5.1 的 `-Encoding UTF8` 写入带 BOM 的 UTF-8；Baseline Profile 文本由 profileinstaller 解析，BOM 有污染风险。
+- **解法**：`[System.IO.File]::WriteAllText($path, $text, [System.Text.UTF8Encoding]::new($false))` 无 BOM 重写。今后改仓库内文本文件一律用此法（或 Edit 工具），不用 `Set-Content`。
+
+## 新证据（报告未记录，留待后续任务）
+
+- baseline-prof.txt 存在先前遗留的死条目 `PL...AlbumDetailSharedSectionsKt;->access$sanitizeRj(...)`（现码中只有 `sanitizeWorkNo`，无 `sanitizeRj`）。非本次任务引入，按范围纪律未顺手删；可在阶段3 S15 CI 守护任务里加 profile 死条目核对。
+
+## S6 落地快照
+
+- 唯一定义：`AlbumDetailViewModelSupport.kt` 顶层 `internal fun sanitizeFolderName()`；测试 `AlbumDetailViewModelSupportTest.kt` 内 `SanitizeFolderNameTest`（5 用例，含钉执行顺序的判别用例）。
+- 迁移：10 处重复定义删除，20 处用点改为共享函数（DirectorySupport×12、Dialogs×4、ViewModel×3、ViewModelSupport×1）。
+- profile 同步：baseline-prof.txt 删 3 条 `$sanitize` 本地函数死条目，补 1 条 `sanitizeFolderName` HSPL。
+- 不同域的相似函数**刻意不动**：`Formatting.sanitizeFilename`（去字符+trim）、`sanitizeDlsiteTrialFileBaseName`（先截扩展名、fallback 参数化）、`AppErrorMessageFormatter.sanitize`、`sanitizeWorkNo`、`sanitizeTitle`×2。

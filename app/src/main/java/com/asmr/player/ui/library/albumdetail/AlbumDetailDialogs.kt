@@ -282,13 +282,11 @@ internal data class OnlineSaveLeafUi(
 
 internal fun flattenOnlineSaveLeaves(tree: List<AsmrOneTrackNodeResponse>): List<OnlineSaveLeafUi> {
     val out = mutableListOf<OnlineSaveLeafUi>()
-    fun sanitize(name: String): String = name.trim().ifEmpty { "item" }.replace(Regex("""[\\/:*?"<>|]"""), "_")
-
     fun walk(nodes: List<AsmrOneTrackNodeResponse>, parentPath: String) {
         nodes.forEach { node ->
             val children = node.children.orEmpty()
             val titleRaw = node.title?.trim().orEmpty().ifBlank { "item" }
-            val safeTitle = sanitize(titleRaw)
+            val safeTitle = sanitizeFolderName(titleRaw)
             val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
             val url = node.mediaDownloadUrl ?: node.streamUrl
             if (children.isEmpty()) {
@@ -315,11 +313,10 @@ internal fun flattenOnlineSaveLeaves(tree: List<AsmrOneTrackNodeResponse>): List
 
 private fun buildSaveLeafPathIndex(tree: List<AsmrOneTrackNodeResponse>): Map<String, List<String>> {
     val folderToLeaves = linkedMapOf<String, MutableList<String>>()
-    fun sanitize(name: String): String = name.trim().ifEmpty { "item" }.replace(Regex("""[\\/:*?"<>|]"""), "_")
     fun walk(nodes: List<AsmrOneTrackNodeResponse>, parentPath: String, folderStack: List<String>) {
         nodes.forEach { node ->
             val titleRaw = node.title?.trim().orEmpty().ifBlank { "item" }
-            val safeTitle = sanitize(titleRaw)
+            val safeTitle = sanitizeFolderName(titleRaw)
             val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
             val children = node.children.orEmpty()
             val url = node.mediaDownloadUrl ?: node.streamUrl
@@ -348,8 +345,6 @@ private fun flattenAsmrOneSaveTreeForUi(
     expanded: Set<String>
 ): AsmrTreeUiResult {
     val out = mutableListOf<AsmrTreeUiEntry>()
-    fun sanitize(name: String): String = name.trim().ifEmpty { "item" }.replace(Regex("""[\\/:*?"<>|]"""), "_")
-
     fun nodeHasMedia(node: AsmrOneTrackNodeResponse): Boolean {
         val children = node.children.orEmpty()
         val titleRaw = node.title?.trim().orEmpty().ifBlank { "item" }
@@ -366,7 +361,7 @@ private fun flattenAsmrOneSaveTreeForUi(
     fun walk(nodes: List<AsmrOneTrackNodeResponse>, parentPath: String, depth: Int) {
         nodes.forEach { node ->
             val titleRaw = node.title?.trim().orEmpty().ifBlank { "item" }
-            val safeTitle = sanitize(titleRaw)
+            val safeTitle = sanitizeFolderName(titleRaw)
             val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
             val children = node.children.orEmpty()
             val url = node.mediaDownloadUrl ?: node.streamUrl
@@ -774,11 +769,10 @@ private fun AsmrTreeFileCheckboxRow(
 
 private fun buildLeafPathIndex(tree: List<AsmrOneTrackNodeResponse>): Map<String, List<String>> {
     val folderToLeaves = linkedMapOf<String, MutableList<String>>()
-    fun sanitize(name: String): String = name.trim().ifEmpty { "item" }.replace(Regex("""[\\/:*?"<>|]"""), "_")
     fun walk(nodes: List<AsmrOneTrackNodeResponse>, parentPath: String, folderStack: List<String>) {
         nodes.forEach { node ->
             val title = node.title?.trim().orEmpty().ifBlank { "item" }
-            val safeTitle = sanitize(title)
+            val safeTitle = sanitizeFolderName(title)
             val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
             val children = node.children.orEmpty()
             val url = node.mediaDownloadUrl ?: node.streamUrl

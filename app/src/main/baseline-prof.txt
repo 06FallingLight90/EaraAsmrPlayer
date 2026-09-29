@@ -28000,7 +28000,6 @@ HSPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt$DirectoryBrowserPan
 HSPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt$DirectoryBrowserPanel$4$1$2$invoke$$inlined$items$3;->invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
 HSPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt$DirectoryBrowserPanel$4$1$2;->invoke(Landroidx/compose/foundation/lazy/LazyListScope;)V
 HSPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt$DirectoryBrowserPanel$4;->invoke(Landroidx/compose/runtime/Composer;I)V
-HSPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->buildRemoteTreeIndex$sanitize(Ljava/lang/String;)Ljava/lang/String;
 HSPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->buildRemoteTreeIndex$walk(Ljava/util/List;Lcom/asmr/player/domain/model/Album;Ljava/util/List;Lcom/asmr/player/ui/library/RemoteTreeNode;Ljava/lang/String;)V
 HSPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->CompactBreadcrumbNode(Ljava/lang/String;ZLandroidx/compose/ui/graphics/vector/ImageVector;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)V
 HSPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->CompactDirectoryBreadcrumbContent(Ljava/lang/String;Ljava/util/List;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;I)V
@@ -38115,6 +38114,7 @@ Lcom/asmr/player/ui/library/AlbumDetailViewModel_HiltModules_KeyModule_ProvideFa
 Lcom/asmr/player/ui/library/AlbumDetailViewModelSupportKt$mergeDlsiteEditions$3;
 Lcom/asmr/player/ui/library/AlbumDetailViewModelSupportKt$mergeDlsiteEditions$4;
 Lcom/asmr/player/ui/library/AlbumDetailViewModelSupportKt;
+HSPLcom/asmr/player/ui/library/AlbumDetailViewModelSupportKt;->sanitizeFolderName(Ljava/lang/String;)Ljava/lang/String;
 Lcom/asmr/player/ui/library/AlbumItemKt$AlbumGridItem$1$1$1$1$1;
 Lcom/asmr/player/ui/library/AlbumItemKt$AlbumGridItem$1$2$1$1;
 Lcom/asmr/player/ui/library/AlbumItemKt$AlbumGridItem$2;
@@ -54130,7 +54130,6 @@ SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt$flattenAsmrOneTracks
 SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt$flattenAsmrOneTracksForUi$LeafFile;->getUrl()Ljava/lang/String;
 SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt$WhenMappings;-><clinit>()V
 SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;-><clinit>()V
-SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->access$buildRemoteTreeIndex$sanitize(Ljava/lang/String;)Ljava/lang/String;
 SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->access$DirectoryBrowserPanel$lambda$201(Landroidx/compose/runtime/MutableState;)Z
 SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->access$DirectoryBrowserPanel$lambda$205(Landroidx/compose/runtime/MutableState;Ljava/lang/String;)V
 SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->access$directoryFolderPosition(II)Lcom/asmr/player/ui/library/DirectoryFolderPosition;
@@ -54147,7 +54146,6 @@ SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->directoryFolderPos
 SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->directoryFolderShape(Lcom/asmr/player/ui/library/DirectoryFolderPosition;)Landroidx/compose/foundation/shape/RoundedCornerShape;
 SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->findRemoteTreeNode(Lcom/asmr/player/ui/library/RemoteTreeNode;Ljava/lang/String;)Lcom/asmr/player/ui/library/RemoteTreeNode;
 SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->flattenAsmrOneTracksForUi$collectSubtitleCandidates$91(Ljava/util/Set;Ljava/util/List;Ljava/util/List;Ljava/lang/String;)V
-SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->flattenAsmrOneTracksForUi$sanitize$88(Ljava/lang/String;)Ljava/lang/String;
 SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->flattenAsmrOneTracksForUi$walk$102(Ljava/util/Set;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/lang/String;)V
 SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->flattenAsmrOneTracksForUi(Ljava/util/List;)Ljava/util/List;
 SPLcom/asmr/player/ui/library/AlbumDetailDirectorySupportKt;->treeFileTypeForExtension(Ljava/lang/String;)Lcom/asmr/player/ui/library/TreeFileType;

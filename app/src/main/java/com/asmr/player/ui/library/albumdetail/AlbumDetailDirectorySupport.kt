@@ -1051,10 +1051,6 @@ internal fun buildRemoteTreeIndex(
     val root = RemoteTreeNode(name = "", path = "")
     val subtitleExts = setOf("lrc", "srt", "vtt")
 
-    fun sanitize(name: String): String {
-        return name.trim().ifEmpty { "item" }.replace(Regex("""[\\/:*?"<>|]"""), "_")
-    }
-
     data class LeafFile(
         val rawTitle: String,
         val safeTitle: String,
@@ -1068,7 +1064,7 @@ internal fun buildRemoteTreeIndex(
     ) {
         val ext: String = rawTitle.substringAfterLast('.', "").lowercase()
         val baseName: String = rawTitle.substringBeforeLast('.')
-        val displayTitle: String = sanitize(baseName).ifBlank { safeTitle.substringBeforeLast('.') }
+        val displayTitle: String = sanitizeFolderName(baseName).ifBlank { safeTitle.substringBeforeLast('.') }
     }
 
     val subtitleCandidates = mutableListOf<Pair<com.asmr.player.util.SubtitleMatchCandidate, LeafFile>>()
@@ -1078,7 +1074,7 @@ internal fun buildRemoteTreeIndex(
             val children = node.children.orEmpty()
             val url = node.mediaDownloadUrl ?: node.streamUrl
             val rawTitle = node.title?.trim().orEmpty().ifBlank { "item" }
-            val safeTitle = sanitize(rawTitle)
+            val safeTitle = sanitizeFolderName(rawTitle)
             val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
             if (children.isEmpty()) {
                 if (!url.isNullOrBlank()) {
@@ -1114,7 +1110,7 @@ internal fun buildRemoteTreeIndex(
             val url = node.mediaDownloadUrl ?: node.streamUrl
             if (!url.isNullOrBlank() && children.isEmpty()) {
                 val rawTitle = node.title?.trim().orEmpty().ifBlank { "item" }
-                val safeTitle = sanitize(rawTitle)
+                val safeTitle = sanitizeFolderName(rawTitle)
                 LeafFile(
                     rawTitle = rawTitle,
                     safeTitle = safeTitle,
@@ -1186,7 +1182,7 @@ internal fun buildRemoteTreeIndex(
             val children = node.children.orEmpty()
             if (children.isEmpty()) return@forEach
             val rawTitle = node.title?.trim().orEmpty().ifBlank { "item" }
-            val safeTitle = sanitize(rawTitle)
+            val safeTitle = sanitizeFolderName(rawTitle)
             val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
             val childNode = parentNode.children.getOrPut(safeTitle) {
                 RemoteTreeNode(name = safeTitle, path = path)
@@ -1366,10 +1362,6 @@ internal suspend fun loadOrBuildLocalTreeIndex(
         if (relativePath.isBlank() || url.isBlank()) null else relativePath to url
     }.toSet()
 
-    fun sanitizeSeg(name: String): String {
-        return name.trim().ifEmpty { "item" }.replace(Regex("""[\\/:*?"<>|]"""), "_")
-    }
-
     fun guessExtFromUrl(url: String): String {
         val u = url.substringBefore('?').trim()
         val ext = u.substringAfterLast('.', "").lowercase()
@@ -1396,9 +1388,9 @@ internal suspend fun loadOrBuildLocalTreeIndex(
                 .split('/')
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
-                .joinToString("/") { sanitizeSeg(it) }
+                .joinToString("/") { sanitizeFolderName(it) }
 
-            val baseName = sanitizeSeg(t.title.ifBlank { "track" })
+            val baseName = sanitizeFolderName(t.title.ifBlank { "track" })
             val fileName = if (ext.isNotBlank() && !baseName.endsWith(".$ext", ignoreCase = true)) "$baseName.$ext" else baseName
             val rel = if (groupPath.isBlank()) fileName else "$groupPath/$fileName"
             LocalTreeLeafCacheEntry(relativePath = rel, absolutePath = url, fileType = type)
@@ -1822,7 +1814,6 @@ fun toTrack(): Track {
 
 internal fun flattenAsmrOneTracksForUi(tree: List<AsmrOneTrackNodeResponse>): List<AsmrOneLeafUi> {
     val out = mutableListOf<AsmrOneLeafUi>()
-    fun sanitize(name: String): String = name.trim().ifEmpty { "item" }.replace(Regex("""[\\/:*?"<>|]"""), "_")
 
     val audioExts = setOf("mp3", "flac", "wav", "m4a", "ogg", "aac", "opus")
     val subtitleExts = setOf("lrc", "srt", "vtt")
@@ -1844,7 +1835,7 @@ internal fun flattenAsmrOneTracksForUi(tree: List<AsmrOneTrackNodeResponse>): Li
             val children = node.children.orEmpty()
             val url = node.mediaDownloadUrl ?: node.streamUrl
             val rawTitle = node.title?.trim().orEmpty().ifBlank { "item" }
-            val safeTitle = sanitize(rawTitle)
+            val safeTitle = sanitizeFolderName(rawTitle)
             val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
             if (children.isEmpty()) {
                 if (url.isNullOrBlank()) return@forEach
@@ -1865,14 +1856,14 @@ internal fun flattenAsmrOneTracksForUi(tree: List<AsmrOneTrackNodeResponse>): Li
             val url = node.mediaDownloadUrl ?: node.streamUrl
             if (!url.isNullOrBlank() && children.isEmpty()) {
                 val rawTitle = node.title?.trim().orEmpty().ifBlank { "item" }
-                val safeTitle = sanitize(rawTitle)
+                val safeTitle = sanitizeFolderName(rawTitle)
                 LeafFile(rawTitle = rawTitle, safeTitle = safeTitle, url = url, duration = node.duration)
             } else null
         }
 
         leaves.filter { it.ext.isBlank() || audioExts.contains(it.ext) }.forEach { leaf ->
             val path = if (parentPath.isBlank()) leaf.safeTitle else "$parentPath/${leaf.safeTitle}"
-            val displayTitle = sanitize(leaf.baseName).ifBlank { leaf.safeTitle }
+            val displayTitle = sanitizeFolderName(leaf.baseName).ifBlank { leaf.safeTitle }
             val matched = SubtitleMatchSupport.matchBest(path.substringBeforeLast('.'), subtitleCandidates.map { it.first })
             val subs = if (matched != null) {
                 subtitleCandidates.firstOrNull { it.first.sourceRef == matched.sourceRef }?.second?.let { subtitleLeaf ->
@@ -1896,7 +1887,7 @@ internal fun flattenAsmrOneTracksForUi(tree: List<AsmrOneTrackNodeResponse>): Li
             val children = node.children.orEmpty()
             if (children.isEmpty()) return@forEach
             val title = node.title?.trim().orEmpty().ifBlank { "item" }
-            val safeTitle = sanitize(title)
+            val safeTitle = sanitizeFolderName(title)
             val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
             walk(children, path)
         }
@@ -1912,7 +1903,6 @@ internal fun flattenAsmrOneTreeForUi(
     expanded: Set<String>
 ): AsmrTreeUiResult {
     val out = mutableListOf<AsmrTreeUiEntry>()
-    fun sanitize(name: String): String = name.trim().ifEmpty { "item" }.replace(Regex("""[\\/:*?"<>|]"""), "_")
 
     data class FolderStats(
         var audioCount: Int = 0,
@@ -1990,7 +1980,7 @@ internal fun flattenAsmrOneTreeForUi(
         fun walkAll(nodes: List<AsmrOneTrackNodeResponse>, parentPath: String) {
             nodes.forEach { node ->
                 val title = node.title?.trim().orEmpty().ifBlank { "item" }
-                val safeTitle = sanitize(title)
+                val safeTitle = sanitizeFolderName(title)
                 val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
                 val children = node.children.orEmpty()
                 val url = node.mediaDownloadUrl ?: node.streamUrl
@@ -2010,7 +2000,7 @@ internal fun flattenAsmrOneTreeForUi(
     fun walk(nodes: List<AsmrOneTrackNodeResponse>, parentPath: String, depth: Int) {
         nodes.forEach { node ->
             val title = node.title?.trim().orEmpty().ifBlank { "item" }
-            val safeTitle = sanitize(title)
+            val safeTitle = sanitizeFolderName(title)
             val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
             val children = node.children.orEmpty()
             val url = node.mediaDownloadUrl ?: node.streamUrl
