@@ -7,7 +7,9 @@
 | 文档 | 内容 | 何时查阅 |
 |---|---|---|
 | [2026-09-29-env-setup.md](2026-09-29-env-setup.md) | 首次环境搭建：新增文件清单、构建链路验证、踩坑与解法、常用命令 | 排查构建 / 安装 / 设备问题时 |
+| [2026-09-30-refactor-start.md](2026-09-30-refactor-start.md) | 重构启动：S0 绿基线（840 tests）与测试基建修复、S1 CI 门禁 | 排查测试 / CI 问题时 |
 | [agent-collab.md](agent-collab.md) | agent 协作约定：入库可移植性原则、构建验证循环、运行环境注意事项 | agent 开始改代码前 |
+| [refactor-collab.md](refactor-collab.md) | 重构工作约定：行为保持、任务循环、范围纪律、新证据处理 | agent 执行重构任务前 |
 
 ## 记录约定
 

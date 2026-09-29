@@ -145,6 +145,11 @@ android {
         unitTests.isIncludeAndroidResources = true
         unitTests.all {
             it.systemProperty("asmr.latency", (project.findProperty("asmr.latency") as? String).orEmpty())
+            // Robolectric 在 ${user.home} 根部创建下载锁并缓存 android-all 到 ${user.home}/.m2；
+            // 重定向到构建目录（gitignored），避免依赖用户主目录可写；目录由测试任务执行前确保存在。
+            val testUserHome = layout.buildDirectory.dir("test-user-home").get().asFile
+            it.doFirst { testUserHome.mkdirs() }
+            it.systemProperty("user.home", testUserHome.absolutePath)
         }
     }
     packaging {
