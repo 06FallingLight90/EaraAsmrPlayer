@@ -577,3 +577,37 @@ private fun albumDetailModel(
         isLoadingDlsitePlay = false
     )
 }
+
+class SanitizeFolderNameTest {
+    @Test
+    fun sanitizeFolderName_keepsLegalCharactersUnchanged() {
+        assertEquals("第一章 早安问候.mp3", sanitizeFolderName("第一章 早安问候.mp3"))
+        assertEquals("filename-with.dots", sanitizeFolderName("filename-with.dots"))
+    }
+
+    @Test
+    fun sanitizeFolderName_replacesEachIllegalPathCharacterWithUnderscore() {
+        assertEquals(
+            "a_b_c_d_e_f_g_h_i_j",
+            sanitizeFolderName("a/b\\c:d*e?f\"g<h>i|j")
+        )
+    }
+
+    @Test
+    fun sanitizeFolderName_trimsOuterWhitespace() {
+        assertEquals("第一章", sanitizeFolderName("  第一章  "))
+    }
+
+    @Test
+    fun sanitizeFolderName_fallsBackToItemWhenBlank() {
+        assertEquals("item", sanitizeFolderName(""))
+        assertEquals("item", sanitizeFolderName("   "))
+    }
+
+    @Test
+    fun sanitizeFolderName_trimsBeforeFallbackAndReplacesAfterwards() {
+        // 仅含非法字符的输入 trim 后非空：先替换为下划线，不触发 "item" 回退
+        assertEquals("_", sanitizeFolderName(" / "))
+        assertEquals("__", sanitizeFolderName(" ?| "))
+    }
+}

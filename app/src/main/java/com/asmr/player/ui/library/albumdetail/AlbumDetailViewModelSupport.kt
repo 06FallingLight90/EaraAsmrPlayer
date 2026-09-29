@@ -837,3 +837,10 @@ internal fun flattenAsmrOneLeafDownloads(tree: List<AsmrOneTrackNodeResponse>): 
     walk(tree, "")
     return out
 }
+
+/**
+ * 将标题规整为可安全用作下载/保存树路径段的名字：
+ * 去首尾空白 → 空则回退 "item" → 非法路径字符（\ / : * ? " < > |）替换为 "_"。
+ */
+internal fun sanitizeFolderName(name: String): String =
+    name.trim().ifEmpty { "item" }.replace(Regex("""[\\/:*?"<>|]"""), "_")
