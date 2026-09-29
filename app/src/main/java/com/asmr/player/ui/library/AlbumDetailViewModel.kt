@@ -1179,23 +1179,6 @@ class AlbumDetailViewModel @Inject constructor(
             .enqueueUniqueWork("album_cover_thumb_$albumId", ExistingWorkPolicy.REPLACE, request)
     }
 
-    private fun buildTagsToken(tagsCsv: String): String {
-        return tagsCsv.split(",")
-            .map { TagNormalizer.normalize(it) }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .joinToString(" ")
-    }
-
-    private fun parseAlbumTags(tagsCsv: String): List<Pair<String, String>> {
-        return tagsCsv.split(",")
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .map { it to TagNormalizer.normalize(it) }
-            .filter { it.second.isNotBlank() }
-            .distinctBy { it.second }
-    }
-
     private suspend fun upsertAlbumFtsIndex(albumId: Long, entity: AlbumEntity) {
         val userTagsCsv = database.tagDao().getAlbumTagsCsvOnce(albumId, TagSource.USER).orEmpty()
         val combinedTagsCsv = buildString {
@@ -2617,17 +2600,6 @@ class AlbumDetailViewModel @Inject constructor(
         val insertedCount: Int,
         val resourceSavedCount: Int
     )
-
-    private fun isLikelyPlaceholderCover(url: String): Boolean {
-        val s = url.trim().lowercase()
-        if (!s.startsWith("http")) return true
-        return s.contains("noimage") ||
-            s.contains("no_image") ||
-            s.contains("no-image") ||
-            s.contains("placeholder") ||
-            s.endsWith("/0.jpg") ||
-            s.endsWith("/0.png")
-    }
 
     private suspend fun ensureAlbumCoverSaved(
         albumId: Long,
