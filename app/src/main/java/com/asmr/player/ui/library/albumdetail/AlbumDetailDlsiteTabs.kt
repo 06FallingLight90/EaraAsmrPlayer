@@ -1277,7 +1277,7 @@ internal fun AlbumDlsiteInfoBreadcrumbTabV2(
                             if (browserValue == null) {
                                 DlsiteDirectoryLoadingPanel()
                             } else {
-                                DirectoryBrowserPanelV4(
+                                DirectoryBrowserPanel(
                                     panelKey = treeStateKey,
                                     currentPath = currentPath,
                                     breadcrumbs = browserValue.breadcrumbs,
@@ -1799,7 +1799,7 @@ internal fun AlbumDlsitePlayBreadcrumbTabV2(
                                 EaraLogoLoadingIndicator(tint = AsmrTheme.colorScheme.primary)
                             }
                         } else {
-                            DirectoryBrowserPanelV4(
+                            DirectoryBrowserPanel(
                                 panelKey = treeStateKey,
                                 currentPath = currentPath,
                                 breadcrumbs = browserValue.breadcrumbs,

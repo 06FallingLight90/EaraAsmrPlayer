@@ -2201,7 +2201,7 @@ internal fun DirectoryActionGroupButton(
 }
 
 @Composable
-internal fun CompactDirectoryBreadcrumbContentV3(
+internal fun CompactDirectoryBreadcrumbContent(
     currentPath: String,
     breadcrumbs: List<DirectoryBreadcrumbSegment>,
     onNavigate: (String) -> Unit,
@@ -2257,7 +2257,7 @@ internal fun CompactDirectoryBreadcrumbContentV3(
 }
 
 @Composable
-internal fun DirectoryFolderRowV3(
+internal fun DirectoryFolderRow(
     title: String,
     onClick: () -> Unit,
     onDelete: (() -> Unit)? = null,
@@ -2346,7 +2346,7 @@ internal fun DirectoryFolderRowV3(
 }
 
 @Composable
-internal fun DirectoryBatchBarEmbeddedV5(
+internal fun DirectoryBatchBarEmbedded(
     targets: List<PlaylistAddTarget>,
     summaryText: String,
     hintText: String,
@@ -2441,7 +2441,7 @@ internal fun DirectoryBatchBarEmbeddedV5(
 }
 
 @Composable
-internal fun DirectoryBrowserPanelV4(
+internal fun DirectoryBrowserPanel(
     panelKey: String,
     currentPath: String,
     breadcrumbs: List<DirectoryBreadcrumbSegment>,
@@ -2573,7 +2573,7 @@ internal fun DirectoryBrowserPanelV4(
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            CompactDirectoryBreadcrumbContentV3(
+            CompactDirectoryBreadcrumbContent(
                 currentPath = currentPath,
                 breadcrumbs = breadcrumbs,
                 onNavigate = onNavigate,
@@ -2593,7 +2593,7 @@ internal fun DirectoryBrowserPanelV4(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                DirectoryBatchBarEmbeddedV5(
+                DirectoryBatchBarEmbedded(
                     targets = activeTargets,
                     summaryText = batchSummaryText,
                     hintText = batchHintText,
@@ -2699,7 +2699,7 @@ internal fun DirectoryBrowserPanelV4(
                             contentType = { _, _ -> "folder" }
                         ) { index, folder ->
                             Column {
-                                DirectoryFolderRowV3(
+                                DirectoryFolderRow(
                                     title = folder.title,
                                     onClick = { onNavigate(folder.path) },
                                     onDelete = onDeleteFolder?.let { deleteFolder ->
