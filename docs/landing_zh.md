@@ -81,7 +81,7 @@ Eara 是一款面向 ASMR 内容的 Android 播放器：既有顺滑的本地媒
 
 ## 下载体验
 
-- 从 **GitHub Releases** 下载（tag `v*`，最新：`v0.2.2`）
+- 从 **GitHub Releases** 下载（tag `v*`，最新：`v1.2.3`）
 - 或在本地自行构建 Debug：
 
 ```bash

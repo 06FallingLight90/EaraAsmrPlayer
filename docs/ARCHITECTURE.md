@@ -28,7 +28,7 @@
            ▼                                   ▼
 ┌────── playback ──────┐              ┌─────── data ────────┐
 │ PlayerConnection     │              │ local/（db、datastore）│
-│ 32 个文件：音效链、  │              │ remote/（api、crawler、│
+│ 31 个文件：音效链、  │              │ remote/（api、crawler、│
 │ 频谱、切片循环、缓存 │              │ scraper、dlsite、auth、 │
 └──────────┬───────────┘              │ download、repository、  │
            │                          │ settings、lyrics）      │
@@ -39,7 +39,7 @@
 └──────────────────────┘
 
 domain：Album / Track / Slice / SearchSource 纯模型（仅 Track 依赖 util）
-di：CacheModule · DatabaseModule · networkmodule（全部 Hilt 绑定集中于此）
+di：CacheModule · DatabaseModule · NetworkModule（全部 Hilt 绑定集中于此）
 feature 服务包：subtitle · translation · cache · work · hotlistening · listentogether · benchmark · performance
 ```
 
@@ -74,7 +74,7 @@ feature 服务包：subtitle · translation · cache · work · hotlistening · 
 一条主线（各环节文件均已核实）：
 
 ```
-UI（ui/player/playerviewmodel.kt 等）
+UI（ui/player/PlayerViewModel.kt 等）
   → PlayerConnection（playback/PlayerConnection.kt，@Singleton，约 959 行）
       · 构建 SessionToken(context, ComponentName(PlaybackService)) → MediaController
       · 队列管理、倍速/音量、切片循环（SlicePlaybackController / SliceLoopEngine）
