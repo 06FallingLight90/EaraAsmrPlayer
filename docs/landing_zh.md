@@ -22,41 +22,41 @@ Eara 是一款面向 ASMR 内容的 Android 播放器：既有顺滑的本地媒
 
 | 专辑卡片 | 专辑列表 |
 |:---:|:---:|
-| <img src="../example_screen/本地库_专辑卡片_示例.png" width="50%"/> | <img src="../example_screen/本地库_专辑列表_示例.png" width="50%"/> |
+| <img src="../example_screen/本地库-平板适配.png" width="50%"/> | 专辑列表 |
 
 | 音轨列表 | 暗色主题 |
 |:---:|:---:|
-| <img src="../example_screen/本地库_音轨列表_示例.png" width="50%"/> | <img src="../example_screen/本地库_暗色主题_示例.png" width="50%"/> |
+| 音轨列表 | 暗色主题 |
 
 ### 搜索与同步
 
 | 在线搜索卡片 | 在线搜索列表 |
 |:---:|:---:|
-| <img src="../example_screen/在线搜索_专辑卡片_示例.png" width="50%"/> | <img src="../example_screen/在线搜索_专辑列表_示例.png" width="50%"/> |
+| <img src="../example_screen/作品列表.png" width="50%"/> | 在线搜索列表 |
 
 | 搜索暗色主题 | 本地 + 云同步 |
 |:---:|:---:|
-| <img src="../example_screen/在线搜索_暗色主题_示例.png" width="50%"/> | <img src="../example_screen/本地+云同步_示例.png" width="50%"/> |
+| 在线搜索暗色主题 | 本地 + 云同步 |
 
 ### 详情与收藏
 
 | 本地专辑详情 | 在线专辑详情 |
 |:---:|:---:|
-| <img src="../example_screen/专辑详情_本地_示例.png" width="50%"/> | <img src="../example_screen/专辑详情_在线_示例.png" width="50%"/> |
+| 本地专辑详情 | <img src="../example_screen/专辑详情.png" width="50%"/> |
 
 | 我的收藏 | 下载管理 |
 |:---:|:---:|
-| <img src="../example_screen/我的收藏_示例.png" width="50%"/> | <img src="../example_screen/下载管理_示例.png" width="50%"/> |
+| 我的收藏 | 下载管理 |
 
 ### 播放体验
 
 | 封面动态主色 | 透明背景播放页 |
 |:---:|:---:|
-| <img src="../example_screen/封面动态主色_示例.png" width="50%"/> | <img src="../example_screen/播放页面_背景透明-0_示例.png" width="50%"/> |
+| <img src="../example_screen/播放主页-手机横屏适配.png" width="50%"/> | <img src="../example_screen/播放主页.png" width="50%"/> |
 
 | 歌词页 | 沉浸背景播放页 |
 |:---:|:---:|
-| <img src="../example_screen/歌词页面_背景透明-45_示例.png" width="50%"/> | <img src="../example_screen/播放页面_背景透明-75_示例.png" width="50%"/> |
+| 歌词页 | 沉浸背景播放页 |
 
 ## 亮点功能
 

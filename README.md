@@ -41,6 +41,45 @@
 
 ---
 
+## Getting Started
+
+### 环境要求
+
+- Android Studio（稳定版）
+- JDK 17
+- Android SDK（项目配置：`compileSdk = 36` / `targetSdk = 34` / `minSdk = 24`）
+
+### 构建与测试
+
+```bash
+./gradlew :app:assembleDebug        # 构建 Debug APK
+./gradlew :app:testDebugUnitTest    # 单元测试（当前基线约 840 个用例）
+```
+
+Windows 本机如需重定向 Gradle 缓存，可使用仓库自带的 `gradlew-local.bat` 辅助脚本。架构说明见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+
+### 签名说明
+
+Release 签名按以下优先级读取（见 `app/build.gradle.kts`）：
+
+1. 环境变量 `EARA_RELEASE_STORE_FILE` / `EARA_RELEASE_STORE_PASSWORD` / `EARA_RELEASE_KEY_ALIAS` / `EARA_RELEASE_KEY_PASSWORD`
+2. 同名 Gradle property
+3. 仓库根目录 `keystore.properties`（已被 gitignore，勿提交）
+
+四项齐全时使用指定 keystore 签名；**任一缺失时 Release 构建自动回退 debug 签名**，仅供本地验证，请勿用于发布。
+
+CI（`.github/workflows/release.yml`）由 `v*` tag 触发：先运行 `:app:testReleaseUnitTest`，再从 secrets 读取 `EARA_RELEASE_JKS_BASE64`（keystore 文件的 Base64 编码）与上述密码/别名项完成 Release 构建与发布；APK 体积超过 20MB 或包含 sherpa-onnx 运行时都会使流水线失败。
+
+### 字幕模型按需下载
+
+应用**不打包** sherpa-onnx 运行时与语音识别模型（Release 校验会拒绝包含 `libsherpa-onnx` / `libonnxruntime` 的 APK）。首次使用设备端字幕生成 / AI 翻译时，应用会按需下载；下载源可通过构建配置覆盖（见 `app/build.gradle.kts`）：
+
+- `SUBTITLE_MODEL_GITHUB_URL` / `SUBTITLE_MODEL_HUGGING_FACE_URL`（Parakeet 日语模型）
+- `SUBTITLE_SENSEVOICE_GITHUB_URL` / `SUBTITLE_SENSEVOICE_HUGGING_FACE_URL`（SenseVoice 多语模型）
+- `SUBTITLE_RUNTIME_URL`（sherpa-onnx Android 运行时）
+
+---
+
 ## Sample Screens
 
 ### 手机界面
