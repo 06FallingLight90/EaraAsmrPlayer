@@ -83,29 +83,20 @@
 
 ---
 
-# 2026-09-30 S9 断点存档（Backlog，下次续接；第二段工作结束）
+# 2026-09-30 S9 存档（已收尾，全部完成）
 
-> 分支 `refactor/architecture-cleanup`，HEAD = 7920679。**工作区有 S9-3 未提交代码改动**（见下），下次开工先跑全量测试验证后按纪律提交。
+> **S9-3 已在收工前验证并提交**：被打断的全量测试最终完成（854/0/4 绿，12m48s），commit fbb1efd。工作区干净。下次从「阶段2 门禁」开始。
 
 ## S9 已完成（3 提交）
 
 - **S9-1 补日志** ✅ 39b376a：DownloadManager.kt 10 处静默 catch 补 Log.w（TAG=DownloadManager / DownloadLibraryUpsert / FinalizeDownloadTaskWorker 字面量）；DownloadTaskBlockedException 为受控流异常刻意不加。
 - **S9-2 拆文件（纯移动）** ✅ 7920679：DownloadManager.kt 2020→1170 行。`object DownloadQueueCoordinator`（调度/恢复/内存节流/对账）与 `class DownloadWorker` + `FinalizeDownloadTaskWorker` 迁至独立文件，`SessionCookieJar` 随 worker 移动。可见性放宽 file-private→internal：`hasDlsitePlayImageTransform`、`finalizeDlsiteLosslessArchiveIfNeeded`、`finalizeDlsiteLosslessArchiveInStorageIfNeeded`、`upsertDownloadedAlbumToLibrary`。全量 854/0/4 绿。
-- 踩坑：PowerShell 按行范围纯移动时 `hasDlsitePlayImageTransform`（file-private 扩展）与 `SessionCookieJar` 跨文件不可见——用 internal 放宽或连类移动；一次 off-by-one 把类尾 `}` 留在原文件（用边界行打印核实后修复）；Edit 工具「IDE Command timeout」实际多数已落盘，**必须 grep 复核后再决定是否重试**，否则会重复编辑。
-
-## S9-3 统一取消路径：代码已写好、未验证未提交（断点）
-
-**改动集（工作区未提交，3 文件 +33/-20）**：
-- `DownloadQueueCoordinator.kt`：新增 3 个尽力而为取消原语——`suspend fun cancelWorkAndUpdateState(context, workId, state, updatedAt)`（cancelWorkById + updateItemState，两 runCatching 互不影响）、`fun cancelWork(context, workId)`、`fun cancelWorksByTag(context, tag)`。已修：cancelWorkAndUpdateState 必须是 **suspend**（updateItemState 是挂起函数）。
-- `DownloadsViewModel.kt`：7 处散落的 `workManager.cancelWorkById/cancelAllWorkByTag` 收口到协调器（cancelItem/pauseItem/pauseTask/pauseAll→cancelWorkAndUpdateState；cancelTask/cancelAll 的条件状态更新保留在 VM 用 dao；deleteItem/deleteTask→cancelWork/cancelWorksByTag）；`workManager` 字段仅剩 enqueueUniqueWork 用途保留；已删未用 `import java.util.UUID`。
-- `LibraryViewModel.kt` L1740：`WorkManager.getInstance(context).cancelAllWorkByTag(task.taskKey)` → `DownloadQueueCoordinator.cancelWorksByTag(...)`；已补 import（download 包 L51）。
-- 已过编译修复轮：首次全量测试因 suspend/LibraryViewModel import 两处失败，均已修复；**修复后的全量测试被中断，结果未验证**。
+- **S9-3 统一取消路径** ✅ fbb1efd：`DownloadQueueCoordinator` 新增 `cancelWorkAndUpdateState`（suspend）/`cancelWork`/`cancelWorksByTag` 三个尽力而为原语；DownloadsViewModel 7 处散落取消收口（条件状态更新保留在调用点；delete 流程 cancel 不带状态更新，与原一致）；LibraryViewModel 任务级取消同步收口；`workManager` 字段仅保留 enqueue 用途。
+- 踩坑：PowerShell 按行范围纯移动时 file-private 符号（`hasDlsitePlayImageTransform` 扩展、`SessionCookieJar`）跨文件不可见——internal 放宽或连类移动；一次 off-by-one 把类尾 `}` 留在原文件（打印边界行核实后修复）；Edit 工具「IDE Command timeout」实际多数已落盘，**必须 grep 复核后再决定是否重试**；LibraryViewModel 首轮编译失败是漏 import + updateItemState 是挂起函数（协调器方法改 suspend）。
 
 ## 下次开工顺序
 
-1. `.\gradlew-local.bat -g "C:\Users\24131\.gradle" :app:testDebugUnitTest --console=plain`（后台 + 轮询）→ 全量绿（预期 854/0/4）后提交：`refactor: P1-7 统一下载取消路径到 DownloadQueueCoordinator`（附行为保持说明：cancel+update 的 runCatching 语义逐点保留）。
-2. 若红：按 e: 行修复后重跑。注意 S9-3 行为差异点：deleteItem/deleteTask 的 cancel 不带状态更新（与原一致）；LibraryViewModel 原 `runCatching{...cancelAllWorkByTag}` 改为协调器内 runCatching（等价）。
-3. 之后：**阶段2 门禁**（全量测试 + 子代理审查 `git diff refactor/phase-1..HEAD` + 报告落盘 docs/iteration/phase-2-review.md + tag `refactor/phase-2`）→ S10-S16（阶段3）。
+**阶段2 门禁**（S6-S9 全部完成）：全量测试 + 子代理审查 `git diff refactor/phase-1..HEAD` + 报告落盘 docs/iteration/phase-2-review.md + tag `refactor/phase-2` → S10-S16（阶段3）。
 
 ## S8 收尾结论（用户批准）
 
