@@ -88,7 +88,7 @@ internal fun MacrobenchmarkScope.startMainActivity(
 internal fun MacrobenchmarkScope.startAlbumDetailDlTabExample(
     rjCode: String = AlbumDetailDlExampleRj
 ) {
-    startMainActivity(startRoute = "album_detail_online/$rjCode")
+    startMainActivity(startRoute = "album_detail_rj/$rjCode?initialTab=dl")
     waitForAlbumDetailDlLoad()
 }
 
