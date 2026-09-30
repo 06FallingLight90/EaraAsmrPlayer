@@ -1,16 +1,5 @@
-package com.asmr.player.ui.library.albumdetail
+package com.asmr.player.ui.library
 
-import com.asmr.player.ui.library.AlbumDetailCvRevealDelayMs
-import com.asmr.player.ui.library.AlbumDetailHorizontalPadding
-import com.asmr.player.ui.library.AlbumDetailTagsRevealDelayMs
-import com.asmr.player.ui.library.AlbumHeaderActionStateTransitionMillis
-import com.asmr.player.ui.library.AlbumHeaderButtonGroupState
-import com.asmr.player.ui.library.AlbumHeaderCvLightweight
-import com.asmr.player.ui.library.AlbumHeaderEnterTweenSpec
-import com.asmr.player.ui.library.AlbumHeaderExpandTweenSpec
-import com.asmr.player.ui.library.AlbumHeaderTagsLightweight
-import com.asmr.player.ui.library.rememberAlbumMetaCopyAction
-import com.asmr.player.ui.library.shouldAnimateAlbumHeaderMetaReveal
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
@@ -776,3 +765,4 @@ private fun AlbumHeaderLateMetaReveal(
         )
     ) { content() }
 }
+
