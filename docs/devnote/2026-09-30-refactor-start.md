@@ -196,6 +196,21 @@ S10 EaraWindowSize（测试先行 + 三种判断 600-840dp 中间档逐处语义
 - 缓替点兑现：isLandscape/useLargeBottomChrome/isCompactWidth → helper；isPhone 保留
 - **遗留（明确缓办）**：主函数体 ~2440 行 NavHost 路由闭包编排的结构化提取——闭包捕获面大、无实机对照，暂缓。S15 CI 守护若为"存量文件 >1500 禁入"口径，MainContainer 2698 不达标，届时与用户确认口径或加深拆分
 
+## 实机 smoke（2026-09-30 晚，小米14 houji/7f264f85，APK 含 S12 @ 74ddf9b）
+
+安装 `install -r` 成功。走查方式：force-stop 冷启动 + `--es start_route` 直达（start_route 在 onCreate 读取，已运行实例不生效——必须冷启动）。四个路由全部渲染正常、全程 logcat 无 FATAL EXCEPTION：
+
+| 路由 | 结果 |
+|---|---|
+| （默认书库） | ✓ 空库状态 EaraBrandedEmptyState + 搜索栏 + 底部导航 |
+| album_detail_rj/RJ01554925?initialTab=dl | ✓ S11 拆分全链路：路由直达 DL 标签页、AlbumHeader（RJ 码/正在听数网络数据）、下载/保存/源切换动作栏；该 RJ 镜像未收录（数据可得性，非缺陷） |
+| search | ✓ 在线浏览 + 分页控件 + 翻译页面浮钮（截图含成人内容缩略图，验证走 uiautomator dump） |
+| settings | ✓ 六分区（本地库/屏蔽词/外观/播放设置/歌词/翻译配置） |
+| downloads | ✓ 任务管理/下载任务/翻译任务/作品编号精准搜索 空态 |
+
+- **留人工确认**：播放流、真实下载、设置写（本地库为空 + 不宜改动用户真实设置）；目录面板需本地专辑
+- 遗留：锁屏会黑屏——smoke 前需解锁（曾遇 NotificationShade 焦点）
+
 ## 工具坑（新增）
 
 - PowerShell .NET 正则 `(?m)^...$` 在 CRLF 文件上 `$` 不匹配 \r 前位置 → **锚替换静默失效**，用字面 .Replace() 或去掉 $
