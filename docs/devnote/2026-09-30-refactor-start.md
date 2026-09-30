@@ -170,3 +170,38 @@ S8a → S8b → S8c → S8d → 阶段2 门禁（全量测试 + 子代理审查 
 
 **阶段3（S10-S16）**，从 docs/iteration/phase-2-review.md 冷启动：
 S10 EaraWindowSize（测试先行 + 三种判断 600-840dp 中间档逐处语义核对，禁盲替）→ S11 前置（AlbumDetailScreen 待拆纯逻辑提取钉测试）→ S11 巨石拆分 → S12 MainContainer → S13 ui/common 拆包 → S14 Cookie 加密 → S15 P2 清尾 + CI 守护 → S16 收尾
+
+---
+
+# 2026-09-30 阶段3 进度：S10+S11+S12 完成（HEAD 6c513c4，全量 875/0/4）
+
+## S10 EaraWindowSize ✅（2 提交：4fd63d7 seam + edf1955 迁移 18 文件）
+
+- 新文件 ui/common/EaraWindowSize.kt：`WindowWidthSizeClass.isCompactWidth`、`isLandscapeOrientation(orientation)`、`Configuration.isLandscape`（委托 Int 版便于纯 JVM 测试——android.jar stub 构造 Configuration 会炸，常量内联可绕，先例 MainNavigationSupportTest 的 ActivityInfo 常量）
+- 测试 EaraWindowSizeTest 2 用例钉三档语义。15 个 width 档文件 + LyricsPage/LyricsScreen/NowPlayingScreen/sidepanel 双宿主全部迁移
+- 缓替点兑现于各自拆分后：AlbumDetailScreen（f8396e2）、MainContainer（6c513c4 内）
+- **未收敛**：`isPhone = smallestScreenWidthDp < 600`（MainContainer，语义独立族）、sidepanel 宿主里 `smallestScreenWidthDp >= 600`——保留，EaraWindowSize KDoc 已注明
+
+## S11 AlbumDetailScreen 拆分 ✅（4 提交：aeac0fd 前置 + 94319f1 Header + 4c4e0f6 Hero + 49acbec LandscapeArtwork + 9ea232a Support + f8396e2 收尾）
+
+- 4038 → **1468 行**（主 composable 单体）；4 个新文件全部在 albumdetail/ 目录且 **`package com.asmr.player.ui.library`（关键约定：albumdetail/ 目录所有文件包名都是 ui.library！）**
+- 前置安全网：AlbumDetailScreenSupportTest 19 用例（横屏数学 12 + isVideoPreviewUrl 1 + resolveStableAlbumHeroIdentity 5），期望值按语义独立推导；首跑 2 处浮点断言失败（0.49999997 / -0.0）→ delta 断言——红→绿证据
+- 拆分 = 逐块纯移动 + file-private→internal（25 处）+ import 收敛（复制全量 import 块 → 编译器引导删减）。**import trim 脚本**：提取简单名 + `(?<!\w)name\b` 宽松匹配；别名 import（`as AndroidPathMeasure`）必须取 as 后名字；.clip/.background 等点号扩展调用靠 lookbehind 覆盖
+- 实机对照：设备未连接，**顺延**（assembleDebug 已验证可构建）
+
+## S12 MainContainer 拆分 ✅（6c513c4）
+
+- 3251 → **2698 行**；新文件 main/MainContainerSupport.kt（623 行）：RouteFrame/RouteTopBar/SecondaryPageBackground/SystemUi 三函数/PrimaryBottomChrome/转场常量/Suppressor/PickerRequest 数据类
+- **包名约定同款坑**：main/ 目录所有文件声明 `package com.asmr.player`（非 main）！新文件必须对齐——"unresolved" 迷阵（100 错误纹丝不动）根因即此，非 visibility 问题
+- 缓替点兑现：isLandscape/useLargeBottomChrome/isCompactWidth → helper；isPhone 保留
+- **遗留（明确缓办）**：主函数体 ~2440 行 NavHost 路由闭包编排的结构化提取——闭包捕获面大、无实机对照，暂缓。S15 CI 守护若为"存量文件 >1500 禁入"口径，MainContainer 2698 不达标，届时与用户确认口径或加深拆分
+
+## 工具坑（新增）
+
+- PowerShell .NET 正则 `(?m)^...$` 在 CRLF 文件上 `$` 不匹配 \r 前位置 → **锚替换静默失效**，用字面 .Replace() 或去掉 $
+- 大文件切行搬移后接缝处 off-by-one 会吃掉首行声明（MainContainerSupport 的 PlaylistPickerRequest）→ 搬完必须 grep 接缝两侧
+- Kotlin 增量编译对"新建文件 + 立即引用"有时给出上轮 stale 诊断 → 重跑一次编译确认
+
+## 下次开工顺序（更新）
+
+S13 ui/common 拆包（52 文件 + 15 测试已盘点，见上表）→ S14 Cookie 加密（复用 DeepSeekApiKeyStore 模式 + 实机登录验证清单）→ S15 P2 清尾（URL 常量收敛、walkTree/scanFromDocumentTree 拆函数、Chrome 概念归包、nowplaying 3 文件死 import、已知 flake 守护）+ CI 守护（单文件行数口径与用户确认）→ S16 收尾（ARCHITECTURE.md 终态、top20 改动榜对比、实机 smoke：小米14 走查全链路）→ 阶段3门禁（全量 + 子代理审查 `git diff refactor/phase-2..HEAD` + 报告落盘 + tag `refactor/phase-3`）
