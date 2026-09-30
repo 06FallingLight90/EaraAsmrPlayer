@@ -12,7 +12,7 @@ import androidx.compose.ui.test.performTouchInput
 import com.asmr.player.data.local.db.entities.PlaylistItemEntity
 import com.asmr.player.data.local.db.entities.PlaylistItemWithSubtitles
 import com.asmr.player.data.repository.PlaylistRepository
-import com.asmr.player.ui.common.EARA_EMPTY_STATE_TAG
+import com.asmr.player.ui.common.status.EARA_EMPTY_STATE_TAG
 import com.asmr.player.ui.testWindowSizeClass
 import com.asmr.player.ui.theme.AsmrPlayerTheme
 import org.junit.Rule

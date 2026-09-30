@@ -38,8 +38,8 @@ import com.asmr.player.ui.library.AlbumHeroBlurLayerCache
 import com.asmr.player.ui.library.AlbumDetailUiState
 import com.asmr.player.ui.library.AlbumDetailViewModel
 import com.asmr.player.performance.UiFrameWorkCoordinator
-import com.asmr.player.ui.common.EaraTopBarIconButton
-import com.asmr.player.ui.common.resolveMainPageBackgroundColor
+import com.asmr.player.ui.common.core.EaraTopBarIconButton
+import com.asmr.player.ui.common.core.resolveMainPageBackgroundColor
 import com.asmr.player.ui.nav.BottomChrome
 import com.asmr.player.ui.nav.BottomChromeNavItem
 import com.asmr.player.ui.nav.bottomChromeNavItems
@@ -58,7 +58,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import com.asmr.player.ui.player.MiniPlayerDisplayMode
-import com.asmr.player.ui.common.StableWindowInsets
+import com.asmr.player.ui.common.list.StableWindowInsets
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import androidx.compose.foundation.border

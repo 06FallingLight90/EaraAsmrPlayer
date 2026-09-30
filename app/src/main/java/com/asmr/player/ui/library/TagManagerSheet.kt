@@ -43,10 +43,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.asmr.player.data.local.db.dao.TagWithCount
-import com.asmr.player.ui.common.FlatActionDialog
-import com.asmr.player.ui.common.FlatDialogAction
-import com.asmr.player.ui.common.FlatDialogActionTone
-import com.asmr.player.ui.common.rememberCalmScrollableFlingBehavior
+import com.asmr.player.ui.common.dialog.FlatActionDialog
+import com.asmr.player.ui.common.dialog.FlatDialogAction
+import com.asmr.player.ui.common.dialog.FlatDialogActionTone
+import com.asmr.player.ui.common.list.rememberCalmScrollableFlingBehavior
 import com.asmr.player.ui.theme.AsmrTheme
 
 @Composable

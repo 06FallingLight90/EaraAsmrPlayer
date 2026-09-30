@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.asmr.player.ui.common.AsmrAsyncImage
+import com.asmr.player.ui.common.cover.AsmrAsyncImage
 
 @Composable
 fun CoverArtworkEdgeBlend(

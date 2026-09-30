@@ -53,7 +53,7 @@ import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
 import com.asmr.player.playback.PlayerConnection
-import com.asmr.player.ui.common.queryTrackFileSize
+import com.asmr.player.ui.common.audio.queryTrackFileSize
 import com.asmr.player.util.GlobalSyncState
 import com.asmr.player.util.DlsiteWorkNo
 import com.asmr.player.util.ScanRootsStore

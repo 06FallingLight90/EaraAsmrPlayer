@@ -119,25 +119,26 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.zIndex
-import com.asmr.player.ui.common.rememberDominantColor
-import com.asmr.player.ui.common.SubtitleStamp
-import com.asmr.player.ui.common.DiscPlaceholder
-import com.asmr.player.ui.common.AsmrAsyncImage
-import com.asmr.player.ui.common.AsmrShimmerPlaceholder
-import com.asmr.player.ui.common.CvChipsFlow
-import com.asmr.player.ui.common.EaraLogoLoadingIndicator
-import com.asmr.player.ui.common.ImagePreviewItem
-import com.asmr.player.ui.common.ImagePreviewRequest
-import com.asmr.player.ui.common.rememberCalmScrollableFlingBehavior
+import com.asmr.player.ui.common.cover.rememberDominantColor
+import com.asmr.player.ui.common.audio.SubtitleStamp
+import com.asmr.player.ui.common.cover.DiscPlaceholder
+import com.asmr.player.ui.common.cover.AsmrAsyncImage
+import com.asmr.player.ui.common.cover.AsmrShimmerPlaceholder
+import com.asmr.player.ui.common.cover.CvChipsFlow
+import com.asmr.player.ui.common.cover.EaraLogoLoadingIndicator
+import com.asmr.player.ui.common.cover.ImagePreviewItem
+import com.asmr.player.ui.common.cover.ImagePreviewRequest
+import com.asmr.player.ui.common.list.rememberCalmScrollableFlingBehavior
 import com.asmr.player.ui.playlists.PlaylistPickerScreen
 import com.asmr.player.ui.theme.AsmrTheme
-import com.asmr.player.ui.common.LocalBottomOverlayPadding
+import com.asmr.player.ui.common.list.LocalBottomOverlayPadding
 import com.asmr.player.ui.theme.AsmrPlayerTheme
 import com.asmr.player.ui.theme.dynamicPageContainerColor
 import com.asmr.player.util.Formatting
 import com.asmr.player.util.MessageManager
 import com.asmr.player.util.RemoteSubtitleSource
 import com.asmr.player.util.isOnlineTrackPath
+import com.asmr.player.ui.common.cover.ImagePreviewPreparedItem
 
 @Composable
 internal fun AlbumLocalBreadcrumbTabV2(
@@ -458,7 +459,7 @@ internal fun AlbumLocalBreadcrumbTabV2(
                                                             title = imageFile.title,
                                                             openPathOrUrl = path,
                                                             prepareImage = {
-                                                                com.asmr.player.ui.common.ImagePreviewPreparedItem(
+                                                                ImagePreviewPreparedItem(
                                                                     imageModel = path,
                                                                     openPathOrUrl = path
                                                                 )
@@ -588,3 +589,4 @@ internal fun AlbumLocalBreadcrumbTabV2(
     }
 
 }
+

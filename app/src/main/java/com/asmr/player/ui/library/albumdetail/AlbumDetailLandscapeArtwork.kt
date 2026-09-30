@@ -51,7 +51,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 import com.asmr.player.domain.model.Album
-import com.asmr.player.ui.common.HorizontalStereoSpectrum
+import com.asmr.player.ui.common.audio.HorizontalStereoSpectrum
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -61,11 +61,11 @@ import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
-import com.asmr.player.ui.common.DiscPlaceholder
-import com.asmr.player.ui.common.AsmrAsyncImage
-import com.asmr.player.ui.common.AsmrImageLoadingPlaceholder
-import com.asmr.player.ui.common.NoImageLoadingIndicator
-import com.asmr.player.ui.common.LocalBottomOverlayPadding
+import com.asmr.player.ui.common.cover.DiscPlaceholder
+import com.asmr.player.ui.common.cover.AsmrAsyncImage
+import com.asmr.player.ui.common.cover.AsmrImageLoadingPlaceholder
+import com.asmr.player.ui.common.cover.NoImageLoadingIndicator
+import com.asmr.player.ui.common.list.LocalBottomOverlayPadding
 import com.asmr.player.ui.player.PlayerViewModel
 import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.util.MessageManager

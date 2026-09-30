@@ -17,8 +17,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.Alignment
-import com.asmr.player.ui.common.EaraLogoLoadingIndicator
-import com.asmr.player.ui.common.isCompactWidth
+import com.asmr.player.ui.common.cover.EaraLogoLoadingIndicator
+import com.asmr.player.ui.common.core.isCompactWidth
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

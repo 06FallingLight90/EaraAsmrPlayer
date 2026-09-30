@@ -14,12 +14,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.asmr.player.service.PlaybackState
-import com.asmr.player.ui.common.rememberCalmScrollableFlingBehavior
+import com.asmr.player.ui.common.list.rememberCalmScrollableFlingBehavior
 import com.asmr.player.util.SubtitleEntry
 import com.asmr.player.util.SubtitleIndexFinder
 import kotlinx.coroutines.launch
 
-import com.asmr.player.ui.common.isLandscape
+import com.asmr.player.ui.common.core.isLandscape
 import androidx.compose.ui.platform.LocalConfiguration
 
 @Composable

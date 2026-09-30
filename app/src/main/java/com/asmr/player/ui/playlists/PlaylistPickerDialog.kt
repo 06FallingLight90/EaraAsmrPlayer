@@ -13,8 +13,8 @@ import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
-import com.asmr.player.ui.common.CollectionPickerContent
-import com.asmr.player.ui.common.CollectionPickerRow
+import com.asmr.player.ui.common.dialog.CollectionPickerContent
+import com.asmr.player.ui.common.dialog.CollectionPickerRow
 
 @Composable
 fun PlaylistPickerScreen(

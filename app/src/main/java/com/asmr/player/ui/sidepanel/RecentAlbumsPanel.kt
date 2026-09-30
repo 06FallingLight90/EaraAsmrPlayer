@@ -45,7 +45,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.data.local.db.entities.titleForDisplay
 import com.asmr.player.domain.model.Album
-import com.asmr.player.ui.common.AsmrAsyncImage
+import com.asmr.player.ui.common.cover.AsmrAsyncImage
 import com.asmr.player.ui.player.PlayerViewModel
 import com.asmr.player.ui.theme.AsmrTheme
 import androidx.compose.runtime.remember
@@ -70,7 +70,7 @@ import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
-import com.asmr.player.ui.common.findActivity
+import com.asmr.player.ui.common.core.findActivity
 
 @Composable
 fun RecentAlbumsPanel(
@@ -585,3 +585,4 @@ private fun albumThumb(album: AlbumEntity): String? {
         ?: album.coverPath.takeIf { it.isNotBlank() }
         ?: album.coverUrl.takeIf { it.isNotBlank() }
 }
+

@@ -77,8 +77,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.MediaItem
-import com.asmr.player.ui.common.AsmrAsyncImage
-import com.asmr.player.ui.common.NoImageLoadingIndicator
+import com.asmr.player.ui.common.cover.AsmrAsyncImage
+import com.asmr.player.ui.common.cover.NoImageLoadingIndicator
 import com.asmr.player.ui.theme.AsmrTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged

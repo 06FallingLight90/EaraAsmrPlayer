@@ -49,7 +49,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import com.asmr.player.ui.common.isCompactWidth
+import com.asmr.player.ui.common.core.isCompactWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -75,10 +75,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.asmr.player.data.local.db.entities.ListeningSessionEntity
-import com.asmr.player.ui.common.AsmrAsyncImage
-import com.asmr.player.ui.common.LocalBottomOverlayPadding
-import com.asmr.player.ui.common.albumCoverImageModel
-import com.asmr.player.ui.common.collectAsStateWhileActive
+import com.asmr.player.ui.common.cover.AsmrAsyncImage
+import com.asmr.player.ui.common.list.LocalBottomOverlayPadding
+import com.asmr.player.ui.common.cover.albumCoverImageModel
+import com.asmr.player.ui.common.list.collectAsStateWhileActive
 import com.asmr.player.ui.theme.AsmrColorScheme
 import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.util.ListeningDay

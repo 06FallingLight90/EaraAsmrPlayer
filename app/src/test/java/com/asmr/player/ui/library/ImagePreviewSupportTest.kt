@@ -1,6 +1,6 @@
 package com.asmr.player.ui.library
 
-import com.asmr.player.ui.common.ImagePreviewItem
+import com.asmr.player.ui.common.cover.ImagePreviewItem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

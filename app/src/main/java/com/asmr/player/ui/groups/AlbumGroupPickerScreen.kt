@@ -12,8 +12,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.asmr.player.ui.common.CollectionPickerContent
-import com.asmr.player.ui.common.CollectionPickerRow
+import com.asmr.player.ui.common.dialog.CollectionPickerContent
+import com.asmr.player.ui.common.dialog.CollectionPickerRow
 
 @Composable
 fun AlbumGroupPickerScreen(

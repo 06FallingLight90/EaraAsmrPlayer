@@ -18,9 +18,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.asmr.player.data.local.datastore.SettingsDataStore
-import com.asmr.player.ui.common.FlatActionDialog
-import com.asmr.player.ui.common.FlatDialogAction
-import com.asmr.player.ui.common.FlatDialogActionTone
+import com.asmr.player.ui.common.dialog.FlatActionDialog
+import com.asmr.player.ui.common.dialog.FlatDialogAction
+import com.asmr.player.ui.common.dialog.FlatDialogActionTone
 import com.asmr.player.util.DlsiteWorkNo
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first

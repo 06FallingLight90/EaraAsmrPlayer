@@ -1,7 +1,7 @@
 package com.asmr.player.ui.sidepanel
 
-import com.asmr.player.ui.common.isCompactWidth
-import com.asmr.player.ui.common.isLandscape
+import com.asmr.player.ui.common.core.isCompactWidth
+import com.asmr.player.ui.common.core.isLandscape
 import androidx.compose.animation.*
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
@@ -38,7 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 
-import com.asmr.player.ui.common.ActionButton
+import com.asmr.player.ui.common.core.ActionButton
 
 @Composable
 fun LandscapeRightPanelHost(

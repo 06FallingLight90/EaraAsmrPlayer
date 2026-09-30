@@ -1,7 +1,7 @@
 package com.asmr.player.ui.sidepanel
 
-import com.asmr.player.ui.common.isCompactWidth
-import com.asmr.player.ui.common.isLandscape
+import com.asmr.player.ui.common.core.isCompactWidth
+import com.asmr.player.ui.common.core.isLandscape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -19,7 +19,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import com.asmr.player.ui.common.rememberCalmScrollableFlingBehavior
+import com.asmr.player.ui.common.list.rememberCalmScrollableFlingBehavior
 
 @Composable
 fun LandscapeSidePanelsHost(

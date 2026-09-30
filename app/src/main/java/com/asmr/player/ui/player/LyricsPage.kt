@@ -31,7 +31,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.asmr.player.ui.theme.AsmrTheme
 
-import com.asmr.player.ui.common.isLandscape
+import com.asmr.player.ui.common.core.isLandscape
 import androidx.compose.ui.platform.LocalConfiguration
 import com.asmr.player.data.settings.CoverPreviewMode
 import com.asmr.player.data.settings.LyricsPageSettings

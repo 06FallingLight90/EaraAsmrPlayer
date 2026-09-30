@@ -27,7 +27,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import com.asmr.player.ui.common.isCompactWidth
+import com.asmr.player.ui.common.core.isCompactWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,23 +43,23 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.asmr.player.data.local.db.dao.PlaylistStatsRow
 import com.asmr.player.data.local.db.entities.PlaylistEntity
-import com.asmr.player.ui.common.AsmrAsyncImage
+import com.asmr.player.ui.common.cover.AsmrAsyncImage
 
 import androidx.compose.ui.text.font.FontWeight
 import com.asmr.player.ui.theme.AsmrTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
-import com.asmr.player.ui.common.FlatActionDialog
-import com.asmr.player.ui.common.FlatDialogAction
-import com.asmr.player.ui.common.FlatDialogActionTone
-import com.asmr.player.ui.common.FlatTextFieldDialog
-import com.asmr.player.ui.common.LocalBottomOverlayPadding
-import com.asmr.player.ui.common.rememberCalmScrollableFlingBehavior
-import com.asmr.player.ui.common.smoothScrollToTop
-import com.asmr.player.ui.common.EaraBrandedEmptyState
-import com.asmr.player.ui.common.withAddedBottomPadding
-import com.asmr.player.ui.common.collectAsStateWhileActive
+import com.asmr.player.ui.common.dialog.FlatActionDialog
+import com.asmr.player.ui.common.dialog.FlatDialogAction
+import com.asmr.player.ui.common.dialog.FlatDialogActionTone
+import com.asmr.player.ui.common.dialog.FlatTextFieldDialog
+import com.asmr.player.ui.common.list.LocalBottomOverlayPadding
+import com.asmr.player.ui.common.list.rememberCalmScrollableFlingBehavior
+import com.asmr.player.ui.common.list.smoothScrollToTop
+import com.asmr.player.ui.common.status.EaraBrandedEmptyState
+import com.asmr.player.ui.common.list.withAddedBottomPadding
+import com.asmr.player.ui.common.list.collectAsStateWhileActive
 
 private val PlaylistsPageHorizontalPadding = 8.dp
 private val PlaylistRowActionButtonSize = 34.dp

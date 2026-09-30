@@ -29,7 +29,7 @@ import androidx.media3.common.MediaItem
 import com.asmr.player.data.repository.AlbumGroupRepository
 import com.asmr.player.data.repository.PlaylistRepository
 import com.asmr.player.ui.groups.AlbumGroupDetailContent
-import com.asmr.player.ui.common.RoundedTopSheet
+import com.asmr.player.ui.common.dialog.RoundedTopSheet
 import com.asmr.player.ui.groups.AlbumGroupPickerScreen
 import com.asmr.player.ui.groups.AlbumGroupsScreen
 import com.asmr.player.ui.downloads.DownloadsScreen
@@ -41,7 +41,7 @@ import com.asmr.player.ui.playlists.PlaylistPickerScreen
 import com.asmr.player.ui.playlists.PlaylistsScreen
 import com.asmr.player.ui.search.SearchScreen
 import com.asmr.player.ui.settings.SettingsScreen
-import com.asmr.player.ui.common.DiscPlaceholderBitmapCache
+import com.asmr.player.ui.common.cover.DiscPlaceholderBitmapCache
 import com.asmr.player.ui.theme.AsmrPlayerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject

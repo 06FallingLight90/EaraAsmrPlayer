@@ -73,11 +73,11 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.asmr.player.domain.model.Album
-import com.asmr.player.ui.common.AsmrAsyncImage
-import com.asmr.player.ui.common.CoverContentRow
-import com.asmr.player.ui.common.albumCoverImageModel
-import com.asmr.player.ui.common.NoImageLoadingIndicator
-import com.asmr.player.ui.common.AsmrShimmerPlaceholder
+import com.asmr.player.ui.common.cover.AsmrAsyncImage
+import com.asmr.player.ui.common.cover.CoverContentRow
+import com.asmr.player.ui.common.cover.albumCoverImageModel
+import com.asmr.player.ui.common.cover.NoImageLoadingIndicator
+import com.asmr.player.ui.common.cover.AsmrShimmerPlaceholder
 import com.asmr.player.ui.theme.AsmrTheme
 import kotlinx.coroutines.delay
 

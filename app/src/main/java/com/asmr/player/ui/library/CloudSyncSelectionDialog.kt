@@ -58,10 +58,10 @@ import com.asmr.player.cache.ImageCacheEntryPoint
 import com.asmr.player.data.remote.NetworkHeaders
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncCandidate
 import com.asmr.player.data.remote.scraper.dlsiteOriginalCoverUrlForWorkNo
-import com.asmr.player.ui.common.AsmrShimmerPlaceholder
-import com.asmr.player.ui.common.CvChipsSingleLine
-import com.asmr.player.ui.common.DiscPlaceholder
-import com.asmr.player.ui.common.rememberCalmScrollableFlingBehavior
+import com.asmr.player.ui.common.cover.AsmrShimmerPlaceholder
+import com.asmr.player.ui.common.cover.CvChipsSingleLine
+import com.asmr.player.ui.common.cover.DiscPlaceholder
+import com.asmr.player.ui.common.list.rememberCalmScrollableFlingBehavior
 import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.util.DlsiteAntiHotlink
 import dagger.hilt.android.EntryPointAccessors

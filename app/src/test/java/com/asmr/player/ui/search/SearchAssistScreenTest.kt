@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.asmr.player.domain.model.Album
 import com.asmr.player.hotlistening.SearchSuggestionTerm
-import com.asmr.player.ui.common.clearFocusOnTapOutside
+import com.asmr.player.ui.common.core.clearFocusOnTapOutside
 import com.asmr.player.ui.testWindowSizeClass
 import com.asmr.player.ui.theme.AsmrPlayerTheme
 import org.junit.Assert.assertEquals

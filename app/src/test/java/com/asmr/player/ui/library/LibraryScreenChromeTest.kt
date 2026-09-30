@@ -16,8 +16,8 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.asmr.player.ui.common.CollapsibleHeaderState
-import com.asmr.player.ui.common.interruptScrollableFlingOnPointerDown
+import com.asmr.player.ui.common.list.CollapsibleHeaderState
+import com.asmr.player.ui.common.list.interruptScrollableFlingOnPointerDown
 import com.asmr.player.ui.theme.AsmrPlayerTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule

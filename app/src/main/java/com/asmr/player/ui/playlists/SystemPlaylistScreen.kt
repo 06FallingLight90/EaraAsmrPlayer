@@ -10,8 +10,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import com.asmr.player.data.local.db.entities.PlaylistItemEntity
 import com.asmr.player.data.repository.PlaylistRepository
-import com.asmr.player.ui.common.EaraLogoLoadingIndicator
-import com.asmr.player.ui.common.collectAsStateWhileActive
+import com.asmr.player.ui.common.cover.EaraLogoLoadingIndicator
+import com.asmr.player.ui.common.list.collectAsStateWhileActive
 import com.asmr.player.ui.theme.AsmrTheme
 
 @Composable

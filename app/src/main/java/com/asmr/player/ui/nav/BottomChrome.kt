@@ -77,7 +77,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.asmr.player.ui.common.consumeTapThrough
+import com.asmr.player.ui.common.core.consumeTapThrough
 import com.asmr.player.ui.player.MiniPlayer
 import com.asmr.player.ui.player.MiniPlayerDisplayMode
 import com.asmr.player.ui.theme.AsmrTheme
