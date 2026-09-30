@@ -81,6 +81,32 @@
 
 > 原「断点存档」目的已达成，S8 于 2026-09-30 第二段工作收尾。以下方向与差异清单保留作决策依据。
 
+---
+
+# 2026-09-30 S9 断点存档（Backlog，下次续接；第二段工作结束）
+
+> 分支 `refactor/architecture-cleanup`，HEAD = 7920679。**工作区有 S9-3 未提交代码改动**（见下），下次开工先跑全量测试验证后按纪律提交。
+
+## S9 已完成（3 提交）
+
+- **S9-1 补日志** ✅ 39b376a：DownloadManager.kt 10 处静默 catch 补 Log.w（TAG=DownloadManager / DownloadLibraryUpsert / FinalizeDownloadTaskWorker 字面量）；DownloadTaskBlockedException 为受控流异常刻意不加。
+- **S9-2 拆文件（纯移动）** ✅ 7920679：DownloadManager.kt 2020→1170 行。`object DownloadQueueCoordinator`（调度/恢复/内存节流/对账）与 `class DownloadWorker` + `FinalizeDownloadTaskWorker` 迁至独立文件，`SessionCookieJar` 随 worker 移动。可见性放宽 file-private→internal：`hasDlsitePlayImageTransform`、`finalizeDlsiteLosslessArchiveIfNeeded`、`finalizeDlsiteLosslessArchiveInStorageIfNeeded`、`upsertDownloadedAlbumToLibrary`。全量 854/0/4 绿。
+- 踩坑：PowerShell 按行范围纯移动时 `hasDlsitePlayImageTransform`（file-private 扩展）与 `SessionCookieJar` 跨文件不可见——用 internal 放宽或连类移动；一次 off-by-one 把类尾 `}` 留在原文件（用边界行打印核实后修复）；Edit 工具「IDE Command timeout」实际多数已落盘，**必须 grep 复核后再决定是否重试**，否则会重复编辑。
+
+## S9-3 统一取消路径：代码已写好、未验证未提交（断点）
+
+**改动集（工作区未提交，3 文件 +33/-20）**：
+- `DownloadQueueCoordinator.kt`：新增 3 个尽力而为取消原语——`suspend fun cancelWorkAndUpdateState(context, workId, state, updatedAt)`（cancelWorkById + updateItemState，两 runCatching 互不影响）、`fun cancelWork(context, workId)`、`fun cancelWorksByTag(context, tag)`。已修：cancelWorkAndUpdateState 必须是 **suspend**（updateItemState 是挂起函数）。
+- `DownloadsViewModel.kt`：7 处散落的 `workManager.cancelWorkById/cancelAllWorkByTag` 收口到协调器（cancelItem/pauseItem/pauseTask/pauseAll→cancelWorkAndUpdateState；cancelTask/cancelAll 的条件状态更新保留在 VM 用 dao；deleteItem/deleteTask→cancelWork/cancelWorksByTag）；`workManager` 字段仅剩 enqueueUniqueWork 用途保留；已删未用 `import java.util.UUID`。
+- `LibraryViewModel.kt` L1740：`WorkManager.getInstance(context).cancelAllWorkByTag(task.taskKey)` → `DownloadQueueCoordinator.cancelWorksByTag(...)`；已补 import（download 包 L51）。
+- 已过编译修复轮：首次全量测试因 suspend/LibraryViewModel import 两处失败，均已修复；**修复后的全量测试被中断，结果未验证**。
+
+## 下次开工顺序
+
+1. `.\gradlew-local.bat -g "C:\Users\24131\.gradle" :app:testDebugUnitTest --console=plain`（后台 + 轮询）→ 全量绿（预期 854/0/4）后提交：`refactor: P1-7 统一下载取消路径到 DownloadQueueCoordinator`（附行为保持说明：cancel+update 的 runCatching 语义逐点保留）。
+2. 若红：按 e: 行修复后重跑。注意 S9-3 行为差异点：deleteItem/deleteTask 的 cancel 不带状态更新（与原一致）；LibraryViewModel 原 `runCatching{...cancelAllWorkByTag}` 改为协调器内 runCatching（等价）。
+3. 之后：**阶段2 门禁**（全量测试 + 子代理审查 `git diff refactor/phase-1..HEAD` + 报告落盘 docs/iteration/phase-2-review.md + tag `refactor/phase-2`）→ S10-S16（阶段3）。
+
 ## S8 收尾结论（用户批准）
 
 - **S8a 镜像 API 收敛** ✅ commit 03ee359：`AsmrMirrorApi`（继承 `AsmrWorkApi`）替代三个逐字重复镜像接口，`@Named` 三实例，asSelected 适配器 4→2，profile 同步（含清除 asBackup/backupApisInOrder 遗留死条目）。安全网=重构前补的 2 个 MockWebServer 锁定测试（search 形状/映射）。
@@ -124,6 +150,6 @@
 - **安全网**：既有 `AlbumDetailAsmrOneBackupEndpointTest` / `AlbumDetailAsmrOneLanguageTargetTest` 覆盖端点选择语义；全量基线 **852 tests / 0 failures / 4 skipped**。
 - 子代理（Explore）ID `28d92dee-c574-4bfe-af75-2c3c38272e9f` 可 resume 复用。
 
-## 下次开工顺序
+## 原「下次开工顺序」（已被文首 S9 断点存档取代，仅留档）
 
-S8a（先核对 BackupEndpoint/LanguageTarget 测试覆盖面，缺镜像选择锁定测试则补）→ S8b → S8c → S8d → 阶段2 门禁（全量测试 + 子代理审查 `git diff refactor/phase-1..HEAD` + 报告落盘 docs/iteration/phase-2-review.md + tag `refactor/phase-2`）→ S9。
+S8a → S8b → S8c → S8d → 阶段2 门禁（全量测试 + 子代理审查 `git diff refactor/phase-1..HEAD` + 报告落盘 docs/iteration/phase-2-review.md + tag `refactor/phase-2`）→ S9。
