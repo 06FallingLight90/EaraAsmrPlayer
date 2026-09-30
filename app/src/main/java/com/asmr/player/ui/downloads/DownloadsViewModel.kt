@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
-import java.util.UUID
 import androidx.work.workDataOf
 import javax.inject.Inject
 import com.asmr.player.util.MessageManager
@@ -377,18 +376,14 @@ class DownloadsViewModel @Inject constructor(
 
     fun cancelItem(workId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { workManager.cancelWorkById(java.util.UUID.fromString(workId)) }
-            runCatching { downloadDao.updateItemState(workId, WorkInfo.State.CANCELLED.name, System.currentTimeMillis()) }
+            DownloadQueueCoordinator.cancelWorkAndUpdateState(context, workId, WorkInfo.State.CANCELLED.name)
             DownloadQueueCoordinator.requestSchedule(context)
         }
     }
 
     fun pauseItem(workId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { workManager.cancelWorkById(UUID.fromString(workId)) }
-            runCatching {
-                downloadDao.updateItemState(workId, "PAUSED", System.currentTimeMillis())
-            }
+            DownloadQueueCoordinator.cancelWorkAndUpdateState(context, workId, "PAUSED")
             DownloadQueueCoordinator.requestSchedule(context)
         }
     }
@@ -445,10 +440,7 @@ class DownloadsViewModel @Inject constructor(
                 it.state == WorkInfo.State.ENQUEUED.name ||
                 it.state == DOWNLOAD_STATE_QUEUED
             }.forEach { item ->
-                runCatching { workManager.cancelWorkById(UUID.fromString(item.workId)) }
-                runCatching {
-                    downloadDao.updateItemState(item.workId, "PAUSED", System.currentTimeMillis())
-                }
+                DownloadQueueCoordinator.cancelWorkAndUpdateState(context, item.workId, "PAUSED")
             }
             DownloadQueueCoordinator.requestSchedule(context)
         }
@@ -472,10 +464,7 @@ class DownloadsViewModel @Inject constructor(
                 it.state == WorkInfo.State.ENQUEUED.name ||
                 it.state == DOWNLOAD_STATE_QUEUED
             }.forEach { item ->
-                runCatching { workManager.cancelWorkById(UUID.fromString(item.workId)) }
-                runCatching {
-                    downloadDao.updateItemState(item.workId, "PAUSED", System.currentTimeMillis())
-                }
+                DownloadQueueCoordinator.cancelWorkAndUpdateState(context, item.workId, "PAUSED")
             }
             DownloadQueueCoordinator.requestSchedule(context)
         }
@@ -498,7 +487,7 @@ class DownloadsViewModel @Inject constructor(
             val now = System.currentTimeMillis()
             task?.let {
                 downloadDao.getItemsForTask(it.id).forEach { item ->
-                    runCatching { workManager.cancelWorkById(UUID.fromString(item.workId)) }
+                    DownloadQueueCoordinator.cancelWork(context, item.workId)
                     if (item.state != WorkInfo.State.SUCCEEDED.name) {
                         runCatching { downloadDao.updateItemState(item.workId, WorkInfo.State.CANCELLED.name, now) }
                     }
@@ -512,7 +501,7 @@ class DownloadsViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val now = System.currentTimeMillis()
             downloadDao.getAllActiveOrPausedItems().forEach { item ->
-                runCatching { workManager.cancelWorkById(UUID.fromString(item.workId)) }
+                DownloadQueueCoordinator.cancelWork(context, item.workId)
                 if (item.state != WorkInfo.State.SUCCEEDED.name) {
                     runCatching { downloadDao.updateItemState(item.workId, WorkInfo.State.CANCELLED.name, now) }
                 }
@@ -524,7 +513,7 @@ class DownloadsViewModel @Inject constructor(
     fun deleteTask(taskId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             val task = downloadDao.getTaskById(taskId) ?: return@launch
-            runCatching { workManager.cancelAllWorkByTag(task.taskKey) }
+            DownloadQueueCoordinator.cancelWorksByTag(context, task.taskKey)
             val items = downloadDao.getItemsForTask(taskId)
             val deleted = deletePathSafely(task.rootDir)
             if (!deleted) {
@@ -558,7 +547,7 @@ class DownloadsViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val item = downloadDao.getItemByWorkId(workId) ?: return@launch
             val task = downloadDao.getTaskById(item.taskId)
-            runCatching { workManager.cancelWorkById(java.util.UUID.fromString(workId)) }
+            DownloadQueueCoordinator.cancelWork(context, workId)
             val primary = item.filePath.ifBlank {
                 if (downloadStorage.isDocumentReference(item.targetDir)) ""
                 else File(item.targetDir, item.fileName).absolutePath

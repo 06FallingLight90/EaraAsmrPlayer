@@ -48,6 +48,7 @@ import com.asmr.player.data.remote.dlsite.resolveSelectedDlsiteCloudSync
 import com.asmr.player.data.remote.scraper.DLSiteScraper
 import com.asmr.player.data.remote.download.DownloadDestination
 import com.asmr.player.data.remote.download.DownloadDestinationStore
+import com.asmr.player.data.remote.download.DownloadQueueCoordinator
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
@@ -1737,7 +1738,7 @@ class LibraryViewModel @Inject constructor(
                     val downloadDao = database.downloadDao()
                     val task = runCatching { downloadDao.getTaskByRootDir(downloadRoot) }.getOrNull()
                     if (task != null) {
-                        runCatching { WorkManager.getInstance(context).cancelAllWorkByTag(task.taskKey) }
+                        DownloadQueueCoordinator.cancelWorksByTag(context, task.taskKey)
                         runCatching { downloadDao.deleteItemsForTask(task.id) }
                         runCatching { downloadDao.deleteTaskById(task.id) }
                     }

@@ -263,4 +263,28 @@ object DownloadQueueCoordinator {
             if (item.hasDlsitePlayImageTransform() && partialFile.exists()) partialFile.length() else outputFile.length()
         }.getOrDefault(item.downloaded).coerceAtLeast(0L)
     }
+
+    /** 统一取消原语：尽力而为地取消 Work 并把条目置为指定状态；两条路径互不影响。 */
+    suspend fun cancelWorkAndUpdateState(
+        context: Context,
+        workId: String,
+        state: String,
+        updatedAt: Long = System.currentTimeMillis()
+    ) {
+        val appContext = context.applicationContext
+        runCatching { WorkManager.getInstance(appContext).cancelWorkById(UUID.fromString(workId)) }
+        runCatching {
+            AppDatabaseProvider.get(appContext).downloadDao().updateItemState(workId, state, updatedAt)
+        }
+    }
+
+    /** 统一取消原语：尽力而为地取消 Work（不改条目状态，供删除流程使用）。 */
+    fun cancelWork(context: Context, workId: String) {
+        runCatching { WorkManager.getInstance(context.applicationContext).cancelWorkById(UUID.fromString(workId)) }
+    }
+
+    /** 统一取消原语：尽力而为地按标签取消全部 Work（任务级删除/清理使用）。 */
+    fun cancelWorksByTag(context: Context, tag: String) {
+        runCatching { WorkManager.getInstance(context.applicationContext).cancelAllWorkByTag(tag) }
+    }
 }
