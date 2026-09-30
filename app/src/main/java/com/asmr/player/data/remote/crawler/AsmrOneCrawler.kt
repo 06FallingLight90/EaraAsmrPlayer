@@ -2,10 +2,8 @@ package com.asmr.player.data.remote.crawler
 
 import com.asmr.player.data.remote.NetworkHeaders
 import com.asmr.player.data.remote.ONLINE_DIRECTORY_REQUEST_TIMEOUT_MS
-import com.asmr.player.data.remote.api.Asmr100Api
-import com.asmr.player.data.remote.api.Asmr200Api
 import com.asmr.player.data.remote.api.Asmr200Work
-import com.asmr.player.data.remote.api.Asmr300Api
+import com.asmr.player.data.remote.api.AsmrMirrorApi
 import com.asmr.player.data.remote.api.AsmrOneApi
 import com.asmr.player.data.remote.api.AsmrOneEndpoint
 import com.asmr.player.data.remote.api.AsmrOneLanguageEdition
@@ -20,6 +18,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 
 data class AsmrOneSearchTrace(
@@ -40,9 +39,9 @@ data class AsmrOneTracksResult(
 @Singleton
 class AsmrOneCrawler @Inject constructor(
     private val asmrOneApi: AsmrOneApi,
-    private val asmr100Api: Asmr100Api,
-    private val asmr200Api: Asmr200Api,
-    private val asmr300Api: Asmr300Api,
+    @Named("asmr100") private val asmr100Api: AsmrMirrorApi,
+    @Named("asmr200") private val asmr200Api: AsmrMirrorApi,
+    @Named("asmr300") private val asmr300Api: AsmrMirrorApi,
     private val settingsRepository: SettingsRepository
 ) {
     suspend fun searchWithTrace(
@@ -122,22 +121,26 @@ class AsmrOneCrawler @Inject constructor(
     }
 
     private suspend fun selectedMetadataApi(): AsmrSelectedApiEntry {
-        return selectedApi(
-            preferredSite = resolveAsmrOneMetadataEndpoint(currentSite()),
-            asmrOneApi = asmrOneApi,
-            asmr100Api = asmr100Api,
-            asmr200Api = asmr200Api,
-            asmr300Api = asmr300Api
-        )
+        return selectedApi(preferredSite = resolveAsmrOneMetadataEndpoint(currentSite()))
     }
 
     private suspend fun getTracksFromSelectedSite(
         site: Int,
         workId: String
     ): List<AsmrOneTrackNodeResponse> {
-        return selectedApi(site, asmrOneApi, asmr100Api, asmr200Api, asmr300Api)
+        return selectedApi(site)
             .api
             .getTracks(workId, silentIoError = NetworkHeaders.SILENT_IO_ERROR_ON)
+    }
+
+    private fun selectedApi(preferredSite: Int): AsmrSelectedApiEntry {
+        return when (val selectedSite = AsmrOneEndpoint.normalize(preferredSite)) {
+            AsmrOneEndpoint.BACKUP -> error("Eara backup does not provide the direct ASMR.one API")
+            AsmrOneEndpoint.MAIN -> AsmrSelectedApiEntry(selectedSite, asmrOneApi.asSelected())
+            AsmrOneEndpoint.MIRROR_100 -> AsmrSelectedApiEntry(selectedSite, asmr100Api.asSelected())
+            AsmrOneEndpoint.MIRROR_300 -> AsmrSelectedApiEntry(selectedSite, asmr300Api.asSelected())
+            else -> AsmrSelectedApiEntry(selectedSite, asmr200Api.asSelected())
+        }
     }
 }
 
@@ -207,47 +210,7 @@ private fun AsmrOneApi.asSelected(): AsmrSelectedApi = object : AsmrSelectedApi 
         this@asSelected.getTracks(workId, silentIoError = silentIoError)
 }
 
-private fun Asmr100Api.asSelected(): AsmrSelectedApi = object : AsmrSelectedApi {
-    override suspend fun search(keyword: String, page: Int, subtitle: Int, silentIoError: String?) =
-        mapMirrorSearchResponse(
-            response = this@asSelected.search(
-                keyword = keyword,
-                page = page,
-                subtitle = subtitle,
-                silentIoError = silentIoError
-            ),
-            keyword = keyword,
-            page = page
-        )
-
-    override suspend fun getWorkDetails(workId: String, silentIoError: String?) =
-        this@asSelected.getWorkDetails(workId, silentIoError = silentIoError)
-
-    override suspend fun getTracks(workId: String, silentIoError: String?) =
-        this@asSelected.getTracks(workId, silentIoError = silentIoError)
-}
-
-private fun Asmr200Api.asSelected(): AsmrSelectedApi = object : AsmrSelectedApi {
-    override suspend fun search(keyword: String, page: Int, subtitle: Int, silentIoError: String?) =
-        mapMirrorSearchResponse(
-            response = this@asSelected.search(
-                keyword = keyword,
-                page = page,
-                subtitle = subtitle,
-                silentIoError = silentIoError
-            ),
-            keyword = keyword,
-            page = page
-        )
-
-    override suspend fun getWorkDetails(workId: String, silentIoError: String?) =
-        this@asSelected.getWorkDetails(workId, silentIoError = silentIoError)
-
-    override suspend fun getTracks(workId: String, silentIoError: String?) =
-        this@asSelected.getTracks(workId, silentIoError = silentIoError)
-}
-
-private fun Asmr300Api.asSelected(): AsmrSelectedApi = object : AsmrSelectedApi {
+private fun AsmrMirrorApi.asSelected(): AsmrSelectedApi = object : AsmrSelectedApi {
     override suspend fun search(keyword: String, page: Int, subtitle: Int, silentIoError: String?) =
         mapMirrorSearchResponse(
             response = this@asSelected.search(
@@ -276,22 +239,6 @@ internal suspend fun fetchAsmrOneTracksFromSelectedSite(
         tree = fetchSelected(selectedSite),
         site = selectedSite
     )
-}
-
-private fun selectedApi(
-    preferredSite: Int,
-    asmrOneApi: AsmrOneApi,
-    asmr100Api: Asmr100Api,
-    asmr200Api: Asmr200Api,
-    asmr300Api: Asmr300Api
-): AsmrSelectedApiEntry {
-    return when (val selectedSite = AsmrOneEndpoint.normalize(preferredSite)) {
-        AsmrOneEndpoint.BACKUP -> error("Eara backup does not provide the direct ASMR.one API")
-        AsmrOneEndpoint.MAIN -> AsmrSelectedApiEntry(selectedSite, asmrOneApi.asSelected())
-        AsmrOneEndpoint.MIRROR_100 -> AsmrSelectedApiEntry(selectedSite, asmr100Api.asSelected())
-        AsmrOneEndpoint.MIRROR_300 -> AsmrSelectedApiEntry(selectedSite, asmr300Api.asSelected())
-        else -> AsmrSelectedApiEntry(selectedSite, asmr200Api.asSelected())
-    }
 }
 
 private fun mapMirrorSearchResponse(

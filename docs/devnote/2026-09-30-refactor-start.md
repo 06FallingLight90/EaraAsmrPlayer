@@ -81,6 +81,17 @@
 
 > 用户决定：今日到此休息，S8 中途暂停。本节是冷启动续接材料。分支 `refactor/architecture-cleanup`，HEAD = 655cf88，工作区干净（本文档提交后）。
 
+## S8a 已完成（2026-09-30 第二段工作，待提交后更新 HEAD）
+
+- **镜像 API 收敛落地**：新增 `AsmrMirrorApi`（继承新基接口 `AsmrWorkApi`，getWorkDetails/getTracks 主站与镜像共用）+ 迁入 `Asmr200SearchResponse/Asmr200Work/Asmr200LanguageEdition`；删除 Asmr100Api/200Api/300Api 三文件；NetworkModule 改为 `@Named("asmr100/200/300")` 三个 provider（共用私有 mirrorApi 构建函数）；AsmrOneCrawler 构造参数类型换 `AsmrMirrorApi`（参数名不变），`selectedApi` 移为类成员（原顶层函数需显式传参），`asSelected` 适配器 4→2；`AsmrOneEndpoint.directBaseUrl` 改引新常量。
+- **安全网**：重构前补了 2 个锁定测试（主站/镜像 search 请求形状 + 镜像响应映射，MockWebServer），并入既有 `AsmrOneCrawlerEndpointRoutingTest`。
+- **profile 同步**：两个 profile 删除 Asmr100/200/300Api、NetworkModule_Provide*ApiFactory、asBackup/backupApisInOrder（**后三者是源码中已不存在的遗留死条目**，连同 access$sanitizeRj 记入 S15 待办：CI 加 profile 死条目核对）并补 AsmrMirrorApi 新符号行（BOM 安全写法）。
+- **新增 flake 记录**：`PageTranslationUiTest.newLabelsDuringAnInFlightBatchDoNotRestartItsRequest` 在全量跑中出现一次 `CalledFromWrongThreadException`（Robolectric Compose 线程时序），单独重跑该类 12/12 全过——非确定性环境 flake，与 S8a 无关。暂不 @Ignore（非确定性失败），S15 CI 守护任务里考虑加重试基建或定位根因。
+
+### S8a 踩坑补记
+
+- 顶层 private fun 引用类构造属性编译不过（原 selectedApi 靠显式传参）——移进类体解决；NetworkModule 曾重复 import javax.inject.Named（文件尾部已有，编辑前先看全 imports）。
+
 ## 已定方向（用户批准的「证据修正版」）
 
 原计划 S8 的「ContentSource 统一搜索入口」前提与代码现状不符（差异清单见下）。用户 2026-09-30 批准调整为：

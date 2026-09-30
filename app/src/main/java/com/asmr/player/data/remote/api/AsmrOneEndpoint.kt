@@ -22,8 +22,8 @@ object AsmrOneEndpoint {
     fun directBaseUrl(value: Int): String? = when (normalize(value)) {
         BACKUP -> null
         MAIN -> AsmrOneApi.BASE_URL
-        MIRROR_100 -> Asmr100Api.BASE_URL
-        MIRROR_300 -> Asmr300Api.BASE_URL
-        else -> Asmr200Api.BASE_URL
+        MIRROR_100 -> AsmrMirrorApi.BASE_URL_100
+        MIRROR_300 -> AsmrMirrorApi.BASE_URL_300
+        else -> AsmrMirrorApi.BASE_URL_200
     }
 }

@@ -2,10 +2,8 @@ package com.asmr.player.di
 
 import com.asmr.player.BuildConfig
 import com.asmr.player.data.local.DeviceIdentityStore
+import com.asmr.player.data.remote.api.AsmrMirrorApi
 import com.asmr.player.data.remote.api.AsmrOneApi
-import com.asmr.player.data.remote.api.Asmr200Api
-import com.asmr.player.data.remote.api.Asmr100Api
-import com.asmr.player.data.remote.api.Asmr300Api
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -223,38 +221,31 @@ object NetworkModule {
         return retrofit.create(AsmrOneApi::class.java)
     }
 
-    @Provides
-    @Singleton
-    fun provideAsmr200Api(okHttpClient: OkHttpClient): Asmr200Api {
-        val retrofit = Retrofit.Builder()
-            .baseUrl(Asmr200Api.BASE_URL)
+    private fun mirrorApi(okHttpClient: OkHttpClient, baseUrl: String): AsmrMirrorApi =
+        Retrofit.Builder()
+            .baseUrl(baseUrl)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-        return retrofit.create(Asmr200Api::class.java)
-    }
+            .create(AsmrMirrorApi::class.java)
 
     @Provides
     @Singleton
-    fun provideAsmr100Api(okHttpClient: OkHttpClient): Asmr100Api {
-        val retrofit = Retrofit.Builder()
-            .baseUrl(Asmr100Api.BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-        return retrofit.create(Asmr100Api::class.java)
-    }
+    @Named("asmr100")
+    fun provideAsmr100MirrorApi(okHttpClient: OkHttpClient): AsmrMirrorApi =
+        mirrorApi(okHttpClient, AsmrMirrorApi.BASE_URL_100)
 
     @Provides
     @Singleton
-    fun provideAsmr300Api(okHttpClient: OkHttpClient): Asmr300Api {
-        val retrofit = Retrofit.Builder()
-            .baseUrl(Asmr300Api.BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-        return retrofit.create(Asmr300Api::class.java)
-    }
+    @Named("asmr200")
+    fun provideAsmr200MirrorApi(okHttpClient: OkHttpClient): AsmrMirrorApi =
+        mirrorApi(okHttpClient, AsmrMirrorApi.BASE_URL_200)
+
+    @Provides
+    @Singleton
+    @Named("asmr300")
+    fun provideAsmr300MirrorApi(okHttpClient: OkHttpClient): AsmrMirrorApi =
+        mirrorApi(okHttpClient, AsmrMirrorApi.BASE_URL_300)
 
     private val earaBackendHost: String?
         get() = BuildConfig.LISTEN_TOGETHER_BASE_URL

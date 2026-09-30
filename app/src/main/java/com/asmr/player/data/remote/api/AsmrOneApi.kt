@@ -7,17 +7,8 @@ import retrofit2.http.Header
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-interface AsmrOneApi {
-    @GET("search/{keyword}")
-    suspend fun search(
-        @Path("keyword") keyword: String,
-        @Query("page") page: Int = 1,
-        @Query("order") order: String = "release",
-        @Query("sort") sort: String = "desc",
-        @Query("subtitle") subtitle: Int = 0,
-        @Header(NetworkHeaders.HEADER_SILENT_IO_ERROR) silentIoError: String? = null
-    ): SearchResponse
-
+/** asmr.one 主站与各镜像共用的作品详情/轨道树端点（四站完全一致）。 */
+interface AsmrWorkApi {
     @GET("work/{workId}")
     suspend fun getWorkDetails(
         @Path("workId") workId: String,
@@ -30,6 +21,18 @@ interface AsmrOneApi {
         @Query("v") version: Int = 2,
         @Header(NetworkHeaders.HEADER_SILENT_IO_ERROR) silentIoError: String? = null
     ): List<AsmrOneTrackNodeResponse>
+}
+
+interface AsmrOneApi : AsmrWorkApi {
+    @GET("search/{keyword}")
+    suspend fun search(
+        @Path("keyword") keyword: String,
+        @Query("page") page: Int = 1,
+        @Query("order") order: String = "release",
+        @Query("sort") sort: String = "desc",
+        @Query("subtitle") subtitle: Int = 0,
+        @Header(NetworkHeaders.HEADER_SILENT_IO_ERROR) silentIoError: String? = null
+    ): SearchResponse
 
     companion object {
         const val BASE_URL = "https://api.asmr.one/api/"
