@@ -1,6 +1,7 @@
-﻿package com.asmr.player.ui.sidepanel
+package com.asmr.player.ui.sidepanel
 
-import android.content.res.Configuration
+import com.asmr.player.ui.common.isCompactWidth
+import com.asmr.player.ui.common.isLandscape
 import androidx.compose.animation.*
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
@@ -29,7 +30,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -59,10 +59,10 @@ fun LandscapeRightPanelHost(
     ) -> Unit
 ) {
     val configuration = LocalConfiguration.current
-    val isCompact = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
+    val isCompact = windowSizeClass.widthSizeClass.isCompactWidth
     val wantPanel = !isCompact &&
         configuration.smallestScreenWidthDp >= 600 &&
-        configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        configuration.isLandscape
 
     val externalExpandedState = LocalRightPanelExpandedState.current
     var internalExpanded by rememberSaveable { mutableStateOf(true) }

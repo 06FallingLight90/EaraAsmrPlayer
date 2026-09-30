@@ -35,7 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import com.asmr.player.ui.common.isCompactWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -170,7 +170,7 @@ internal fun AlbumGroupDetailContent(
     scrollToTopSignal: Long = 0L,
 ) {
     val colorScheme = AsmrTheme.colorScheme
-    val isCompact = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
+    val isCompact = windowSizeClass.widthSizeClass.isCompactWidth
     val draggedTrackShape = RoundedCornerShape(18.dp)
     val draggedTrackContainerColor = dynamicPageContainerColor(colorScheme)
     val draggedTrackElevation = if (colorScheme.isDark) 10.dp else 14.dp

@@ -55,7 +55,7 @@ import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import com.asmr.player.ui.common.isCompactWidth
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -313,7 +313,7 @@ fun SettingsScreen(
     var pendingRemoveRoot by remember { mutableStateOf<String?>(null) }
 
     // 屏幕尺寸判断
-    val isCompact = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
+    val isCompact = windowSizeClass.widthSizeClass.isCompactWidth
     BackHandler(enabled = isActive && selectedSection != null) {
         selectedSection = null
     }

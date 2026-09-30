@@ -37,7 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import com.asmr.player.ui.common.isCompactWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -173,7 +173,7 @@ internal fun PlaylistDetailContent(
             localItems.map { item -> item.toPlaybackEntity() }
         }
     }
-    val isCompact = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
+    val isCompact = windowSizeClass.widthSizeClass.isCompactWidth
     val colorScheme = AsmrTheme.colorScheme
     val draggedItemShape = RoundedCornerShape(18.dp)
     val draggedItemContainerColor = dynamicPageContainerColor(colorScheme)

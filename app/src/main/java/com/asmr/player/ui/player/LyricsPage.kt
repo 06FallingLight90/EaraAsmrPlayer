@@ -31,7 +31,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.asmr.player.ui.theme.AsmrTheme
 
-import android.content.res.Configuration
+import com.asmr.player.ui.common.isLandscape
 import androidx.compose.ui.platform.LocalConfiguration
 import com.asmr.player.data.settings.CoverPreviewMode
 import com.asmr.player.data.settings.LyricsPageSettings
@@ -65,7 +65,7 @@ internal fun LyricsPage(
         useReadablePageInactiveText = true
     )
     val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isLandscape = configuration.isLandscape
     val useDragPreview = coverBackgroundEnabled && coverPreviewMode == CoverPreviewMode.Drag
     val useMotionPreview = coverBackgroundEnabled && coverPreviewMode == CoverPreviewMode.Motion
     val ownsMotionPreview = sharedArtworkAlignment == null

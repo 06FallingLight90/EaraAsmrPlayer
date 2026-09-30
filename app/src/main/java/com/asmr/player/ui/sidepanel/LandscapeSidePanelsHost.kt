@@ -1,6 +1,7 @@
 package com.asmr.player.ui.sidepanel
 
-import android.content.res.Configuration
+import com.asmr.player.ui.common.isCompactWidth
+import com.asmr.player.ui.common.isLandscape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -18,7 +19,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import com.asmr.player.ui.common.rememberCalmScrollableFlingBehavior
 
 @Composable
@@ -34,10 +34,10 @@ fun LandscapeSidePanelsHost(
     content: @Composable () -> Unit
 ) {
     val configuration = LocalConfiguration.current
-    val isCompact = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
+    val isCompact = windowSizeClass.widthSizeClass.isCompactWidth
     val wantSidePanels = !isCompact &&
         configuration.smallestScreenWidthDp >= 600 &&
-        configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        configuration.isLandscape
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val extraPerSide = (maxWidth - centerMaxWidth) / 2f

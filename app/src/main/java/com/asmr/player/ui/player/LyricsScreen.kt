@@ -19,7 +19,7 @@ import com.asmr.player.util.SubtitleEntry
 import com.asmr.player.util.SubtitleIndexFinder
 import kotlinx.coroutines.launch
 
-import android.content.res.Configuration
+import com.asmr.player.ui.common.isLandscape
 import androidx.compose.ui.platform.LocalConfiguration
 
 @Composable
@@ -31,7 +31,7 @@ fun LyricsScreen(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isLandscape = configuration.isLandscape
     
     val currentPosition = (playbackState as? PlaybackState.Playing)?.position ?: 0L
     

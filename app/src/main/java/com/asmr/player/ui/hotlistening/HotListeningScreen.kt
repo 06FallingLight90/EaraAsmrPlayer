@@ -41,7 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import com.asmr.player.ui.common.isCompactWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.CompositionLocalProvider
@@ -186,7 +186,7 @@ private fun HotListeningScreenContent(
     val settingsViewModel: SettingsViewModel = hiltViewModel()
     val searchBlockedKeywords by settingsViewModel.searchBlockedKeywords.collectAsStateWhileActive(isDataActive)
     val scope = rememberCoroutineScope()
-    val isCompactWidth = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
+    val isCompactWidth = windowSizeClass.widthSizeClass.isCompactWidth
     var showBlockedEntries by rememberSaveable { mutableStateOf(false) }
     var scrollResetNonce by rememberSaveable { mutableIntStateOf(0) }
     var metaActionKeyword by rememberSaveable { mutableStateOf<String?>(null) }

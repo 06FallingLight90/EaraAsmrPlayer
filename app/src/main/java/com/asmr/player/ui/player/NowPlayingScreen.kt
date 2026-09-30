@@ -1,6 +1,5 @@
 package com.asmr.player.ui.player
 
-import android.content.res.Configuration
 import android.content.Intent
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,6 +27,8 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import com.asmr.player.ui.common.isCompactWidth
+import com.asmr.player.ui.common.isLandscape
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -275,7 +276,7 @@ internal fun nowPlayingPortraitLayoutMetrics(
     screenHeight: Dp,
     widthClass: WindowWidthSizeClass
 ): NowPlayingPortraitLayoutMetrics {
-    val compact = widthClass == WindowWidthSizeClass.Compact &&
+    val compact = widthClass.isCompactWidth &&
         screenHeight.isFiniteDp() &&
         screenHeight <= NowPlayingCompactShortScreenHeight
     if (compact) {
@@ -298,7 +299,7 @@ internal fun nowPlayingPortraitLayoutMetrics(
         compact = false,
         contentHorizontalPadding = 24.dp,
         topPadding = 24.dp,
-        coverVerticalPadding = if (widthClass == WindowWidthSizeClass.Compact) 16.dp else 32.dp,
+        coverVerticalPadding = if (widthClass.isCompactWidth) 16.dp else 32.dp,
         audienceHeight = NowPlayingClassicAudienceHeight,
         trackInfoSingleLineHeight = NowPlayingClassicTrackInfoSingleLineHeight,
         classicLyricsReserveHeight = NowPlayingHomeClassicLyricsReserveHeight,
@@ -322,7 +323,7 @@ internal fun nowPlayingHomeCoverWidth(
     contentHorizontalPadding: Dp,
     coverAspectRatio: Float = 1f,
     topPadding: Dp = if (expanded) 0.dp else 24.dp,
-    coverVerticalPadding: Dp = if (expanded) 0.dp else if (widthClass == WindowWidthSizeClass.Compact) 16.dp else 32.dp,
+    coverVerticalPadding: Dp = if (expanded) 0.dp else if (widthClass.isCompactWidth) 16.dp else 32.dp,
     identityHeight: Dp = if (expanded) {
         0.dp
     } else {
@@ -336,7 +337,7 @@ internal fun nowPlayingHomeCoverWidth(
         fullWidth
     } else {
         val paddedWidth = (fullWidth - contentHorizontalPadding * 2).coerceAtLeast(1.dp)
-        if (widthClass == WindowWidthSizeClass.Compact) {
+        if (widthClass.isCompactWidth) {
             paddedWidth * NowPlayingHomeClassicCompactCoverScale
         } else {
             paddedWidth.coerceAtMost(NowPlayingHomeClassicRegularMaxCoverWidth)
@@ -358,7 +359,7 @@ internal fun nowPlayingHomeCoverWidth(
 }
 
 private fun nowPlayingHomeMinCoverWidth(widthClass: WindowWidthSizeClass): Dp {
-    return if (widthClass == WindowWidthSizeClass.Compact) {
+    return if (widthClass.isCompactWidth) {
         NowPlayingHomeCompactMinCoverWidth
     } else {
         NowPlayingHomeRegularMinCoverWidth
@@ -1372,7 +1373,7 @@ internal fun NowPlayingScreen(
         viewModel.selectSlice(if (sliceUiState.selectedSliceId == sliceId) null else sliceId)
     }
     val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isLandscape = configuration.isLandscape
     val widthClass = windowSizeClass.widthSizeClass
     val heightClass = windowSizeClass.heightSizeClass
     
@@ -2093,7 +2094,7 @@ internal fun NowPlayingScreen(
             val expandedHomeLyricsSettings = remember(lyricsPageSettings) {
                 lyricsPageSettings.copy(displayAreaMode = 0)
             }
-            val portraitContentWidthModifier = if (widthClass == WindowWidthSizeClass.Compact) {
+            val portraitContentWidthModifier = if (widthClass.isCompactWidth) {
                 Modifier.fillMaxWidth()
             } else {
                 Modifier
@@ -2294,7 +2295,7 @@ internal fun NowPlayingScreen(
                                                         availableHeight = portraitTopContentMaxHeight,
                                                         lineHeight = with(portraitDensity) {
                                                             nowPlayingLyricTypographyMetrics(
-                                                                largeTypography = widthClass != WindowWidthSizeClass.Compact,
+                                                                largeTypography = !widthClass.isCompactWidth,
                                                                 highlightFontSizeSp = nowPlayingLyricsSettings.highlightFontSizeSp
                                                             ).currentLineHeightSp.sp.toDp()
                                                         }
@@ -2311,7 +2312,7 @@ internal fun NowPlayingScreen(
                                             .then(
                                                 if (isVideo) {
                                                     Modifier
-                                                        .widthIn(max = if (widthClass == WindowWidthSizeClass.Compact) 1000.dp else 400.dp)
+                                                        .widthIn(max = if (widthClass.isCompactWidth) 1000.dp else 400.dp)
                                                         .fitVideoPreviewAspectRatio(videoAspectRatio)
                                                 } else {
                                                     Modifier
@@ -2431,7 +2432,7 @@ internal fun NowPlayingScreen(
                                                     highlightFontSizeSp = nowPlayingLyricsSettings.highlightFontSizeSp,
                                                     multilineEnabled = nowPlayingLyricsSettings.multilineEnabled,
                                                     compactHeight = portraitLayoutMetrics.compact,
-                                                    largeTypography = widthClass != WindowWidthSizeClass.Compact,
+                                                    largeTypography = !widthClass.isCompactWidth,
                                                     upcomingCount = upcomingCount,
                                                     centered = true,
                                                     currentFontWeight = FontWeight.ExtraBold,

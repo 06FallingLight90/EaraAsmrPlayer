@@ -92,7 +92,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import com.asmr.player.ui.common.isCompactWidth
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -438,7 +438,7 @@ private fun LibraryScreenContent(
         // TopAppBar is now handled by MainActivity for better consistency
     ) { padding ->
         // 屏幕尺寸判断
-        val isCompact = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
+        val isCompact = windowSizeClass.widthSizeClass.isCompactWidth
 
         LandscapeRightPanelHost(
             windowSizeClass = windowSizeClass,

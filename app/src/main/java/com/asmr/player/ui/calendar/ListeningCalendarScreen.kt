@@ -49,7 +49,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import com.asmr.player.ui.common.isCompactWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -114,7 +114,7 @@ fun ListeningCalendarScreen(
     val selectedSessions by viewModel.selectedSessions.collectAsStateWhileActive(isDataActive)
     val isDlsiteLoggedIn by viewModel.isDlsiteLoggedIn.collectAsStateWhileActive(isDataActive)
     val colorScheme = AsmrTheme.colorScheme
-    val isCompact = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
+    val isCompact = windowSizeClass.widthSizeClass.isCompactWidth
     val bottomOverlayPadding = LocalBottomOverlayPadding.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
