@@ -231,3 +231,14 @@ S13 ui/common 拆包（52 文件 + 15 测试已盘点，见上表）→ S14 Cook
 - **S16 收尾** ✅：ARCHITECTURE.md 更新至终态（家族表 14 文件、包分层图 common 七子包、偿还状态 P0-1..P2 全记）；top20 改动榜 `docs/iteration/top20-churn-after.txt`（前三：AlbumDetailScreen 121、MainContainer 114、SearchScreen 81——与体检时一致，改动集中地即重构集中地）
 - **实机 smoke**（S11/S12 后）✅：书库/专辑详情 DL/搜索/设置/下载四路由 + 无 FATAL；留人工：播放流/真实下载/设置写
 - 测试基线 840（S0）→ **875/0/4**（+35 只增不减），全程无 @Ignore 退化
+
+---
+
+# 2026-09-30 深夜：阶段3 门禁通过，重构 S0-S16 全部完成
+
+- **全量测试**：门禁权威跑 **880/0/4**（854→880，+26：EaraWindowSizeTest 2 + AlbumDetailScreenSupportTest 19 + DlsiteAuthStoreTest 5；审查核对 @Test 计数无删除）
+- **子代理审查**（`git diff refactor/phase-2..HEAD` 13 提交）：**通过**（P0/P1 零发现）。要点：5 个拆分提交归一化比对零逻辑混入；63a80d0 拆包 129 文件非 import 改动仅 5 行；10c721b 加密/迁移逻辑复核通过；P2×3 带过（edf1955 提交信息 19 实为 18；size baseline 建议升级行数 pin；readCookie 撕裂态可忽略）。报告：docs/iteration/phase-3-review.md
+- **tag `refactor/phase-3`** @ c0dfef1（兼作回退锚点；CI 双绿之 CI 侧待 push 后确认）
+- **重构全貌**：测试基线 840→880；巨石 AlbumDetailScreen 4039→1415 / MainContainer 3251→2631 / DownloadManager 2020→1170；ui/common 60 文件七子包；Cookie 加密；CI 行数+import 双守护。审查报告三份落盘 docs/iteration/（phase-1/2/3-review.md，gitignored）
+- **backlog（后续二开顺手偿还）**：walkTree/scanFromDocumentTree 拆函数；Chrome 概念归包；data→上层模型搬迁（import baseline 5 条）；MainContainer 主函数体路由编排结构化提取（需实机对照）；size baseline 升级「路径:行数」pin；PageTranslationUiTest 偶发 flake（单独跑必过）
+- push 时机由用户决定：push 后确认 ci.yml 架构守护与测试门禁在 GitHub Actions 全绿
