@@ -96,8 +96,10 @@ UI（ui/player/PlayerViewModel.kt 等）
 
 ## 5. 搜索 / 内容源现状
 
-- 双内容源：**asmr.one**（`data/remote/crawler/AsmrOneCrawler` + `data/remote/api/` 的 Retrofit 接口，含 Asmr100/200/300 镜像）与 **DLsite**（`data/remote/scraper/DLSiteScraper` 抓取 + `data/remote/dlsite/DlsitePlayLibraryClient` 已购曲库）。
-- 已知问题（P0-3）：`ui/search/SearchViewModel.kt` 直接注入 `AsmrOneCrawler` / `DlsitePlayLibraryClient` / `DLSiteScraper`，搜索源无接口抽象——新增内容源需改 6–10 个文件。**重构计划将抽 `ContentSource` 接口**统一搜索入口。
+- 双内容源：**asmr.one**（`data/remote/crawler/AsmrOneCrawler`；Retrofit 接口已收敛为 `AsmrOneApi` 主站 + `AsmrMirrorApi` 统一镜像接口，二者继承公共基接口 `AsmrWorkApi`，镜像实例由 NetworkModule 按 `@Named("asmr100"/"asmr200"/"asmr300")` 提供）与 **DLsite**（`data/remote/scraper/DLSiteScraper` 抓取 + `data/remote/dlsite/DlsitePlayLibraryClient` 已购曲库）。
+- 搜索是**筛选驱动的编排**而非按源分发：`SearchViewModel.fetchPage` 四分支短路——purchasedOnly→已购库、collectedOnly→Eara 后端（`AsmrOneAvailabilityApi`，走 `LISTEN_TOGETHER_BASE_URL`，非 asmr.one 直连）、直接 RJ 号→DLsite 多级 locale 回退、默认→DLsite 网页搜索。
+- 详情页分源：`AlbumDetailViewModel` 三个 `ensure*Loaded` 状态机（asmr.one 树 / DLsite 网页信息 / 已购曲库），由 `albumDetailOnlineLoadPlan`（纯函数，有锁定测试）按页签驱动。
+- **新增内容源改动面现状（2026-09-30 实测）**：新 client（1 文件）+ `SearchViewModel.fetchPage` 分支与筛选映射 + `AlbumDetailViewModel` 的 ensure 编排与 `AlbumDetailModel` 状态字段 + UI 装配，约 6–8 文件。**未来收敛路径**：`AlbumDetailModel` 状态模型拆分（S11 级）后可引入 `OnlineWorkSource` 接口 + 注册表把改动面压到 ≤4；在出现真实的新源需求前不为三个 ensure 编排套接口（它们是状态机而非源 seam，硬套是仪式）。
 - 辅助源：`hotlistening/`（热门收听）、`listentogether/`（一起听，服务端地址可由 `LISTEN_TOGETHER_BASE_URL` 构建配置覆盖）。
 
 ## 6. 构建与测试速查
@@ -114,7 +116,7 @@ UI（ui/player/PlayerViewModel.kt 等）
 
 - P0-1 已偿还：目录面板 V1–V4 死代码已删除，存活组件已去版本号重命名（见第 3 节括注）。
 - P0-2 巨石文件群：17 个 >1200 行文件仍待拆，最甚者为 `AlbumDetailDirectorySupport.kt` / `AlbumDetailScreen.kt` / `MainContainer.kt`；纪律是"新功能一律新建文件"。
-- P0-3 分层穿透：`ui` 直连 DAO 与搜索源无抽象仍在（见第 2、5 节），重构将先抽 `ContentSource` 接口。
+- P0-3 部分偿还（2026-09-30）：镜像 Retrofit 接口四合一（`AsmrWorkApi`/`AsmrMirrorApi`）；死路由族 `album_detail_online` 与死枚举 `SearchSource` 已删；`ui` 直连 DAO 仍在（见第 2 节）。搜索源抽象按证据评估后**不做**接口套壳——原因与未来路径见第 5 节。
 - P0-4 文档债：本文件与 README「Getting Started」即其偿还；`docs/landing_zh.md` 失效截图已同步修订。
 
 快速读懂本工程的建议顺序：`MainActivity` → `main/MainContainer`（导航骨架）→ `ui/library`（库页与详情家族）→ `playback/PlayerConnection` → `service/PlaybackService`（播放落地）。

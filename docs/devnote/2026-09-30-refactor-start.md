@@ -77,11 +77,22 @@
 
 ---
 
-# 2026-09-30 S8 断点存档（Backlog，下次续接）
+# 2026-09-30 S8 存档（已收尾，本节转为记录）
 
-> 用户决定：今日到此休息，S8 中途暂停。本节是冷启动续接材料。分支 `refactor/architecture-cleanup`，HEAD = 655cf88，工作区干净（本文档提交后）。
+> 原「断点存档」目的已达成，S8 于 2026-09-30 第二段工作收尾。以下方向与差异清单保留作决策依据。
 
-## S8a 已完成（2026-09-30 第二段工作，待提交后更新 HEAD）
+## S8 收尾结论（用户批准）
+
+- **S8a 镜像 API 收敛** ✅ commit 03ee359：`AsmrMirrorApi`（继承 `AsmrWorkApi`）替代三个逐字重复镜像接口，`@Named` 三实例，asSelected 适配器 4→2，profile 同步（含清除 asBackup/backupApisInOrder 遗留死条目）。安全网=重构前补的 2 个 MockWebServer 锁定测试（search 形状/映射）。
+- **S8b 死路由族删除** ✅ commit 49d7505：`album_detail_online/{source}/{workId}` shim + `{rj}` 宿主 + `Routes.AlbumDetailOnlineByRjPattern` + 底部栏死分支 + `SearchSource` 死枚举（零引用清单：字符串/常量/Manifest 深链三路 grep）。测试输入样例同步替换。
+- **S8c OnlineWorkSource 接口：按证据评估后不做**（用户批准「文档收尾」）：ensure* 三函数是 ~250 行的 VM 状态机编排（token 取消/跨源联动/头部合并缠在一起），不是源 seam；真正卡新增源改动面的是 `AlbumDetailModel` 状态模型（S11 级拆分）。现状改动面 6-8 文件与未来收敛路径已写入 ARCHITECTURE.md 第 5 节。等出现真实新源需求再设计接口。
+- **S8d fake source 走查：随 S8c 一并取消**（无接口可走查），以 ARCHITECTURE.md 的「新增内容源改动面现状」替代。
+
+## 遗留记录
+
+- 新增 flake：`PageTranslationUiTest.newLabelsDuringAnInFlightBatchDoNotRestartItsRequest` 全量跑中出现过一次 `CalledFromWrongThreadException`（Robolectric Compose 线程时序），单独重跑 12/12 全过——非确定性，暂不 @Ignore，S15 考虑重试基建。
+
+## S8a 落地快照（保留供追溯）
 
 - **镜像 API 收敛落地**：新增 `AsmrMirrorApi`（继承新基接口 `AsmrWorkApi`，getWorkDetails/getTracks 主站与镜像共用）+ 迁入 `Asmr200SearchResponse/Asmr200Work/Asmr200LanguageEdition`；删除 Asmr100Api/200Api/300Api 三文件；NetworkModule 改为 `@Named("asmr100/200/300")` 三个 provider（共用私有 mirrorApi 构建函数）；AsmrOneCrawler 构造参数类型换 `AsmrMirrorApi`（参数名不变），`selectedApi` 移为类成员（原顶层函数需显式传参），`asSelected` 适配器 4→2；`AsmrOneEndpoint.directBaseUrl` 改引新常量。
 - **安全网**：重构前补了 2 个锁定测试（主站/镜像 search 请求形状 + 镜像响应映射，MockWebServer），并入既有 `AsmrOneCrawlerEndpointRoutingTest`。
