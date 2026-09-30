@@ -1,0 +1,10 @@
+app/src/main/java/com/asmr/player/main/MainContainer.kt
+app/src/main/java/com/asmr/player/ui/downloads/DownloadsScreen.kt
+app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt
+app/src/main/java/com/asmr/player/ui/library/LibraryScreen.kt
+app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt
+app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailDirectorySupport.kt
+app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailDlsiteTabs.kt
+app/src/main/java/com/asmr/player/ui/player/NowPlayingScreen.kt
+app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt
+app/src/main/java/com/asmr/player/ui/settings/SettingsScreen.kt

@@ -26,5 +26,7 @@ jobs:
           set -euo pipefail
           sed -i 's/\r$//' gradlew
           chmod +x gradlew
+      - name: Architecture guards (file size / import direction)
+        run: python3 tools/ci_guard.py
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest

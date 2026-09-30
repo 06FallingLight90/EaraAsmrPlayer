@@ -83,18 +83,18 @@ object NetworkModule {
             }
 
             if (host.contains("asmr.one")) {
-                builder.header("Origin", "https://www.asmr.one")
-                builder.header("Referer", "https://www.asmr.one/")
+                builder.header("Origin", NetworkHeaders.ORIGIN_ASMR_ONE)
+                builder.header("Referer", NetworkHeaders.REFERER_ASMR_ONE)
             } else if (host.contains("asmr-100.com") || host.contains("asmr-200.com") || host.contains("asmr-300.com")) {
-                builder.header("Origin", "https://www.asmr.one")
-                builder.header("Referer", "https://www.asmr.one/")
+                builder.header("Origin", NetworkHeaders.ORIGIN_ASMR_ONE)
+                builder.header("Referer", NetworkHeaders.REFERER_ASMR_ONE)
             } else if (host.contains("dlsite.")) {
                 if (request.header("Referer") == null) {
-                    builder.header("Referer", "https://www.dlsite.com/")
+                    builder.header("Referer", NetworkHeaders.REFERER_DLSITE)
                 }
             } else if (host.contains("byteair.volces.com")) {
                 if (request.header("Referer") == null) {
-                    builder.header("Referer", "https://www.dlsite.com/")
+                    builder.header("Referer", NetworkHeaders.REFERER_DLSITE)
                 }
             }
             
@@ -173,11 +173,11 @@ object NetworkModule {
             }
 
             if (host.contains("asmr.one")) {
-                builder.header("Origin", "https://www.asmr.one")
-                builder.header("Referer", "https://www.asmr.one/")
+                builder.header("Origin", NetworkHeaders.ORIGIN_ASMR_ONE)
+                builder.header("Referer", NetworkHeaders.REFERER_ASMR_ONE)
             } else if (host.contains("asmr-100.com") || host.contains("asmr-200.com") || host.contains("asmr-300.com")) {
-                builder.header("Origin", "https://www.asmr.one")
-                builder.header("Referer", "https://www.asmr.one/")
+                builder.header("Origin", NetworkHeaders.ORIGIN_ASMR_ONE)
+                builder.header("Referer", NetworkHeaders.REFERER_ASMR_ONE)
             } else {
                 val dlsiteHeaders = DlsiteAntiHotlink.headersForImageUrl(request.url.toString())
                 dlsiteHeaders.forEach { (k, v) ->
