@@ -55,7 +55,6 @@ import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -125,6 +124,7 @@ import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
 import com.asmr.player.playback.MediaItemFactory
 import com.asmr.player.ui.common.HorizontalStereoSpectrum
+import com.asmr.player.ui.common.isCompactWidth
 import com.asmr.player.data.remote.NetworkHeaders
 import com.asmr.player.cache.CacheImageModel
 import com.asmr.player.data.remote.dlsite.DlsiteLanguageEdition
@@ -318,7 +318,7 @@ fun AlbumDetailScreen(
             .background(AsmrTheme.colorScheme.background),
         contentAlignment = Alignment.TopCenter
     ) {
-        val isCompact = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
+        val isCompact = windowSizeClass.widthSizeClass.isCompactWidth
         val configuration = LocalConfiguration.current
         val useLandscapeArtworkTide = shouldUseAlbumDetailLandscapeLayout(
             compactWidth = isCompact,
