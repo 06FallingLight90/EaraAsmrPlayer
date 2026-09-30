@@ -220,3 +220,14 @@ S10 EaraWindowSize（测试先行 + 三种判断 600-840dp 中间档逐处语义
 ## 下次开工顺序（更新）
 
 S13 ui/common 拆包（52 文件 + 15 测试已盘点，见上表）→ S14 Cookie 加密（复用 DeepSeekApiKeyStore 模式 + 实机登录验证清单）→ S15 P2 清尾（URL 常量收敛、walkTree/scanFromDocumentTree 拆函数、Chrome 概念归包、nowplaying 3 文件死 import、已知 flake 守护）+ CI 守护（单文件行数口径与用户确认）→ S16 收尾（ARCHITECTURE.md 终态、top20 改动榜对比、实机 smoke：小米14 走查全链路）→ 阶段3门禁（全量 + 子代理审查 `git diff refactor/phase-2..HEAD` + 报告落盘 + tag `refactor/phase-3`）
+
+---
+
+# 2026-09-30 晚：S13-S16 全部完成，阶段3 收官（门禁执行中）
+
+- **S13 ui/common 拆包** ✅ 63a80d0：52 主文件 + 15 测试按域分 7 子包（cover 15/dialog 7/status 6/audio 9/list 10/core 5/reorderable 8 既有）；245 符号映射 0 重名，62 文件 import 行锚重写；跨子包引用编译引导补 21+3 处。坑：泛型 receiver 扩展漏符号表、reorderable 本就是真实子包（差点双重前缀）、FQN 调用点与 stale import 各 1 处手工清
+- **S14 Cookie 加密** ✅ 10c721b：ValueCipher seam + KeystoreValueCipher（AES/GCM 按别名单例）+ DlsiteAuthStore 改造（save 加密写/解密读失败清除/明文惰性迁移）+ 5 注入式测试。**实机验证**：历史明文迁移 → `_encrypted`/`_iv` 落盘、明文键删除、expires 保留；强杀重启登录态保持（Keystore 解密回读 ✓）
+- **S15 CI 守护 + P2 清尾** ✅ 6da7304：`tools/ci_guard.py`（行数 >1500 ratchet：存量 10 文件 baseline + import 方向 data→playback/ui/main 禁令：存量 5 处 baseline）；ci.yml 插 Architecture guards 步骤；networkmodule 6 处 inline URL 收敛 NetworkHeaders；nowplaying 3 文件死 import 清 166 个。**backlog**：walkTree/scanFromDocumentTree 拆函数、Chrome 概念归包、data→上层模型搬迁（import baseline 5 条）
+- **S16 收尾** ✅：ARCHITECTURE.md 更新至终态（家族表 14 文件、包分层图 common 七子包、偿还状态 P0-1..P2 全记）；top20 改动榜 `docs/iteration/top20-churn-after.txt`（前三：AlbumDetailScreen 121、MainContainer 114、SearchScreen 81——与体检时一致，改动集中地即重构集中地）
+- **实机 smoke**（S11/S12 后）✅：书库/专辑详情 DL/搜索/设置/下载四路由 + 无 FATAL；留人工：播放流/真实下载/设置写
+- 测试基线 840（S0）→ **875/0/4**（+35 只增不减），全程无 @Ignore 退化

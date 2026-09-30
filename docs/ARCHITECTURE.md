@@ -1,6 +1,6 @@
 # ARCHITECTURE — EaraAsmrPlayer 架构说明
 
-> 范围：`refactor/architecture-cleanup` 分支（v1.2.3 之后，含目录面板 V1–V4 死代码清理与去版本号重命名，commit `e002a43` / `b7603e4`）。
+> 范围：`refactor/architecture-cleanup` 分支（v1.2.3 之后：死代码清理、去版本号重命名、阶段 1–3 结构重构，见第 7 节偿还状态）。
 > 文中包名、类名、行数均于 2026-09-30 直接从代码核实；行数为约数（按换行切分统计，含文件末尾空行）。
 
 ## 1. 技术栈与模块
@@ -17,12 +17,16 @@
 
 ```
               ┌───────────── main ──────────────┐
-              │ MainContainer（导航宿主，约3345行）│
+              │ MainContainer（导航宿主，约2630行）│
+              │ MainContainerSupport（约590行：  │
+              │  路由框/顶栏/系统栏/底部Chrome）  │
               └───────────────┬─────────────────┘
                               ▼
 ┌───────────────────────────── ui ─────────────────────────────┐
 │ library（含 albumdetail/）· player · search · downloads      │
-│ settings · playlists · groups · common · nav · sidepanel …   │
+│ settings · playlists · groups · nav · sidepanel · calendar … │
+│ common/：audio · core · cover · dialog · list · reorderable ·│
+│          status 七个子包（按域拆分，P1-6 已偿还）              │
 └──────────┬───────────────────────────────────┬───────────────┘
            │                                   │
            ▼                                   ▼
@@ -38,36 +42,44 @@
 │ : MediaSessionService│  （PlaybackService 亦回读 data 持久化进度/统计）
 └──────────────────────┘
 
-domain：Album / Track / Slice / SearchSource 纯模型（仅 Track 依赖 util）
+domain：Album / Track / Slice 纯模型（仅 Track 依赖 util）
 di：CacheModule · DatabaseModule · NetworkModule（全部 Hilt 绑定集中于此）
 feature 服务包：subtitle · translation · cache · work · hotlistening · listentogether · benchmark · performance
 ```
+
+> 注意目录与包名的既有约定：`ui/library/albumdetail/` 目录内文件声明包
+> `com.asmr.player.ui.library`；`main/` 目录内文件声明包
+> `com.asmr.player`（ui/common 子包为真实包名，勿混淆）。
 
 分层规则与已知例外：
 
 - 预期方向：`ui → (playback, data, domain)`；`playback → (data, domain)`；`service → (playback, data)`；`data → (domain, util)`。
 - 已知穿透（P0-3，重构目标）：`ui` 下 16 个文件直接 import `data.local.db.dao.*`（如 DownloadsViewModel 直连 AlbumDao / DownloadDao / TrackDao；AlbumDetailViewModel 注入整个 AppDatabase）。
-- 已知反向耦合（`data → 上层`，共 4 文件 5 处）：`data/settings/SettingsRepository → playback.AppVolume`；`data/lyrics/LyricsTargetContext → playback.MediaItemRequest`；`data/repository/PlaylistMediaItemMapper → playback.MediaItemFactory`；`data/lyrics/LyricsLoader → ui.library.LocalTreeLeafCacheEntry / TreeFileType`。
+- 已知反向耦合（`data → 上层`，共 4 文件 5 处，已记录于 `tools/import-direction-baseline.txt`，新增违规会被 CI 拦截；存量的跨层模型搬迁留待后续）：`data/settings/SettingsRepository → playback.AppVolume`；`data/lyrics/LyricsTargetContext → playback.MediaItemRequest`；`data/repository/PlaylistMediaItemMapper → playback.MediaItemFactory`；`data/lyrics/LyricsLoader → ui.library.LocalTreeLeafCacheEntry / TreeFileType`。
 - `domain` 基本纯净：仅 `Track.kt` 依赖 `util.RemoteSubtitleSource`。
 
 ## 3. AlbumDetail 家族职责表
 
-详情页是全库最大的文件家族：10 个文件、合计约 15 900 行。除前两个位于 `ui/library/` 外，其余在 `ui/library/albumdetail/`。
+详情页是全库最大的文件家族：14 个文件、合计约 16 400 行。除前两个位于 `ui/library/` 外，其余在 `ui/library/albumdetail/`（目录内文件声明包 `com.asmr.player.ui.library`）。
 
 | 文件 | 约行数 | 职责 |
 |---|---|---|
-| `AlbumDetailScreen.kt` | 4039 | 页面入口 Composable `AlbumDetailScreen`；横屏布局数学（`albumLandscape*` 系列）、在线加载计划（`albumDetailOnlineLoadPlan`）、目录树状态 key、头部揭晓动画 |
-| `AlbumDetailViewModel.kt` | 3198 | `@HiltViewModel`：详情页状态编排——asmr.one / DLsite / 本地三路数据加载合并、播放与下载意图、相似作品推荐 |
-| `albumdetail/AlbumDetailDirectorySupport.kt` | 3388 | 目录浏览面板：`DirectoryBrowserPanel`、`CompactDirectoryBreadcrumbContent`、`DirectoryFolderRow`、`DirectoryBatchBarEmbedded`（死代码清理后已去 V3/V4/V5 版本号后缀） |
-| `albumdetail/AlbumDetailDlsiteTabs.kt` | 1935 | DLsite 页签 `AlbumDlsiteInfoBreadcrumbTabV2`：画廊预览、试听列表、目录树加载占位与空态插画 |
-| `albumdetail/AlbumDetailDialogs.kt` | 1100 | `AsmrOneDownloadDialog`、`OnlineSaveDialog`、`InlineVideoPlayer`、`FilePreviewDialog` 及保存树扁平化工具 |
-| `albumdetail/AlbumDetailViewModelSupport.kt` | 840 | VM 纯函数支撑：`AlbumDetailModel`、相似作品推荐特征、头部专辑合并、DLSite 语言版本解析、asmr.one 轨道树扁平化、远程文件大小探测 |
-| `albumdetail/AlbumDetailSharedSections.kt` | 688 | 共享区块：`AlbumDescription`、`AlbumTracks` / `TrackItem` / `OnlineTrackRow`、DLSite 推荐卡、区块标题 |
-| `albumdetail/AlbumDetailLocalTab.kt` | 591 | 本地目录页签 `AlbumLocalBreadcrumbTabV2` |
-| `albumdetail/AlbumDetailLocalAvailability.kt` | 57 | 本地专辑物理来源枚举与缺失专辑清理判断 |
-| `albumdetail/AlbumDetailScrollPersistence.kt` | 43 | `PersistAlbumDetailListScroll`：滚动停止或页面离开时保存/恢复列表位置 |
+| `AlbumDetailScreen.kt` | 1415 | 页面入口 Composable `AlbumDetailScreen`（S11 拆分后仅剩主 Composable 编排） |
+| `AlbumDetailViewModel.kt` | 2960 | `@HiltViewModel`：详情页状态编排——asmr.one / DLsite / 本地三路数据加载合并、播放与下载意图、相似作品推荐 |
+| `albumdetail/AlbumDetailDirectorySupport.kt` | 3180 | 目录浏览面板：`DirectoryBrowserPanel`、`CompactDirectoryBreadcrumbContent`、`DirectoryFolderRow`、`DirectoryBatchBarEmbedded` |
+| `albumdetail/AlbumDetailDlsiteTabs.kt` | 1870 | DLsite 页签 `AlbumDlsiteInfoBreadcrumbTabV2`：画廊预览、试听列表、目录树加载占位与空态插画 |
+| `albumdetail/AlbumDetailLandscapeArtwork.kt` | 920 | 横屏封面渲染：模糊源/缓存、曲线形状、Ribbon、背景/封面/身份、相似作品（横竖屏） |
+| `albumdetail/AlbumDetailHeader.kt` | 740 | 页头：`AlbumHeader`、动作栏、语言菜单、迟到元数据揭晓 |
+| `albumdetail/AlbumDetailHero.kt` | 725 | Hero 区：背景模糊、身份覆盖层、在线听众信息、稳定身份/封面源记忆、滚动渐隐 |
+| `albumdetail/AlbumDetailDialogs.kt` | 1070 | `AsmrOneDownloadDialog`、`OnlineSaveDialog`、`InlineVideoPlayer`、`FilePreviewDialog` 及保存树扁平化工具 |
+| `albumdetail/AlbumDetailScreenSupport.kt` | 400 | 支撑层：枚举/数据类/动画 spec/`AlbumDetailHeroMotionState`/加载计划/`isVideoPreviewUrl`/`PlaylistAddTarget` |
+| `albumdetail/AlbumDetailViewModelSupport.kt` | 780 | VM 纯函数支撑：`AlbumDetailModel`、相似作品推荐特征、头部专辑合并、DLSite 语言版本解析、asmr.one 轨道树扁平化、远程文件大小探测 |
+| `albumdetail/AlbumDetailSharedSections.kt` | 670 | 共享区块：`AlbumDescription`、`AlbumTracks` / `TrackItem` / `OnlineTrackRow`、DLSite 推荐卡、区块标题 |
+| `albumdetail/AlbumDetailLocalTab.kt` | 585 | 本地目录页签 `AlbumLocalBreadcrumbTabV2` |
+| `albumdetail/AlbumDetailLocalAvailability.kt` | 50 | 本地专辑物理来源枚举与缺失专辑清理判断 |
+| `albumdetail/AlbumDetailScrollPersistence.kt` | 37 | `PersistAlbumDetailListScroll`：滚动停止或页面离开时保存/恢复列表位置 |
 
-> 重构纪律：新功能一律新建文件，禁止向 `AlbumDetailScreen.kt` / `MainContainer.kt` 追加。
+> 重构纪律（由 CI 强制）：单文件 >1500 行禁入（存量 10 个记录于 `tools/size-guard-baseline.txt`，修复后须收缩 baseline）；新功能一律新建文件。
 
 ## 4. 播放数据流
 
@@ -106,17 +118,22 @@ UI（ui/player/PlayerViewModel.kt 等）
 
 - 环境：JDK 17；Windows 本机可用仓库自带的 `gradlew-local.bat` 辅助脚本（重定向 Gradle 本地缓存）。
 - 构建：`./gradlew :app:assembleDebug`
-- 测试：`./gradlew :app:testDebugUnitTest`（当前基线约 **840** 个用例，改动后应保持全绿）
-- CI：`.github/workflows/release.yml` 由 `v*` tag 触发，先运行 `:app:testReleaseUnitTest` 再构建 Release 签名 APK。
+- 测试：`./gradlew :app:testDebugUnitTest`（当前基线约 **875** 个用例，改动后应保持全绿且只增不减）
+- CI：`.github/workflows/ci.yml`（push/PR）：架构守护（`tools/ci_guard.py`：单文件行数 ratchet + data 层 import 方向）→ `:app:testDebugUnitTest`；`.github/workflows/release.yml` 由 `v*` tag 触发，先运行 `:app:testReleaseUnitTest` 再构建 Release 签名 APK。
 - 签名配置与字幕模型按需下载说明见 README「Getting Started」一节。
 
 ## 7. 已知问题与重构线索
 
-对照 `docs/project-quality-review-20260929.md`（2026-09-29 体检），当前状态：
+对照 `docs/project-quality-review-20260929.md`（2026-09-29 体检），当前状态（阶段 1–3 重构后）：
 
 - P0-1 已偿还：目录面板 V1–V4 死代码已删除，存活组件已去版本号重命名（见第 3 节括注）。
-- P0-2 巨石文件群：17 个 >1200 行文件仍待拆，最甚者为 `AlbumDetailDirectorySupport.kt` / `AlbumDetailScreen.kt` / `MainContainer.kt`；纪律是"新功能一律新建文件"。
-- P0-3 部分偿还（2026-09-30）：镜像 Retrofit 接口四合一（`AsmrWorkApi`/`AsmrMirrorApi`）；死路由族 `album_detail_online` 与死枚举 `SearchSource` 已删；`ui` 直连 DAO 仍在（见第 2 节）。搜索源抽象按证据评估后**不做**接口套壳——原因与未来路径见第 5 节。
+- P0-2 大幅偿还（阶段 2/3）：DownloadManager 2020→1170（协调器/Worker 外提）；AlbumDetailScreen 4039→1415（Header/Hero/LandscapeArtwork/ScreenSupport 四文件外提，行为经钉测试与实机 smoke 验证）；MainContainer 3251→2631（Support 外提，主函数体路由编排仍在，单文件行数已入 CI ratchet）；死代码删除与 SearchSource 死枚举清理见 P0-3。剩余超限文件见 `tools/size-guard-baseline.txt`。
+- P0-3 部分偿还：镜像 Retrofit 接口四合一（`AsmrWorkApi`/`AsmrMirrorApi`）；死路由族 `album_detail_online` 与死枚举 `SearchSource` 已删；`ui` 直连 DAO 仍在（见第 2 节）。搜索源抽象按证据评估后**不做**接口套壳——原因与未来路径见第 5 节。
 - P0-4 文档债：本文件与 README「Getting Started」即其偿还；`docs/landing_zh.md` 失效截图已同步修订。
+- P1-1/P1-2 已偿还（阶段 2）：双 VM 共享支持函数与 `sanitizeFolderName` 收敛（钉测试）。
+- P1-3 已偿还（阶段 3）：设备形态判断收敛 `ui/common/core/EaraWindowSize`（三族断点语义钉测试；`isPhone` smallestScreenWidthDp 族独立保留）。
+- P1-6 已偿还（阶段 3）：ui/common 60 文件按域拆 7 子包（audio/core/cover/dialog/list/reorderable/status），测试同步移动。
+- P1-8 已偿还（阶段 3）：DLsite Cookie AndroidKeyStore AES/GCM 加密存储（`data/remote/auth/ValueCipher` seam + 注入式测试；明文惰性迁移，实机验证登录持久化）。
+- P2 部分偿还：networkmodule inline URL 收敛至 `NetworkHeaders`；nowplaying 死 import 清理；CI 架构守护（行数 ratchet + import 方向）。**backlog**：`LibraryViewModel.walkTree` / `scanFromDocumentTree` 拆函数、Chrome 概念归包（main 与 ui/nav）、`data → 上层`反向耦合的模型搬迁（见第 2 节 baseline）。
 
 快速读懂本工程的建议顺序：`MainActivity` → `main/MainContainer`（导航骨架）→ `ui/library`（库页与详情家族）→ `playback/PlayerConnection` → `service/PlaybackService`（播放落地）。
