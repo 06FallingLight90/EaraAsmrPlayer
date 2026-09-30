@@ -13,7 +13,6 @@ object Routes {
     const val NowPlaying = "now_playing"
 
     const val AlbumDetailByIdPattern = "album_detail/{albumId}?rjCode={rjCode}&initialTab={initialTab}"
-    const val AlbumDetailOnlineByRjPattern = "album_detail_online/{rj}"
 
     const val AlbumDetailByRjPattern = "album_detail_rj/{rj}?initialTab={initialTab}"
     fun searchAssist(keyword: String = ""): String {

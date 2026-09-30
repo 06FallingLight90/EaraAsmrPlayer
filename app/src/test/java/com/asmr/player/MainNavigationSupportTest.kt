@@ -328,7 +328,6 @@ class MainNavigationSupportTest {
     fun shouldHideStatusBarForImmersivePage_hidesAlbumDetailRoutes() {
         assertEquals(true, shouldHideStatusBarForImmersivePage("album_detail/{albumId}?rjCode={rjCode}", false))
         assertEquals(true, shouldHideStatusBarForImmersivePage("album_detail_rj/{rj}?initialTab={initialTab}", false))
-        assertEquals(true, shouldHideStatusBarForImmersivePage("album_detail_online/{rj}", false))
     }
 
     @Test
@@ -360,7 +359,7 @@ class MainNavigationSupportTest {
         )
         assertEquals(
             false,
-            isAlbumDetailStackTransition("album_detail_online/{rj}", "library")
+            isAlbumDetailStackTransition("album_detail_rj/{rj}?initialTab={initialTab}", "library")
         )
     }
 

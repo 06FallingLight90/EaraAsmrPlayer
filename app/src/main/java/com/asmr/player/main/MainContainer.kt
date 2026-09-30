@@ -128,7 +128,6 @@ import com.asmr.player.ui.search.SearchAssistSearchRequest
 import com.asmr.player.ui.search.SearchAssistScreen
 import com.asmr.player.ui.search.SearchScreen
 import com.asmr.player.ui.search.SearchViewModel
-import com.asmr.player.domain.model.SearchSource
 import com.asmr.player.ui.settings.AppUpdateState
 import com.asmr.player.ui.settings.SettingsScreen
 import com.asmr.player.ui.settings.SettingsViewModel
@@ -1683,8 +1682,7 @@ fun MainContainer(
                             ) {
                                 items(navItems, key = { it.third }) { (icon, label, route) ->
                                     val isAlbumDetailFromSearch =
-                                        currentRoute?.startsWith("album_detail_rj") == true ||
-                                            currentRoute?.startsWith("album_detail_online") == true
+                                        currentRoute?.startsWith("album_detail_rj") == true
                                     val isAlbumDetailFromLibrary =
                                         currentRoute?.startsWith("album_detail/") == true &&
                                             !currentRoute.startsWith("album_detail_rj")
@@ -2729,97 +2727,6 @@ fun MainContainer(
                             heroBlurLayerCache = heroBlurLayerCache,
                             viewModel = albumDetailViewModel
                         )
-                    }
-                }
-                composable(
-                    route = "album_detail_online/{rj}",
-                    arguments = listOf(navArgument("rj") { defaultValue = "" })
-                ) { backStackEntry ->
-                    val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    val albumGroupsViewModel: AlbumGroupsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    val rj = backStackEntry.arguments?.getString("rj").orEmpty()
-                    AlbumDetailRouteFrame(
-                        backStackEntry = backStackEntry,
-                        previousBackStackEntry = navController.previousBackStackEntry,
-                        stackPopTargetEntryId = albumDetailStackPopTargetEntryId,
-                        onPopBackStack = { targetEntryId ->
-                            albumDetailStackPopTargetEntryId = targetEntryId
-                            navController.popBackStack()
-                        },
-                        onPageOffsetReader = { reader ->
-                            if (navController.currentBackStackEntry?.id == backStackEntry.id) {
-                                albumDetailPageOffsetReader = reader
-                            }
-                        },
-                        onExitStateChanged = { albumDetailExitInProgress = it },
-                        onEditRj = { currentRj ->
-                            manualRjInput = currentRj
-                            showManualRjDialog = true
-                        }
-                    ) { albumDetailViewModel, heroBlurLayerCache ->
-                        AlbumDetailScreen(
-                            windowSizeClass = windowSizeClass,
-                            rjCode = rj,
-                            onPlayTracks = { album, tracks, startTrack ->
-                                scope.launch {
-                                    if (playerViewModel.playTracksPrepared(album, tracks, startTrack)) {
-                                        requestMiniPlayerPlayFeedback()
-                                    }
-                                }
-                            },
-                            onPlayMediaItems = { items, startIndex ->
-                                playerViewModel.playMediaItems(items, startIndex)
-                                val startItem = items.getOrNull(startIndex)
-                                if (startItem.isVideoPlaybackItem()) {
-                                    openNowPlaying()
-                                } else if (startItem != null) {
-                                    requestMiniPlayerPlayFeedback()
-                                }
-                            },
-                            onAddToQueue = { album, track ->
-                                playerViewModel.addTrackToQueue(album, track)
-                            },
-                            onOpenPlaylistPicker = { item ->
-                                albumBatchPlaylistPickerRequest = BatchPlaylistPickerRequest(listOf(item))
-                            },
-                            onOpenDlsiteLogin = { navController.navigateSingleTop("dlsite_login") },
-                            onOpenAlbumByRj = { targetRj, work ->
-                                AlbumCoverHintStore.record(
-                                    albumId = null,
-                                    rjCode = targetRj,
-                                    title = work?.title,
-                                    circle = null,
-                                    coverUrl = resolveRecommendedWorkHeroCoverUrl(targetRj, work?.coverUrl)
-                                )
-                                navigator.openAlbumDetailByRjStacked(targetRj)
-                            },
-                            onSearchKeyword = ::submitMetaSearchKeyword,
-                            playlistsViewModel = playlistsViewModel,
-                            albumGroupsViewModel = albumGroupsViewModel,
-                            settingsViewModel = settingsViewModel,
-                            libraryViewModel = libraryViewModel,
-                            heroBlurLayerCache = heroBlurLayerCache,
-                            viewModel = albumDetailViewModel
-                        )
-                    }
-                }
-                composable(
-                    route = "album_detail_online/{source}/{workId}",
-                    arguments = listOf(
-                        navArgument("source") { defaultValue = SearchSource.DLSite.name },
-                        navArgument("workId") { defaultValue = "" }
-                    )
-                ) { backStackEntry ->
-                    val workId = backStackEntry.arguments?.getString("workId").orEmpty()
-                    LaunchedEffect(workId) {
-                        if (workId.isNotBlank()) {
-                            navController.navigate("album_detail_online/$workId") {
-                                launchSingleTop = true
-                                popUpTo("album_detail_online/{source}/{workId}") { inclusive = true }
-                            }
-                        } else {
-                            navController.popBackStack()
-                        }
                     }
                 }
                 composable("playlists") {
