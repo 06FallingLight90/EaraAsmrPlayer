@@ -144,3 +144,29 @@
 ## 原「下次开工顺序」（已被文首 S9 断点存档取代，仅留档）
 
 S8a → S8b → S8c → S8d → 阶段2 门禁（全量测试 + 子代理审查 `git diff refactor/phase-1..HEAD` + 报告落盘 docs/iteration/phase-2-review.md + tag `refactor/phase-2`）→ S9。
+
+---
+
+# 2026-09-30 阶段2 门禁：通过，tag `refactor/phase-2` 已打（71e12a2）
+
+## 门禁执行记录
+
+- **全量测试**：854/0/4（fbb1efd 全量 12m48s 绿；7d0a877/71e12a2 均不影响 app 测试输入，UP-TO-DATE 复用）。840→854 只增不减 ✓
+- **子 agent 审查**（general-purpose，两轮）：首轮 `git diff refactor/phase-1..7d0a877` → P0 零 / P1 一 / P2 三；修复提交 71e12a2 后复审 → **P1 消除，终判通过**。报告落盘 docs/iteration/phase-2-review.md（gitignored 本机文件）
+- **tag**：`refactor/phase-2` @ 71e12a2（阶段3门禁 diff 基准：`git diff refactor/phase-2..HEAD`）
+
+## P1 发现与闭环（审查唯一实质发现）
+
+- **发现**：49d7505（S8b 死路由删除）的零引用清单只 grep 了 app 模块，**漏扫 baselineprofile 模块**——BenchmarkDriver.kt:91 `startAlbumDetailDlTabExample` 仍引用已删路由 `album_detail_online/{rj}`，被 BaselineProfileGenerator/LongListPerformanceBenchmark 实际调用，基准场景会导航到不存在路由。不破坏编译与单测（baselineprofile 模块不在 app 测试范围），故 P1 非 P0
+- **修复**（71e12a2，编号 P0-3 修正）：startRoute 改 `"album_detail_rj/$rjCode?initialTab=dl"`。语义链核实：`toAlbumDetailInitialTab`（MainNavigationSupport.kt:203）"dl"→tab 1（DL 页）；start_route extra 经 `navigateSingleTop`（MainContainer.kt:964）导航，query 参数匹配 AlbumDetailByRjPattern（AppNavigator.kt:17）
+- **验证**：baselineprofile 两变体 `compileNonMinifiedReleaseKotlin` + `compileBenchmarkReleaseKotlin` 通过；复审全仓（排除 .md）grep `album_detail_online` 零匹配
+
+## 纪律沉淀（下阶段门禁沿用）
+
+- **零引用清单必须跨模块 grep**：不只 app/，含 baselineprofile、macrobenchmark 等全部模块源码（排除 docs/devnote 历史记录），再交叉核对 Routes 常量清单
+- P2（带过不回流）：提交信息口径微瑕 3 处（655cf88/da58a9e/fbb1efd 的数字与实际统计口径出入），历史信息不改
+
+## 下次开工顺序
+
+**阶段3（S10-S16）**，从 docs/iteration/phase-2-review.md 冷启动：
+S10 EaraWindowSize（测试先行 + 三种判断 600-840dp 中间档逐处语义核对，禁盲替）→ S11 前置（AlbumDetailScreen 待拆纯逻辑提取钉测试）→ S11 巨石拆分 → S12 MainContainer → S13 ui/common 拆包 → S14 Cookie 加密 → S15 P2 清尾 + CI 守护 → S16 收尾
