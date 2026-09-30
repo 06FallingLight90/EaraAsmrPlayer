@@ -319,7 +319,8 @@ class DownloadManager @Inject constructor(
                 EnqueueDownloadBatchResult.Accepted(requests.size)
             } catch (_: DownloadTaskBlockedException) {
                 EnqueueDownloadBatchResult.TaskBlocked
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "enqueueBatch failed dir=${requests.firstOrNull()?.taskRootDir.orEmpty()}", e)
                 EnqueueDownloadBatchResult.DirectoryUnavailable
             }
         }
@@ -606,6 +607,10 @@ class DownloadManager @Inject constructor(
         )
         if (created > 0) return created
         return downloadDao.getTaskByKey(taskKey)?.id ?: 0L
+    }
+
+    companion object {
+        private const val TAG = "DownloadManager"
     }
 }
 
@@ -1194,7 +1199,8 @@ class DownloadWorker(context: Context, parameters: WorkerParameters) : Coroutine
             val now = System.currentTimeMillis()
             try {
                 flushTrafficStats()
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "flushTrafficStats failed", e)
             }
             val finalTotal = if (total > 0) total else downloaded
             dao.updateItemProgress(
@@ -1241,6 +1247,7 @@ class DownloadWorker(context: Context, parameters: WorkerParameters) : Coroutine
                 )
             )
         } catch (e: Exception) {
+            Log.w(TAG, "download work failed file=$fileName dir=$targetDir", e)
             val now = System.currentTimeMillis()
             runCatching {
                 val workId = id.toString()
@@ -1376,7 +1383,8 @@ class FinalizeDownloadTaskWorker(context: Context, parameters: WorkerParameters)
                 }
             }
             ListenableWorker.Result.success()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("FinalizeDownloadTaskWorker", "finalize download task failed; reporting success", e)
             ListenableWorker.Result.success()
         }
     }
@@ -1530,6 +1538,8 @@ private suspend fun finalizeDlsiteLosslessArchiveInStorageIfNeeded(
     stagingArchive.delete()
 }
 
+private const val LIBRARY_UPSERT_TAG = "DownloadLibraryUpsert"
+
 private suspend fun upsertDownloadedAlbumToLibrary(
     db: com.asmr.player.data.local.db.AppDatabase,
     appContext: Context,
@@ -1584,7 +1594,8 @@ private suspend fun upsertDownloadedAlbumToLibrary(
         downloadPath = dir.absolutePath,
     ) ?: try {
         albumDao.getAlbumByPathOnce(dir.absolutePath)
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        Log.w(LIBRARY_UPSERT_TAG, "lookup downloaded album by path failed", e)
         null
     } ?: try {
         albumDao.getAllAlbumsOnce().firstOrNull { album ->
@@ -1592,11 +1603,13 @@ private suspend fun upsertDownloadedAlbumToLibrary(
                 .map { it.trim() }
                 .any { it.equals(dir.absolutePath, ignoreCase = false) }
         }
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        Log.w(LIBRARY_UPSERT_TAG, "scan downloaded albums by directory failed", e)
         null
     } ?: try {
         if (rj.isNotBlank()) albumDao.getAlbumByWorkIdOnce(rj) else null
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        Log.w(LIBRARY_UPSERT_TAG, "lookup downloaded album by work id failed", e)
         null
     }
 
@@ -1634,7 +1647,8 @@ private suspend fun upsertDownloadedAlbumToLibrary(
             albumDao.updateAlbum(entity)
             entity.id
         }
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        Log.w(LIBRARY_UPSERT_TAG, "upsert downloaded album row failed dir=${dir.name}", e)
         0L
     }
     if (albumId <= 0L) return
@@ -1657,7 +1671,8 @@ private suspend fun upsertDownloadedAlbumToLibrary(
     )
     try {
         albumFtsDao.upsert(listOf(fts))
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        Log.w(LIBRARY_UPSERT_TAG, "upsert downloaded album fts failed", e)
     }
 
     val audioExtensions = setOf("mp3", "flac", "wav", "m4a", "ogg", "aac", "opus")
@@ -1688,7 +1703,8 @@ private suspend fun upsertDownloadedAlbumToLibrary(
 
     val existingTracks = try {
         trackDao.getTracksForAlbumOnce(albumId)
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        Log.w(LIBRARY_UPSERT_TAG, "load existing downloaded tracks failed", e)
         emptyList()
     }
     val prefix = dir.absolutePath.trimEnd('\\', '/') + File.separator
