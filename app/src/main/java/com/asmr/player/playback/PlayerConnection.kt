@@ -50,6 +50,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.net.URLDecoder
 import java.util.concurrent.CancellationException
@@ -808,20 +809,19 @@ class PlayerConnection @Inject constructor(
     /**
      * 播放位置轮询会更新多个 Compose 状态。把这段工作放到当前帧提交之后，避免固定 250ms
      * 定时器随机插进测量、绘制或 RenderThread 同步阶段；轮询频率和进度显示行为保持不变。
+     * Choreographer 帧回调仅前台可用（见 [awaitFrameCommitOrTimeout]），后台走超时兜底。
      */
     private suspend fun awaitFrameCommit() {
-        suspendCancellableCoroutine { continuation ->
+        awaitFrameCommitOrTimeout(FrameCommitAwaitTimeoutMs) { commit ->
             val choreographer = Choreographer.getInstance()
-            val commitAction = Runnable {
-                if (continuation.isActive) continuation.resume(Unit)
-            }
+            val commitAction = Runnable { commit() }
             val frameCallback = Choreographer.FrameCallback {
                 // Choreographer 的帧回调先于 traversal；投递到主消息队列后会在整个
                 // doFrame（包括绘制与提交）返回之后执行。
                 mainHandler.post(commitAction)
             }
             choreographer.postFrameCallback(frameCallback)
-            continuation.invokeOnCancellation {
+            return@awaitFrameCommitOrTimeout {
                 choreographer.removeFrameCallback(frameCallback)
                 mainHandler.removeCallbacks(commitAction)
             }
@@ -955,4 +955,33 @@ private suspend fun awaitSessionResult(
         )
         cont.invokeOnCancellation { future.cancel(true) }
     }
+}
+
+/** 帧提交等待的后台兜底超时：超过即视为当前无 vsync（应用在后台），轮询退化为纯 delay 节奏。 */
+private const val FrameCommitAwaitTimeoutMs = 50L
+
+/**
+ * 等待一帧提交完成；[timeoutMs] 内未等到则返回 false 兜底。
+ *
+ * Choreographer 帧回调只在前台（有 vsync）时产生，应用退后台后永远等不到回调——若无限
+ * 挂起，依赖本挂起点推进的位置轮询会整体停摆，「仅播放切片只在应用前台生效、切回前台时
+ * 立刻跳转」的上游缺陷（issue #322）即源于此。超时返回后轮询循环继续走 delay 节奏，
+ * 后台切片检测恢复正常；前台回调通常在下一帧（约 16ms）内到达，早于超时。
+ *
+ * @param postFrameCommit 注册一次性「帧提交后」回调并返回注销函数；测试可注入假实现。
+ */
+internal suspend fun awaitFrameCommitOrTimeout(
+    timeoutMs: Long,
+    postFrameCommit: (commit: () -> Unit) -> (() -> Unit)
+): Boolean {
+    val resumed = withTimeoutOrNull(timeoutMs) {
+        suspendCancellableCoroutine { continuation ->
+            val commit: () -> Unit = {
+                if (continuation.isActive) continuation.resume(Unit)
+            }
+            val unregister = postFrameCommit(commit)
+            continuation.invokeOnCancellation { unregister() }
+        }
+    }
+    return resumed != null
 }
