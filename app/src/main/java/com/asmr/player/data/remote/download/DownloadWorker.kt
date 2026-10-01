@@ -417,7 +417,13 @@ class DownloadWorker(context: Context, parameters: WorkerParameters) : Coroutine
                 )
             )
         } catch (e: Exception) {
-            Log.w(TAG, "download work failed file=$fileName dir=$targetDir", e)
+            Log.w(TAG, "download work failed file=$fileName dir=$targetDir attempt=$runAttemptCount", e)
+            // 弱网自动重试（20261001 体检 P2-1）：IO 类异常且未超上限时走 WorkManager 指数退避，
+            // 不改 DB 失败态；上限后按原路径落失败
+            if (e is java.io.IOException && runAttemptCount < MAX_AUTO_RETRY_ATTEMPTS) {
+                DownloadQueueCoordinator.requestSchedule(applicationContext)
+                return ListenableWorker.Result.retry()
+            }
             val now = System.currentTimeMillis()
             runCatching {
                 val workId = id.toString()
@@ -439,6 +445,9 @@ class DownloadWorker(context: Context, parameters: WorkerParameters) : Coroutine
 
     companion object {
         private const val TAG = "DownloadWorker"
+
+        /** IO 类失败的最大自动重试次数（总尝试 = 1 + 该值）；退避沿用 WorkManager 默认指数策略。 */
+        private const val MAX_AUTO_RETRY_ATTEMPTS = 2
         private const val DOWNLOAD_BUFFER_SIZE = 64 * 1024
         private const val PROGRESS_UPDATE_INTERVAL_MS = 1_000L
 

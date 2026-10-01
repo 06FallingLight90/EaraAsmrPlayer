@@ -98,6 +98,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.TimeUnit
@@ -275,9 +276,11 @@ class PlaybackService : MediaSessionService() {
         appVolumeBoostController =
             AppVolumeBoostController(getSystemService(AUDIO_SERVICE) as AudioManager)
         val runtimeSettings = runBlocking {
-            settingsRepository.loadPlaybackRuntimeSettings()
+            // 主线程最多等 2s（正常为内存级 DataStore 读）；超时回退默认设置，避免无限 ANR
+            runCatching {
+                withTimeout(2_000L) { settingsRepository.loadPlaybackRuntimeSettings() }
+            }.getOrDefault(PlaybackRuntimeSettings())
         }
-        applyPlaybackRuntimeSettings(runtimeSettings)
         val currentAppVolumePercent = appVolumeBoostController.currentVolumePercent()
         startupAppVolumePercent = currentAppVolumePercent
         val startupAppVolumeSyncJob = serviceScope.launch(Dispatchers.IO) {
@@ -1373,7 +1376,8 @@ class PlaybackService : MediaSessionService() {
         overlay?.hide()
         statsJob?.cancel()
         runBlocking(Dispatchers.IO) {
-            flushPendingNetworkTraffic()
+            // 退出落盘限时 3s：超时放弃本次流量统计 flush，避免 onDestroy 无限阻塞
+            runCatching { withTimeout(3_000L) { flushPendingNetworkTraffic() } }
         }
         cancelPlaybackRecovery(resetPolicy = true)
         effectApplyJob?.cancel()
