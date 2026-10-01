@@ -1,6 +1,5 @@
 package com.asmr.player.playback
 
-import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
 import android.os.Handler
@@ -20,7 +19,6 @@ import com.asmr.player.data.local.db.dao.TrackDao
 import com.asmr.player.data.lyrics.EXTRA_REMOTE_SUBTITLE_SOURCES_JSON
 import com.asmr.player.data.repository.TrackSliceRepository
 import com.asmr.player.data.settings.SettingsRepository
-import com.asmr.player.service.PlaybackService
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
 import com.asmr.player.util.MessageManager
@@ -77,6 +75,7 @@ class PlayerConnection @Inject constructor(
     private val slicePlaybackController: SlicePlaybackController,
     private val messageManager: MessageManager,
     private val networkMeteredChecker: NetworkMeteredChecker,
+    private val playbackController: PlaybackController,
     private val playbackStateStore: PlaybackStateStore,
     private val trackDao: TrackDao,
     private val albumDao: AlbumDao
@@ -221,7 +220,7 @@ class PlayerConnection @Inject constructor(
     private suspend fun connect() {
         connectMutex.withLock {
             if (!PlaybackConnectionLifecycle.canConnect() || controller != null) return
-            val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
+            val token = SessionToken(context, playbackController.sessionServiceComponent(context))
             val future = MediaController.Builder(context, token)
                 .setListener(
                     object : MediaController.Listener {

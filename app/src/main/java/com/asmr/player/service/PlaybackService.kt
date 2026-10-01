@@ -3,6 +3,7 @@ package com.asmr.player.service
 import android.app.PendingIntent
 import android.bluetooth.BluetoothAdapter
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -58,6 +59,7 @@ import com.asmr.player.playback.DefaultSpectrumAudioTrackBufferDurationMillis
 import com.asmr.player.playback.FadingPlayer
 import com.asmr.player.domain.model.AppVolume
 import com.asmr.player.playback.AppVolumeBoostController
+import com.asmr.player.playback.PlaybackController
 import com.asmr.player.playback.GraphicEqualizerAudioProcessor
 import com.asmr.player.playback.PlaybackMediaCache
 import com.asmr.player.playback.PlaybackConnectionLifecycle
@@ -1452,3 +1454,12 @@ private data class PlaybackStatsTick(
     val trackContext: ListeningTrackContext?,
     val incrementTrackCount: Boolean,
 )
+
+/**
+ * [PlaybackController] 的 service 侧实现：把 Media3 会话服务的组件名交给 playback 层，
+ * 使其不再直接引用 [PlaybackService] 类型（依赖方向 service→playback）。
+ */
+internal class PlaybackServiceController @Inject constructor() : PlaybackController {
+    override fun sessionServiceComponent(context: Context): ComponentName =
+        ComponentName(context, PlaybackService::class.java)
+}
