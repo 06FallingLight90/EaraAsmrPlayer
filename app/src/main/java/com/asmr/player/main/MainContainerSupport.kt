@@ -1,4 +1,4 @@
-package com.asmr.player
+package com.asmr.player.main
 
 import com.asmr.player.translation.PageTranslationAction
 import com.asmr.player.translation.PageTranslationHost

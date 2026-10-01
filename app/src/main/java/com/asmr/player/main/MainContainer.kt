@@ -1,5 +1,7 @@
-package com.asmr.player
+package com.asmr.player.main
 
+import com.asmr.player.BuildConfig
+import com.asmr.player.R
 import com.asmr.player.translation.LocalPageTranslationHeader
 import com.asmr.player.translation.PageTranslationAction
 import com.asmr.player.translation.PageTranslationHeaderAction

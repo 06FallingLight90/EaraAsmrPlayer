@@ -13,6 +13,21 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import com.asmr.player.main.computePrimaryNavSelectionProgresses
+import com.asmr.player.main.isAlbumDetailStackTransition
+import com.asmr.player.main.isVideoPlaybackItem
+import com.asmr.player.main.resolveCurrentPrimaryDestinationRoute
+import com.asmr.player.main.resolveMainRequestedOrientation
+import com.asmr.player.main.resolvePrimaryNavVisualRoute
+import com.asmr.player.main.resolvePrimaryPagerApproachPage
+import com.asmr.player.main.resolvePrimaryPagerBeyondBoundsPageCount
+import com.asmr.player.main.shouldClearPendingPrimaryNavigationRoute
+import com.asmr.player.main.shouldHideStatusBarForImmersivePage
+import com.asmr.player.main.shouldKeepVideoOutputEnabled
+import com.asmr.player.main.shouldScrollPrimaryRouteToTop
+import com.asmr.player.main.shouldSyncPrimaryPagerToRoute
+import com.asmr.player.main.shouldTriggerPrimaryRouteScrollToTop
+import com.asmr.player.main.toThemeMediaSource
 
 @RunWith(RobolectricTestRunner::class)
 class MainNavigationSupportTest {

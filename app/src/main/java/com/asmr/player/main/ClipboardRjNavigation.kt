@@ -1,4 +1,4 @@
-package com.asmr.player
+package com.asmr.player.main
 
 import android.content.ClipboardManager
 import android.content.Context

@@ -6,7 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.media3.common.MediaItem
-import com.asmr.player.toThemeMediaSource
+import com.asmr.player.main.toThemeMediaSource
 import com.asmr.player.ui.theme.AsmrColorScheme
 import com.asmr.player.ui.theme.HuePalette
 import com.asmr.player.ui.theme.ThemeMode
