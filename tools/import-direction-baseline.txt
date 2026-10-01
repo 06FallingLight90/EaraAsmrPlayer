@@ -1,4 +1,3 @@
-app/src/main/java/com/asmr/player/service/PlaybackService.kt com.asmr.player.MainActivity
 app/src/main/java/com/asmr/player/subtitle/SubtitleTaskService.kt com.asmr.player.MainActivity
 app/src/main/java/com/asmr/player/subtitle/SubtitleTaskService.kt com.asmr.player.ui.library.albumdetail.loadOrBuildLocalTreeIndex
 app/src/main/java/com/asmr/player/subtitle/SubtitleTaskService.kt com.asmr.player.ui.library.albumdetail.LocalTreeNode

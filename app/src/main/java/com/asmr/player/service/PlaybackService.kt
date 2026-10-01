@@ -37,7 +37,6 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommands
 import androidx.media3.datasource.cache.CacheDataSource
-import com.asmr.player.MainActivity
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.datastore.SettingsDataStore
 import com.asmr.player.data.local.db.entities.TrackPlaybackProgressEntity
@@ -1356,7 +1355,9 @@ class PlaybackService : MediaSessionService() {
     }
 
     private fun createContentIntent(): PendingIntent {
-        val intent = Intent(this, MainActivity::class.java)
+        val intent = packageManager.getLaunchIntentForPackage(packageName) ?: Intent(Intent.ACTION_MAIN)
+            .setPackage(packageName)
+            .addCategory(Intent.CATEGORY_LAUNCHER)
         return TaskStackBuilder.create(this)
             .addNextIntentWithParentStack(intent)
             .getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
