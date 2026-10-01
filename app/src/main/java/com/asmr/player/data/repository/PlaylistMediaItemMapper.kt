@@ -7,7 +7,6 @@ import com.asmr.player.data.lyrics.EXTRA_ALBUM_WORK_ID
 import com.asmr.player.data.lyrics.EXTRA_LYRICS_RELATIVE_PATH_NO_EXT
 import com.asmr.player.data.lyrics.EXTRA_TRACK_GROUP
 import com.asmr.player.data.local.db.entities.PlaylistItemEntity
-import com.asmr.player.playback.MediaItemFactory
 import java.io.File
 
 object PlaylistMediaItemMapper {
@@ -36,27 +35,6 @@ object PlaylistMediaItemMapper {
             mimeType = item.localConfiguration?.mimeType.orEmpty(),
             isVideo = extras?.getBoolean("is_video") == true,
             itemOrder = itemOrder
-        )
-    }
-
-    fun toMediaItemOrNull(item: PlaylistItemEntity): MediaItem? {
-        val normalizedUri = repairPlayableUri(item.uri)
-        if (normalizedUri.isBlank() || normalizedUri.equals("null", ignoreCase = true)) return null
-        return MediaItemFactory.fromDetails(
-            mediaId = item.mediaId.trim().ifBlank { normalizedUri },
-            uri = normalizedUri,
-            title = item.title,
-            artist = item.artist,
-            albumTitle = item.albumTitle,
-            artworkUri = item.artworkUri,
-            albumId = item.albumId,
-            trackId = item.trackId,
-            rjCode = item.rjCode,
-            albumWorkId = item.albumWorkId,
-            trackGroup = item.trackGroup,
-            lyricsRelativePathNoExt = item.lyricsRelativePathNoExt,
-            mimeType = item.mimeType.ifBlank { null },
-            isVideo = item.isVideo
         )
     }
 

@@ -57,7 +57,7 @@ import com.asmr.player.playback.BalanceAudioProcessor
 import com.asmr.player.playback.ChannelModeAudioProcessor
 import com.asmr.player.playback.DefaultSpectrumAudioTrackBufferDurationMillis
 import com.asmr.player.playback.FadingPlayer
-import com.asmr.player.playback.AppVolume
+import com.asmr.player.domain.model.AppVolume
 import com.asmr.player.playback.AppVolumeBoostController
 import com.asmr.player.playback.GraphicEqualizerAudioProcessor
 import com.asmr.player.playback.PlaybackMediaCache

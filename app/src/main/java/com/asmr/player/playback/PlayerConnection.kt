@@ -24,7 +24,7 @@ import com.asmr.player.service.PlaybackService
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
 import com.asmr.player.util.MessageManager
-import com.asmr.player.playback.AppVolume
+import com.asmr.player.domain.model.AppVolume
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.asmr.player.util.NetworkMeteredChecker
 import com.asmr.player.util.RemoteSubtitleSource

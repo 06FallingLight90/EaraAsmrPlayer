@@ -7,7 +7,7 @@ import org.junit.Test
 import com.asmr.player.ui.library.albumdetail.buildDirectoryImagePreviewRequest
 import com.asmr.player.ui.library.albumdetail.buildGalleryImagePreviewRequest
 import com.asmr.player.ui.library.albumdetail.DirectoryFileItem
-import com.asmr.player.ui.library.albumdetail.TreeFileType
+import com.asmr.player.data.local.db.entities.TreeFileType
 
 class ImagePreviewSupportTest {
 

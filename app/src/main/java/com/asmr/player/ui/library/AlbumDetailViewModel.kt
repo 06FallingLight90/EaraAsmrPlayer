@@ -162,7 +162,7 @@ import com.asmr.player.ui.library.albumdetail.shouldPreserveHeaderAlbumMetadata
 import com.asmr.player.ui.library.albumdetail.shouldReloadAsmrOneForResolvedInitialTarget
 import com.asmr.player.ui.library.albumdetail.shouldRemoveMissingLocalAlbum
 import com.asmr.player.ui.library.albumdetail.shouldReuseAlbumDetailModel
-import com.asmr.player.ui.library.albumdetail.TreeFileType
+import com.asmr.player.data.local.db.entities.TreeFileType
 import com.asmr.player.ui.library.albumdetail.treeFileTypeForName
 import com.asmr.player.ui.library.albumdetail.treeFileTypeForNode
 import com.asmr.player.ui.library.albumdetail.ALBUM_DETAIL_SIMILAR_WORK_LIMIT

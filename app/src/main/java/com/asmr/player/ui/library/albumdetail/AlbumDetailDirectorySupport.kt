@@ -95,6 +95,8 @@ import com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 import com.asmr.player.data.remote.scraper.DlsiteRecommendations
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
+import com.asmr.player.data.local.db.entities.LocalTreeLeafCacheEntry
+import com.asmr.player.data.local.db.entities.TreeFileType
 import com.asmr.player.playback.MediaItemFactory
 import com.asmr.player.subtitle.SubtitleGenerationPolicy
 import com.asmr.player.data.remote.NetworkHeaders
@@ -247,24 +249,6 @@ internal sealed class LocalTreeUiEntry {
         val fileType: TreeFileType,
         val track: Track?
     ) : LocalTreeUiEntry()
-}
-
-internal enum class TreeFileType {
-    Audio,
-    Video,
-    Image,
-    Subtitle,
-    Text,
-    Pdf,
-    Archive,
-    Document,
-    Spreadsheet,
-    Presentation,
-    Code,
-    Ebook,
-    Font,
-    AppPackage,
-    Other
 }
 
 internal fun treeFileTypeForName(fileName: String): TreeFileType {
@@ -1250,13 +1234,6 @@ internal fun buildRemoteDirectoryBrowser(
         files = files
     )
 }
-
-internal data class LocalTreeLeafCacheEntry(
-    val relativePath: String,
-    val absolutePath: String,
-    val fileType: TreeFileType,
-    val sizeBytes: Long? = null
-)
 
 internal fun onlineSavedResourceTreeLeaf(
     resource: OnlineSavedResourceEntity

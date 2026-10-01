@@ -41,7 +41,7 @@ import com.asmr.player.ui.common.audio.AudioOutputRouteIcon
 import com.asmr.player.ui.common.audio.AppVolumeHearingWarningDialog
 import com.asmr.player.ui.common.audio.AppVolumeSlider
 import com.asmr.player.ui.common.audio.AppVolumeWarningSessionState
-import com.asmr.player.playback.AppVolume
+import com.asmr.player.domain.model.AppVolume
 import com.asmr.player.playback.PlaybackSnapshot
 import com.asmr.player.ui.common.audio.rememberProtectedAppVolumeChangeState
 import com.asmr.player.service.AudioOutputRouteKind

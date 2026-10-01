@@ -9,6 +9,7 @@ import com.asmr.player.data.lyrics.ManualLyricsSourceRepository
 import com.asmr.player.data.lyrics.lyricsTargetContextFromMediaItem
 import com.asmr.player.playback.PlaybackSnapshot
 import com.asmr.player.playback.MediaItemFactory
+import com.asmr.player.playback.toMediaItemOrNull
 import com.asmr.player.playback.PlayerConnection
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
@@ -53,13 +54,12 @@ import android.os.Bundle
 import java.io.File
 
 import com.asmr.player.data.repository.PlaylistRepository
-import com.asmr.player.data.repository.PlaylistMediaItemMapper
 import com.asmr.player.data.repository.TrackSliceRepository
 import com.asmr.player.data.repository.SliceOverlapException
 import com.asmr.player.data.settings.EqualizerSettings
 import com.asmr.player.data.settings.AsmrPreset
 import com.asmr.player.playback.SlicePlaybackController
-import com.asmr.player.playback.AppVolume
+import com.asmr.player.domain.model.AppVolume
 
 import com.asmr.player.util.MessageManager
 import kotlin.math.roundToLong
@@ -990,8 +990,4 @@ class PlayerViewModel @Inject constructor(
             )
         }
     }
-}
-
-private fun PlaylistItemEntity.toMediaItemOrNull(): MediaItem? {
-    return PlaylistMediaItemMapper.toMediaItemOrNull(this)
 }

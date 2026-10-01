@@ -10,6 +10,7 @@ import com.asmr.player.data.lyrics.EXTRA_LYRICS_RELATIVE_PATH_NO_EXT
 import com.asmr.player.data.lyrics.EXTRA_TRACK_GROUP
 import com.asmr.player.data.local.db.entities.PlaylistEntity
 import com.asmr.player.data.local.db.entities.PlaylistItemEntity
+import com.asmr.player.playback.toMediaItemOrNull
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -115,7 +116,7 @@ class PlaylistRepositoryOrderTest {
         assertEquals("audio/flac", entity.mimeType)
         assertFalse(entity.isVideo)
 
-        val restored = PlaylistMediaItemMapper.toMediaItemOrNull(entity)
+        val restored = entity.toMediaItemOrNull()
         assertNotNull(restored)
         val restoredItem = restored!!
         val extras = restoredItem.mediaMetadata.extras

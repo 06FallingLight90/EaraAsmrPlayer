@@ -1,5 +1,6 @@
 package com.asmr.player.playback
 
+import com.asmr.player.domain.model.AppVolume
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

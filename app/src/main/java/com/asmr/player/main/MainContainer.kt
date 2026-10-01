@@ -254,7 +254,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.asmr.player.data.settings.SettingsRepository
-import com.asmr.player.playback.AppVolume
+import com.asmr.player.domain.model.AppVolume
 import com.asmr.player.ui.common.audio.AppVolumeVerticalSlider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

@@ -197,7 +197,7 @@ import androidx.media3.common.MediaItem
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.asmr.player.data.settings.SettingsRepository
-import com.asmr.player.playback.AppVolume
+import com.asmr.player.domain.model.AppVolume
 import com.asmr.player.ui.common.audio.AppVolumeVerticalSlider
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties

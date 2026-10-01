@@ -7,7 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import com.asmr.player.playback.AppVolume
+import com.asmr.player.domain.model.AppVolume
 import com.asmr.player.playback.AppVolumeChangeSource
 import com.asmr.player.playback.AppVolumeSafety
 import com.asmr.player.ui.common.dialog.FlatActionDialog

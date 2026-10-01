@@ -2,7 +2,7 @@ package com.asmr.player.ui.library
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import com.asmr.player.ui.library.albumdetail.TreeFileType
+import com.asmr.player.data.local.db.entities.TreeFileType
 import com.asmr.player.ui.library.albumdetail.treeFileTypeForName
 import com.asmr.player.ui.library.albumdetail.treeFileTypeForNode
 

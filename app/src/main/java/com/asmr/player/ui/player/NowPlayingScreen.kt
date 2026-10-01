@@ -98,7 +98,7 @@ import com.asmr.player.ui.common.dialog.DismissOutsideBoundsOverlay
 import com.asmr.player.ui.common.audio.AppVolumeHearingWarningDialog
 import com.asmr.player.ui.common.audio.AppVolumeSlider
 import com.asmr.player.ui.common.audio.AppVolumeWarningSessionState
-import com.asmr.player.playback.AppVolume
+import com.asmr.player.domain.model.AppVolume
 import com.asmr.player.playback.PlaybackSnapshot
 import com.asmr.player.ui.common.audio.EqualizerPanel
 import com.asmr.player.ui.common.dialog.PlayerModalSheet

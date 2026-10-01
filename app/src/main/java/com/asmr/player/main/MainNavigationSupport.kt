@@ -189,7 +189,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.media3.common.MediaItem
 import androidx.lifecycle.lifecycleScope
 import com.asmr.player.data.settings.SettingsRepository
-import com.asmr.player.playback.AppVolume
+import com.asmr.player.domain.model.AppVolume
 import com.asmr.player.ui.common.audio.AppVolumeVerticalSlider
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties

@@ -5,11 +5,13 @@ import android.os.Bundle
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import com.asmr.player.data.local.db.entities.PlaylistItemEntity
 import com.asmr.player.data.lyrics.EXTRA_ALBUM_WORK_ID
 import com.asmr.player.data.lyrics.EXTRA_LYRICS_RELATIVE_PATH_NO_EXT
 import com.asmr.player.data.lyrics.EXTRA_REMOTE_SUBTITLE_SOURCES_JSON
 import com.asmr.player.data.lyrics.EXTRA_TRACK_GROUP
 import com.asmr.player.data.lyrics.deriveLyricsRelativePathNoExt
+import com.asmr.player.data.repository.PlaylistMediaItemMapper
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
 import com.asmr.player.util.RemoteSubtitleSource
@@ -192,4 +194,26 @@ object MediaItemFactory {
         if (normalized.isEmpty()) return null
         return normalized.joinToString("\n")
     }
+}
+
+/** 播放列表实体 → 播放项（原 PlaylistMediaItemMapper.toMediaItemOrNull，B1 下沉至 playback）。 */
+fun PlaylistItemEntity.toMediaItemOrNull(): MediaItem? {
+    val normalizedUri = PlaylistMediaItemMapper.repairPlayableUri(uri)
+    if (normalizedUri.isBlank() || normalizedUri.equals("null", ignoreCase = true)) return null
+    return MediaItemFactory.fromDetails(
+        mediaId = mediaId.trim().ifBlank { normalizedUri },
+        uri = normalizedUri,
+        title = title,
+        artist = artist,
+        albumTitle = albumTitle,
+        artworkUri = artworkUri,
+        albumId = albumId,
+        trackId = trackId,
+        rjCode = rjCode,
+        albumWorkId = albumWorkId,
+        trackGroup = trackGroup,
+        lyricsRelativePathNoExt = lyricsRelativePathNoExt,
+        mimeType = mimeType.ifBlank { null },
+        isVideo = isVideo
+    )
 }

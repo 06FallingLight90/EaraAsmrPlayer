@@ -1,5 +1,7 @@
 package com.asmr.player.playback
 
+import com.asmr.player.domain.model.AppVolume
+
 enum class AppVolumeChangeSource {
     TapJump,
     Drag

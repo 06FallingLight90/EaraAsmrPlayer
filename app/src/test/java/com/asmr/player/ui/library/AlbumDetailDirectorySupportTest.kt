@@ -32,7 +32,7 @@ import com.asmr.player.ui.library.albumdetail.flattenLocalTreeIndex
 import com.asmr.player.ui.library.albumdetail.flattenOnlineSaveLeaves
 import com.asmr.player.ui.library.albumdetail.folderPathPrefixes
 import com.asmr.player.ui.library.albumdetail.LocalSelectionFileRef
-import com.asmr.player.ui.library.albumdetail.LocalTreeLeafCacheEntry
+import com.asmr.player.data.local.db.entities.LocalTreeLeafCacheEntry
 import com.asmr.player.ui.library.albumdetail.localTreePathMatchesTarget
 import com.asmr.player.ui.library.albumdetail.LocalTreeUiEntry
 import com.asmr.player.ui.library.albumdetail.normalizeLocalTreeRelativePath
@@ -41,7 +41,7 @@ import com.asmr.player.ui.library.albumdetail.RemoteSelectionFileRef
 import com.asmr.player.ui.library.albumdetail.resolveExistingRemoteSelectionPaths
 import com.asmr.player.ui.library.albumdetail.subtitleGenerationTrackForFile
 import com.asmr.player.ui.library.albumdetail.subtitleTranslationTrackForFile
-import com.asmr.player.ui.library.albumdetail.TreeFileType
+import com.asmr.player.data.local.db.entities.TreeFileType
 
 class AlbumDetailDirectorySupportTest {
 

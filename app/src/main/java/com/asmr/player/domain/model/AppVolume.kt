@@ -1,4 +1,4 @@
-package com.asmr.player.playback
+package com.asmr.player.domain.model
 
 import kotlin.math.ceil
 
