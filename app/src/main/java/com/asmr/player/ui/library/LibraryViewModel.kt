@@ -49,6 +49,7 @@ import com.asmr.player.data.remote.scraper.DLSiteScraper
 import com.asmr.player.data.remote.download.DownloadDestination
 import com.asmr.player.data.remote.download.DownloadDestinationStore
 import com.asmr.player.data.remote.download.DownloadQueueCoordinator
+import com.asmr.player.data.repository.LibraryWriteRepository
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
@@ -137,6 +138,7 @@ class LibraryViewModel @Inject constructor(
     private val database: AppDatabase,
     private val albumDao: AlbumDao,
     private val trackDao: TrackDao,
+    private val libraryWriteRepository: LibraryWriteRepository,
     private val dlsiteScraper: DLSiteScraper,
     private val dlsiteProductInfoClient: DlsiteProductInfoClient,
     private val asmrOneApi: AsmrOneApi,
@@ -548,49 +550,14 @@ class LibraryViewModel @Inject constructor(
     fun setUserTagsForAlbum(albumId: Long, tagsCsv: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val entity = albumDao.getAlbumById(albumId) ?: return@launch
-            val tags = parseAlbumTags(tagsCsv)
-            val tagDao = database.tagDao()
-            database.withTransaction {
-                tagDao.deleteAlbumTagsByAlbumIdAndSource(albumId, TagSource.USER)
-                if (tags.isNotEmpty()) {
-                    val tagEntities = tags.map { (name, normalized) ->
-                        TagEntity(name = name, nameNormalized = normalized)
-                    }
-                    tagDao.insertTags(tagEntities)
-                    val persisted = tagDao.getTagsByNormalized(tags.map { it.second })
-                    val idByNormalized = persisted.associateBy({ it.nameNormalized }, { it.id })
-                    val refs = tags.mapNotNull { (_, normalized) ->
-                        val tagId = idByNormalized[normalized] ?: return@mapNotNull null
-                        AlbumTagEntity(albumId = albumId, tagId = tagId, source = TagSource.USER)
-                    }
-                    if (refs.isNotEmpty()) tagDao.insertAlbumTags(refs)
-                }
-            }
+            libraryWriteRepository.replaceAlbumUserTags(albumId, parseAlbumTags(tagsCsv))
             upsertAlbumFtsIndex(albumId, entity)
         }
     }
 
     fun setUserTagsForTrack(trackId: Long, tagsCsv: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val tags = parseAlbumTags(tagsCsv)
-            val tagDao = database.tagDao()
-            val trackTagDao = database.trackTagDao()
-            database.withTransaction {
-                trackTagDao.deleteTrackTagsByTrackIdAndSource(trackId, TagSource.USER)
-                if (tags.isNotEmpty()) {
-                    val tagEntities = tags.map { (name, normalized) ->
-                        TagEntity(name = name, nameNormalized = normalized)
-                    }
-                    tagDao.insertTags(tagEntities)
-                    val persisted = tagDao.getTagsByNormalized(tags.map { it.second })
-                    val idByNormalized = persisted.associateBy({ it.nameNormalized }, { it.id })
-                    val refs = tags.mapNotNull { (_, normalized) ->
-                        val tagId = idByNormalized[normalized] ?: return@mapNotNull null
-                        TrackTagEntity(trackId = trackId, tagId = tagId, source = TagSource.USER)
-                    }
-                    if (refs.isNotEmpty()) trackTagDao.insertTrackTags(refs)
-                }
-            }
+            libraryWriteRepository.replaceTrackUserTags(trackId, parseAlbumTags(tagsCsv))
         }
     }
 
@@ -598,25 +565,7 @@ class LibraryViewModel @Inject constructor(
         val trimmed = newName.trim()
         if (trimmed.isBlank()) return
         viewModelScope.launch(Dispatchers.IO) {
-            val tagDao = database.tagDao()
-            val albumIds = tagDao.getAlbumIdsForTag(tagId).toMutableSet()
-            database.withTransaction {
-                val existing = tagDao.getTagById(tagId) ?: return@withTransaction
-                val newNormalized = TagNormalizer.normalize(trimmed)
-                if (newNormalized.isBlank()) return@withTransaction
-
-                val conflict = tagDao.getTagByNormalized(newNormalized)
-                if (conflict != null && conflict.id != existing.id) {
-                    albumIds.addAll(tagDao.getAlbumIdsForTag(conflict.id))
-                    tagDao.moveAlbumTagsToAnotherTag(existing.id, conflict.id)
-                    database.trackTagDao().moveTrackTagsToAnotherTag(existing.id, conflict.id)
-                    tagDao.deleteAlbumTagsByTagId(existing.id)
-                    database.trackTagDao().deleteTrackTagsByTagId(existing.id)
-                    tagDao.deleteTag(existing.id)
-                } else {
-                    tagDao.updateTag(existing.id, trimmed, newNormalized)
-                }
-            }
+            val albumIds = libraryWriteRepository.renameUserTag(tagId, trimmed)
             albumIds.forEach { albumId ->
                 val entity = albumDao.getAlbumById(albumId) ?: return@forEach
                 upsertAlbumFtsIndex(albumId, entity)
@@ -626,13 +575,7 @@ class LibraryViewModel @Inject constructor(
 
     fun deleteUserTag(tagId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            val tagDao = database.tagDao()
-            val albumIds = tagDao.getAlbumIdsForTag(tagId)
-            database.withTransaction {
-                tagDao.deleteAlbumTagsByTagId(tagId)
-                database.trackTagDao().deleteTrackTagsByTagId(tagId)
-                tagDao.deleteTag(tagId)
-            }
+            val albumIds = libraryWriteRepository.deleteUserTag(tagId)
             val currentFilters = PersistedLibraryFilters.fromSpec(_querySpec.value)
             if (currentFilters.includeTagIds.contains(tagId) || currentFilters.excludeTagIds.contains(tagId)) {
                 val updatedFilters = currentFilters.copy(
@@ -981,13 +924,11 @@ class LibraryViewModel @Inject constructor(
                     val tracks = trackDao.getTracksForAlbumOnce(entity.id)
                     val hasOnline = isVirtualAlbumPath(entity.path) || tracks.any { isOnlineTrackPath(it.path) }
                     if (!hasOnline) {
-                        trackDao.deleteSubtitlesForAlbum(entity.id)
-                        trackDao.deleteTracksForAlbum(entity.id)
-                        deleteAlbumEntity(entity)
+                        libraryWriteRepository.deleteAlbumTracksAndSubtitles(entity.id)
+                        libraryWriteRepository.deleteAlbumEntity(entity)
                     } else {
                         tracks.filter { it.path.startsWith(uriString) }.forEach { track ->
-                            trackDao.deleteSubtitlesForTrack(track.id)
-                            trackDao.deleteTrackById(track.id)
+                            libraryWriteRepository.deleteTrackWithSubtitlesById(track.id)
                         }
                         val updatedPath = if (entity.path.startsWith(uriString)) (buildOnlineAlbumPath(entity) ?: entity.path) else entity.path
                         val updated = entity.copy(
@@ -1001,8 +942,7 @@ class LibraryViewModel @Inject constructor(
                 } else {
                     val tracks = trackDao.getTracksForAlbumOnce(entity.id)
                     tracks.filter { it.path.startsWith(uriString) }.forEach { track ->
-                        trackDao.deleteSubtitlesForTrack(track.id)
-                        trackDao.deleteTrackById(track.id)
+                        libraryWriteRepository.deleteTrackWithSubtitlesById(track.id)
                     }
 
                     val updated = entity.copy(
@@ -1664,9 +1604,8 @@ class LibraryViewModel @Inject constructor(
                         val tracks = trackDao.getTracksForAlbumOnce(entity.id)
                         val hasOnline = isVirtualAlbumPath(entity.path) || tracks.any { isOnlineTrackPath(it.path) }
                         if (!hasOnline) {
-                            trackDao.deleteSubtitlesForAlbum(entity.id)
-                            trackDao.deleteTracksForAlbum(entity.id)
-                            deleteAlbumEntity(entity)
+                            libraryWriteRepository.deleteAlbumTracksAndSubtitles(entity.id)
+                            libraryWriteRepository.deleteAlbumEntity(entity)
                             removed = true
                         } else {
                             val prefixes = localPaths.map { it.trim() }.filter { it.isNotBlank() }
@@ -1674,8 +1613,7 @@ class LibraryViewModel @Inject constructor(
                                 !isOnlineTrackPath(t.path) && prefixes.any { pfx -> t.path.startsWith(pfx) }
                             }.map { it.id }
                             if (toRemove.isNotEmpty()) {
-                                trackDao.deleteSubtitlesForTracks(toRemove)
-                                trackDao.deleteTracksByIds(toRemove)
+                                libraryWriteRepository.deleteTracksWithSubtitles(toRemove)
                             }
 
                             val updatedPath = if (prefixes.any { pfx -> entity.path.startsWith(pfx) }) {
@@ -1731,13 +1669,7 @@ class LibraryViewModel @Inject constructor(
                 val entity = albumDao.getAlbumById(album.id) ?: return@launch
                 val downloadRoot = entity.downloadPath.orEmpty()
 
-                database.withTransaction {
-                    trackDao.deleteSubtitlesForAlbum(album.id)
-                    trackDao.deleteTracksForAlbum(album.id)
-                    deleteAlbumEntity(entity)
-                    database.tagDao().deleteAlbumTagsByAlbumId(album.id)
-                    database.albumFtsDao().deleteByAlbumId(album.id)
-                }
+                libraryWriteRepository.deleteAlbumWithContent(album.id, entity)
 
                 if (downloadRoot.isNotBlank()) {
                     val downloadDao = database.downloadDao()
@@ -1807,18 +1739,7 @@ class LibraryViewModel @Inject constructor(
                     }
                     .map { it.id }
 
-                database.withTransaction {
-                    if (verifiedTrackIds.isNotEmpty()) {
-                        database.remoteSubtitleSourceDao().deleteByTrackIds(verifiedTrackIds)
-                        trackDao.deleteSubtitlesForTracks(verifiedTrackIds)
-                        database.trackTagDao().deleteTrackTagsByTrackIds(verifiedTrackIds)
-                        trackDao.deleteTracksByIds(verifiedTrackIds)
-                    }
-                    if (resourceIds.isNotEmpty()) {
-                        database.onlineSavedResourceDao().deleteByIds(resourceIds)
-                    }
-                    database.localTreeCacheDao().deleteByAlbum(album.id)
-                }
+                libraryWriteRepository.deleteVerifiedTracksAndResources(album.id, verifiedTrackIds, resourceIds)
                 if (verifiedTrackIds.isNotEmpty()) {
                     refreshAlbumAudioAggregate(album.id)
                 }
@@ -1855,13 +1776,7 @@ class LibraryViewModel @Inject constructor(
                 if (isInAllowed) deletePathSafely(target.absolutePath) else false
             }
 
-            database.withTransaction {
-                runCatching { database.remoteSubtitleSourceDao().deleteByTrackId(trackId) }
-                runCatching { trackDao.deleteSubtitlesForTrack(trackId) }
-                runCatching { database.trackTagDao().deleteTrackTagsByTrackId(trackId) }
-                runCatching { trackDao.deleteTrackById(trackId) }
-                runCatching { database.localTreeCacheDao().deleteByAlbum(track.albumId) }
-            }
+            libraryWriteRepository.deleteTrackCompletely(trackId, track.albumId)
 
             refreshAlbumAudioAggregate(track.albumId)
 
@@ -3051,8 +2966,7 @@ class LibraryViewModel @Inject constructor(
     )
 
     private suspend fun deleteAlbumEntity(entity: AlbumEntity) {
-        database.onlineSavedResourceDao().deleteByAlbumId(entity.id)
-        albumDao.deleteAlbum(entity)
+        libraryWriteRepository.deleteAlbumEntity(entity)
     }
 
     private data class DocNode(
