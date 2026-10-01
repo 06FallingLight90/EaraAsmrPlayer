@@ -4,8 +4,8 @@ app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt: 1523
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt: 3213
 app/src/main/java/com/asmr/player/ui/library/LibraryScreen.kt: 1581
 app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt: 3229
-app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailDirectorySupport.kt: 3377
-app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailDlsiteTabs.kt: 1934
+app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailDirectorySupport.kt: 2705
+app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailDlsiteTabs.kt: 1935
 app/src/main/java/com/asmr/player/ui/player/NowPlayingScreen.kt: 2902
 app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt: 2186
 app/src/main/java/com/asmr/player/ui/settings/SettingsScreen.kt: 2673

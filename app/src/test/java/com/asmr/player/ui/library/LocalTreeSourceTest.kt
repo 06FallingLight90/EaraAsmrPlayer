@@ -3,8 +3,8 @@ package com.asmr.player.ui.library
 import com.asmr.player.domain.model.Album
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import com.asmr.player.ui.library.albumdetail.LocalTreeSourceKind
-import com.asmr.player.ui.library.albumdetail.localTreeSourcesForAlbum
+import com.asmr.player.data.local.tree.LocalTreeSourceKind
+import com.asmr.player.data.local.tree.localTreeSourcesForAlbum
 
 class LocalTreeSourceTest {
     @Test

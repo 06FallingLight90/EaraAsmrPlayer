@@ -19,7 +19,6 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.room.withTransaction
-import com.asmr.player.MainActivity
 import com.asmr.player.R
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.AppDatabaseProvider
@@ -35,9 +34,9 @@ import com.asmr.player.data.local.db.entities.titleForDisplay
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.di.DEEPSEEK_HTTP_CLIENT
 import com.asmr.player.domain.model.Track
-import com.asmr.player.ui.library.albumdetail.LocalTreeNode
+import com.asmr.player.data.local.tree.LocalTreeNode
 import com.asmr.player.data.local.db.entities.TreeFileType
-import com.asmr.player.ui.library.albumdetail.loadOrBuildLocalTreeIndex
+import com.asmr.player.data.local.tree.loadOrBuildLocalTreeIndex
 import com.asmr.player.util.MessageManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -1205,12 +1204,17 @@ internal class SubtitleTaskService : Service() {
         getSystemService(NotificationManager::class.java).notify(WARNING_NOTIFICATION_ID, notification)
     }
 
-    private fun openAppPendingIntent(): PendingIntent = PendingIntent.getActivity(
-        this,
-        0,
-        Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    )
+    private fun openAppPendingIntent(): PendingIntent {
+        val intent = packageManager.getLaunchIntentForPackage(packageName)
+            ?: Intent(Intent.ACTION_MAIN).setPackage(packageName).addCategory(Intent.CATEGORY_LAUNCHER)
+        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        return PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
 
     private fun servicePendingIntent(action: String, requestCode: Int): PendingIntent = PendingIntent.getService(
         this,

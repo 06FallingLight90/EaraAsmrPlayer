@@ -101,7 +101,7 @@ import com.asmr.player.ui.library.albumdetail.LocalTreeDeletionTarget
 import com.asmr.player.ui.library.albumdetail.localTreePathMatchesTarget
 import com.asmr.player.ui.library.albumdetail.normalizeLocalTreeRelativePath
 import com.asmr.player.data.local.db.entities.TreeFileType
-import com.asmr.player.ui.library.albumdetail.treeFileTypeForName
+import com.asmr.player.data.local.db.entities.treeFileTypeForName
 
 sealed class LibraryUiState {
     object Loading : LibraryUiState()

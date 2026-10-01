@@ -28,7 +28,7 @@ import com.asmr.player.ui.library.albumdetail.mergeDetailHeaderAlbum
 import com.asmr.player.ui.library.albumdetail.resolveAlbumDetailRj
 import com.asmr.player.ui.library.albumdetail.resolveStableAlbumHeroCoverSource
 import com.asmr.player.ui.library.albumdetail.resolveStableAlbumHeroIdentity
-import com.asmr.player.ui.library.albumdetail.sanitizeFolderName
+import com.asmr.player.data.local.tree.sanitizeFolderName
 import com.asmr.player.ui.library.albumdetail.shouldPreserveHeaderAlbumMetadata
 import com.asmr.player.ui.library.albumdetail.shouldRemoveMissingLocalAlbum
 import com.asmr.player.ui.library.albumdetail.shouldReuseAlbumDetailModel

@@ -19,6 +19,10 @@ import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.db.entities.TagEntity
 import com.asmr.player.data.local.db.entities.TagSource
 import com.asmr.player.data.local.db.entities.TrackTagEntity
+import com.asmr.player.data.local.db.entities.isDownloadableTreeFileType
+import com.asmr.player.data.local.db.entities.treeFileTypeForName
+import com.asmr.player.data.local.db.entities.treeFileTypeForNode
+import com.asmr.player.data.local.tree.sanitizeFolderName
 import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
 import com.asmr.player.data.remote.api.AsmrOneRecommendationItem
 import com.asmr.player.data.remote.api.AsmrOneRecommendationSeedFeatures
@@ -883,10 +887,3 @@ internal fun collectSubtitleCandidates(
     walk(tree, "")
     return out
 }
-
-/**
- * 将标题规整为可安全用作下载/保存树路径段的名字：
- * 去首尾空白 → 空则回退 "item" → 非法路径字符（\ / : * ? " < > |）替换为 "_"。
- */
-internal fun sanitizeFolderName(name: String): String =
-    name.trim().ifEmpty { "item" }.replace(Regex("""[\\/:*?"<>|]"""), "_")
