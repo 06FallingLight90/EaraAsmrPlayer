@@ -1,4 +1,4 @@
-package com.asmr.player.ui.library
+package com.asmr.player.ui.library.albumdetail
 
 import com.asmr.player.translation.translatedPageText
 

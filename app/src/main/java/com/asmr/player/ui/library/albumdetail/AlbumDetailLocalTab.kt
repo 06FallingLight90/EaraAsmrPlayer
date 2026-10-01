@@ -1,4 +1,4 @@
-package com.asmr.player.ui.library
+package com.asmr.player.ui.library.albumdetail
 
 import android.content.Intent
 import android.net.Uri

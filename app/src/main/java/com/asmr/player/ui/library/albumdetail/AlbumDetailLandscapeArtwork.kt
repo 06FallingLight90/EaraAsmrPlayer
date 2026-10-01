@@ -1,4 +1,4 @@
-package com.asmr.player.ui.library
+package com.asmr.player.ui.library.albumdetail
 
 import android.graphics.PathMeasure as AndroidPathMeasure
 
@@ -69,6 +69,9 @@ import com.asmr.player.ui.common.list.LocalBottomOverlayPadding
 import com.asmr.player.ui.player.PlayerViewModel
 import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.util.MessageManager
+import com.asmr.player.ui.library.AlbumDetailViewModel
+import com.asmr.player.ui.library.AlbumHeroPrimaryMetaLightweight
+import com.asmr.player.ui.library.rememberAlbumMetaCopyAction
 
 
 

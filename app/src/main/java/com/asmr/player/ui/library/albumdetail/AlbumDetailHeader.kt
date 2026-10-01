@@ -1,4 +1,4 @@
-package com.asmr.player.ui.library
+package com.asmr.player.ui.library.albumdetail
 
 import android.content.Intent
 import android.net.Uri
@@ -43,6 +43,9 @@ import androidx.compose.material.icons.automirrored.rounded.Label
 import kotlinx.coroutines.delay
 import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.util.MessageManager
+import com.asmr.player.ui.library.AlbumHeaderCvLightweight
+import com.asmr.player.ui.library.AlbumHeaderTagsLightweight
+import com.asmr.player.ui.library.rememberAlbumMetaCopyAction
 
 
 

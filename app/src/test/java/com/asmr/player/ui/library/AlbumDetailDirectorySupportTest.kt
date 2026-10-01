@@ -9,6 +9,39 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
+import com.asmr.player.ui.library.albumdetail.buildBreadcrumbSegments
+import com.asmr.player.ui.library.albumdetail.buildDlsiteTrialDownloadTree
+import com.asmr.player.ui.library.albumdetail.buildLocalDirectoryBrowser
+import com.asmr.player.ui.library.albumdetail.buildLocalTreeIndexFromLeaves
+import com.asmr.player.ui.library.albumdetail.buildRemoteDirectoryBrowser
+import com.asmr.player.ui.library.albumdetail.buildRemoteTreeIndex
+import com.asmr.player.ui.library.albumdetail.canSetDirectoryImageAsLocalCover
+import com.asmr.player.ui.library.albumdetail.collectRemoteTreeImageFiles
+import com.asmr.player.ui.library.albumdetail.collectSubtitleGenerationTracks
+import com.asmr.player.ui.library.albumdetail.combineLocalTreeCacheStamp
+import com.asmr.player.ui.library.albumdetail.DirectoryFileItem
+import com.asmr.player.ui.library.albumdetail.directoryFileTypeLabel
+import com.asmr.player.ui.library.albumdetail.DirectoryFolderPosition
+import com.asmr.player.ui.library.albumdetail.directorySelectedItemPosition
+import com.asmr.player.ui.library.albumdetail.downloadableOnlineAudioTrack
+import com.asmr.player.ui.library.albumdetail.FileSizeSource
+import com.asmr.player.ui.library.albumdetail.filterDownloadableMediaTree
+import com.asmr.player.ui.library.albumdetail.flattenAsmrOneLeafDownloads
+import com.asmr.player.ui.library.albumdetail.flattenAsmrOneTracksForUi
+import com.asmr.player.ui.library.albumdetail.flattenLocalTreeIndex
+import com.asmr.player.ui.library.albumdetail.flattenOnlineSaveLeaves
+import com.asmr.player.ui.library.albumdetail.folderPathPrefixes
+import com.asmr.player.ui.library.albumdetail.LocalSelectionFileRef
+import com.asmr.player.ui.library.albumdetail.LocalTreeLeafCacheEntry
+import com.asmr.player.ui.library.albumdetail.localTreePathMatchesTarget
+import com.asmr.player.ui.library.albumdetail.LocalTreeUiEntry
+import com.asmr.player.ui.library.albumdetail.normalizeLocalTreeRelativePath
+import com.asmr.player.ui.library.albumdetail.onlineSavedResourceTreeLeaf
+import com.asmr.player.ui.library.albumdetail.RemoteSelectionFileRef
+import com.asmr.player.ui.library.albumdetail.resolveExistingRemoteSelectionPaths
+import com.asmr.player.ui.library.albumdetail.subtitleGenerationTrackForFile
+import com.asmr.player.ui.library.albumdetail.subtitleTranslationTrackForFile
+import com.asmr.player.ui.library.albumdetail.TreeFileType
 
 class AlbumDetailDirectorySupportTest {
 

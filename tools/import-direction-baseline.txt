@@ -1,5 +1,5 @@
 app/src/main/java/com/asmr/player/data/lyrics/LyricsTargetContext.kt com.asmr.player.playback.MediaItemRequest
 app/src/main/java/com/asmr/player/data/repository/PlaylistMediaItemMapper.kt com.asmr.player.playback.MediaItemFactory
 app/src/main/java/com/asmr/player/data/settings/SettingsRepository.kt com.asmr.player.playback.AppVolume
-app/src/main/java/com/asmr/player/data/lyrics/LyricsLoader.kt com.asmr.player.ui.library.LocalTreeLeafCacheEntry
-app/src/main/java/com/asmr/player/data/lyrics/LyricsLoader.kt com.asmr.player.ui.library.TreeFileType
+app/src/main/java/com/asmr/player/data/lyrics/LyricsLoader.kt com.asmr.player.ui.library.albumdetail.LocalTreeLeafCacheEntry
+app/src/main/java/com/asmr/player/data/lyrics/LyricsLoader.kt com.asmr.player.ui.library.albumdetail.TreeFileType

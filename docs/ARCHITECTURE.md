@@ -47,9 +47,9 @@ di：CacheModule · DatabaseModule · NetworkModule（全部 Hilt 绑定集中�
 feature 服务包：subtitle · translation · cache · work · hotlistening · listentogether · benchmark · performance
 ```
 
-> 注意目录与包名的既有约定：`ui/library/albumdetail/` 目录内文件声明包
-> `com.asmr.player.ui.library`；`main/` 目录内文件声明包
-> `com.asmr.player`（ui/common 子包为真实包名，勿混淆）。
+> 目录与包名已全面对齐（R2-A2，2026-10-01）：每个目录 = 同名子包，
+> 包括 `main/`、`ui/player/nowplaying/`、`ui/library/albumdetail/` 与
+> `ui/common/` 七子包。新文件一律放在与包名一致的目录下。
 
 分层规则与已知例外：
 
@@ -60,7 +60,7 @@ feature 服务包：subtitle · translation · cache · work · hotlistening · 
 
 ## 3. AlbumDetail 家族职责表
 
-详情页是全库最大的文件家族：14 个文件、合计约 16 400 行。除前两个位于 `ui/library/` 外，其余在 `ui/library/albumdetail/`（目录内文件声明包 `com.asmr.player.ui.library`）。
+详情页是全库最大的文件家族：14 个文件、合计约 16 400 行。除前两个位于 `ui/library/` 外，其余在 `ui/library/albumdetail/`（包 `com.asmr.player.ui.library.albumdetail`，目录与包名一致）。
 
 | 文件 | 约行数 | 职责 |
 |---|---|---|

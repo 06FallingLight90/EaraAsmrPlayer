@@ -59,7 +59,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.asmr.player.ui.library.AlbumDetailScreen
-import com.asmr.player.ui.library.AlbumDetailUiState
+import com.asmr.player.ui.library.albumdetail.AlbumDetailUiState
 import com.asmr.player.ui.library.AlbumDetailViewModel
 import com.asmr.player.ui.library.CloudSyncSelectionDialog
 import com.asmr.player.ui.library.LibraryFilterScreen

@@ -5,6 +5,24 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.asmr.player.ui.library.albumdetail.albumLandscapeArtworkRight
+import com.asmr.player.ui.library.albumdetail.albumLandscapeCollapseDistance
+import com.asmr.player.ui.library.albumdetail.albumLandscapeCollapseProgress
+import com.asmr.player.ui.library.albumdetail.albumLandscapeCoverScale
+import com.asmr.player.ui.library.albumdetail.albumLandscapeCoverShadowAlpha
+import com.asmr.player.ui.library.albumdetail.albumLandscapeDirectoryTop
+import com.asmr.player.ui.library.albumdetail.albumLandscapeHeaderStart
+import com.asmr.player.ui.library.albumdetail.albumLandscapePaneViewportHeightPx
+import com.asmr.player.ui.library.albumdetail.albumLandscapePlaybackProgress
+import com.asmr.player.ui.library.albumdetail.albumLandscapePulseEnabled
+import com.asmr.player.ui.library.albumdetail.albumLandscapePulseSweepFraction
+import com.asmr.player.ui.library.albumdetail.albumLandscapeSpectrumOffsetY
+import com.asmr.player.ui.library.albumdetail.albumLandscapeSpectrumTranslationY
+import com.asmr.player.ui.library.albumdetail.albumLandscapeSurfaceHeight
+import com.asmr.player.ui.library.albumdetail.isVideoPreviewUrl
+import com.asmr.player.ui.library.albumdetail.resolveStableAlbumHeroIdentity
+import com.asmr.player.ui.library.albumdetail.shouldUseAlbumDetailLandscapeLayout
+import com.asmr.player.ui.library.albumdetail.StableAlbumHeroIdentity
 
 /**
  * 钉住 AlbumDetailScreen.kt 内待拆纯逻辑的现行为（S11 前置安全网）：

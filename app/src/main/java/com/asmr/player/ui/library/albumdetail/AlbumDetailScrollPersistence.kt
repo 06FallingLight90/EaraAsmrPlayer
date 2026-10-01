@@ -1,4 +1,4 @@
-package com.asmr.player.ui.library
+package com.asmr.player.ui.library.albumdetail
 
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable

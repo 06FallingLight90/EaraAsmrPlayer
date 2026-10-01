@@ -4,6 +4,10 @@ import com.asmr.player.ui.common.cover.ImagePreviewItem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import com.asmr.player.ui.library.albumdetail.buildDirectoryImagePreviewRequest
+import com.asmr.player.ui.library.albumdetail.buildGalleryImagePreviewRequest
+import com.asmr.player.ui.library.albumdetail.DirectoryFileItem
+import com.asmr.player.ui.library.albumdetail.TreeFileType
 
 class ImagePreviewSupportTest {
 

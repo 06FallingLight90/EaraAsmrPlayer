@@ -13,6 +13,26 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
 import org.junit.Test
 import java.io.FileNotFoundException
+import com.asmr.player.ui.library.albumdetail.AlbumDetailModel
+import com.asmr.player.ui.library.albumdetail.listenTogetherSummaryRj
+import com.asmr.player.ui.library.albumdetail.withPreservedListenTogetherListenerCount
+import com.asmr.player.ui.library.albumdetail.withUpdatedLocalCover
+import com.asmr.player.ui.library.albumdetail.albumDetailRequestKey
+import com.asmr.player.ui.library.albumdetail.asmrOneTrackRjCandidates
+import com.asmr.player.ui.library.albumdetail.asmrOneTracksCacheKey
+import com.asmr.player.ui.library.albumdetail.buildDisplayAlbum
+import com.asmr.player.ui.library.albumdetail.isMissingLocalDocumentFailure
+import com.asmr.player.ui.library.albumdetail.LocalSourceAvailability
+import com.asmr.player.ui.library.albumdetail.mergeAsmrOneHeaderAlbum
+import com.asmr.player.ui.library.albumdetail.mergeDetailHeaderAlbum
+import com.asmr.player.ui.library.albumdetail.resolveAlbumDetailRj
+import com.asmr.player.ui.library.albumdetail.resolveStableAlbumHeroCoverSource
+import com.asmr.player.ui.library.albumdetail.resolveStableAlbumHeroIdentity
+import com.asmr.player.ui.library.albumdetail.sanitizeFolderName
+import com.asmr.player.ui.library.albumdetail.shouldPreserveHeaderAlbumMetadata
+import com.asmr.player.ui.library.albumdetail.shouldRemoveMissingLocalAlbum
+import com.asmr.player.ui.library.albumdetail.shouldReuseAlbumDetailModel
+import com.asmr.player.ui.library.albumdetail.StableAlbumHeroIdentity
 
 class AlbumDetailViewModelSupportTest {
     @Test

@@ -34,8 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.composable
-import com.asmr.player.ui.library.AlbumHeroBlurLayerCache
-import com.asmr.player.ui.library.AlbumDetailUiState
+import com.asmr.player.ui.library.albumdetail.AlbumHeroBlurLayerCache
+import com.asmr.player.ui.library.albumdetail.AlbumDetailUiState
 import com.asmr.player.ui.library.AlbumDetailViewModel
 import com.asmr.player.performance.UiFrameWorkCoordinator
 import com.asmr.player.ui.common.core.EaraTopBarIconButton

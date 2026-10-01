@@ -5,6 +5,13 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.asmr.player.ui.library.albumdetail.AlbumDetailOnlineLoadPlan
+import com.asmr.player.ui.library.albumdetail.albumDetailOnlineLoadPlan
+import com.asmr.player.ui.library.albumdetail.albumHeaderDownloadEnabled
+import com.asmr.player.ui.library.albumdetail.asmrOneDirectoryTreeStateKey
+import com.asmr.player.ui.library.albumdetail.canUseAsmrOneOnlineTreeActions
+import com.asmr.player.ui.library.albumdetail.shouldShowAsmrOneDirectoryLoading
+import com.asmr.player.ui.library.albumdetail.shouldShowDlsitePlayDirectoryLoading
 
 class AlbumDetailOneStateTest {
     @Test

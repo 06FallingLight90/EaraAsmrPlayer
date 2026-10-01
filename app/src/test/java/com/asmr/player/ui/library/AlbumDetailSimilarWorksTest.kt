@@ -5,6 +5,8 @@ import com.asmr.player.data.remote.api.AsmrOneRecommendationSeedFeatures
 import com.asmr.player.domain.model.Album
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import com.asmr.player.ui.library.albumdetail.buildAlbumDetailRecommendationSeedFeatures
+import com.asmr.player.ui.library.albumdetail.buildAlbumDetailSimilarWorks
 
 class AlbumDetailSimilarWorksTest {
     @Test

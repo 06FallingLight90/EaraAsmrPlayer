@@ -1,5 +1,6 @@
 app/src/main/java/com/asmr/player/main/MainContainer.kt
 app/src/main/java/com/asmr/player/ui/downloads/DownloadsScreen.kt
+app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt
 app/src/main/java/com/asmr/player/ui/library/LibraryScreen.kt
 app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt

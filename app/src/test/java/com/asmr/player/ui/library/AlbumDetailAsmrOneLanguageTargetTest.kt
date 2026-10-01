@@ -6,6 +6,8 @@ import com.asmr.player.data.remote.api.WorkDetailsResponse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import com.asmr.player.ui.library.albumdetail.asmrOneTrackRjCandidates
+import com.asmr.player.ui.library.albumdetail.resolveAsmrOneTrackWorkId
 
 class AlbumDetailAsmrOneLanguageTargetTest {
 

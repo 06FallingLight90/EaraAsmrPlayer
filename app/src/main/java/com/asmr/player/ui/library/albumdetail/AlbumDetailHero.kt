@@ -1,4 +1,4 @@
-package com.asmr.player.ui.library
+package com.asmr.player.ui.library.albumdetail
 
 import com.asmr.player.translation.translatedPageText
 
@@ -189,6 +189,8 @@ import com.asmr.player.util.RemoteSubtitleSource
 import java.util.UUID
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import com.asmr.player.ui.library.AlbumHeroPrimaryMetaLightweight
+import com.asmr.player.ui.library.rememberAlbumMetaCopyAction
 
 @Composable
 internal fun AlbumDetailHeroBackground(
