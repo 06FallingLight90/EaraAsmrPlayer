@@ -3,7 +3,6 @@ package com.asmr.player.data.lyrics
 import androidx.media3.common.MediaItem
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
-import com.asmr.player.playback.MediaItemRequest
 import com.asmr.player.util.RemoteSubtitleSource
 import com.asmr.player.util.TrackKeyNormalizer
 
@@ -70,22 +69,6 @@ fun lyricsTargetContextFromTrack(album: Album, track: Track): LyricsTargetContex
         albumIdentity = albumIdentity,
         relativePathNoExt = relativePathNoExt,
         remoteSubtitleSources = emptyList()
-    )
-}
-
-fun lyricsTargetContextFromRequest(request: MediaItemRequest): LyricsTargetContext? {
-    val mediaId = request.mediaId.trim().ifBlank { request.uri.trim() }
-    if (mediaId.isBlank()) return null
-    val albumIdentity = request.rjCode.trim().ifBlank { request.albumWorkId.trim() }
-    return buildLyricsTargetContext(
-        mediaId = mediaId,
-        title = request.title,
-        group = request.trackGroup,
-        trackId = request.trackId,
-        albumId = request.albumId,
-        albumIdentity = albumIdentity,
-        relativePathNoExt = request.lyricsRelativePathNoExt,
-        remoteSubtitleSources = request.remoteSubtitleSources
     )
 }
 
