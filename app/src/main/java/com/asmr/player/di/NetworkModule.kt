@@ -27,6 +27,7 @@ import com.asmr.player.util.ASMR_ONE_SITE_FAILURE_MESSAGE
 import com.asmr.player.util.DlsiteAntiHotlink
 import com.google.gson.Gson
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 internal const val DEEPSEEK_HTTP_CLIENT = "deepseek"
 private val ASMR_ONE_SITE_DOMAINS = setOf("asmr.one", "asmr-100.com", "asmr-200.com", "asmr-300.com")
@@ -133,6 +134,9 @@ object NetworkModule {
             .proxySelector(networkRouteManager.proxySelector)
             .proxyAuthenticator(networkRouteManager.proxyAuthenticator)
             .dns(networkRouteManager.dns)
+            .connectTimeout(15_000L, TimeUnit.MILLISECONDS)
+            .readTimeout(30_000L, TimeUnit.MILLISECONDS)
+            .writeTimeout(30_000L, TimeUnit.MILLISECONDS)
             .addInterceptor(asmrHeaders)
             .addInterceptor(trafficStatsInterceptor)
             .addInterceptor(logging)

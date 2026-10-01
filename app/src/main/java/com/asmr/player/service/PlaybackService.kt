@@ -281,6 +281,7 @@ class PlaybackService : MediaSessionService() {
                 withTimeout(2_000L) { settingsRepository.loadPlaybackRuntimeSettings() }
             }.getOrDefault(PlaybackRuntimeSettings())
         }
+        applyPlaybackRuntimeSettings(runtimeSettings)
         val currentAppVolumePercent = appVolumeBoostController.currentVolumePercent()
         startupAppVolumePercent = currentAppVolumePercent
         val startupAppVolumeSyncJob = serviceScope.launch(Dispatchers.IO) {
