@@ -1,4 +1,4 @@
-package com.asmr.player.ui.player
+package com.asmr.player.ui.player.nowplaying
 
 import android.os.SystemClock
 import androidx.compose.animation.*
@@ -50,6 +50,10 @@ import com.asmr.player.util.SubtitleEntry
 import com.asmr.player.util.SubtitleIndexFinder
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import com.asmr.player.ui.player.isOnlineMedia
+import com.asmr.player.ui.player.LyricReadableColors
+import com.asmr.player.ui.player.PlayerViewModel
+import com.asmr.player.ui.player.SliceUiState
 
 
 

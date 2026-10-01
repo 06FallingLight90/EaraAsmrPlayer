@@ -10,7 +10,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import com.asmr.player.ui.player.NowPlayingLyricsPreview
+import com.asmr.player.ui.player.nowplaying.NowPlayingLyricsPreview
 import com.asmr.player.ui.player.rememberLyricReadableColors
 import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.data.settings.FloatingLyricsSettings

@@ -1,4 +1,4 @@
-package com.asmr.player.ui.player
+package com.asmr.player.ui.player.nowplaying
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.asmr.player.ui.common.list.rememberCalmScrollableFlingBehavior
 import com.asmr.player.ui.theme.AsmrTheme
+import com.asmr.player.ui.player.PlayerViewModel
 
 @Composable
 internal fun TabletLandscapeQueuePanel(

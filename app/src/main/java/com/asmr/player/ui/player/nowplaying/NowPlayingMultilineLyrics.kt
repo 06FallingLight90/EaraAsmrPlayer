@@ -1,4 +1,4 @@
-package com.asmr.player.ui.player
+package com.asmr.player.ui.player.nowplaying
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.asmr.player.util.SubtitleEntry
+import com.asmr.player.ui.player.LyricReadableColors
 
 // 保留原有字幕区尺寸，移除操作栏后全部用于正文；尺寸仍不依赖当前字幕的行数。
 internal fun multilineLyricsReserveHeight(availableHeight: Dp, lineHeight: Dp): Dp =

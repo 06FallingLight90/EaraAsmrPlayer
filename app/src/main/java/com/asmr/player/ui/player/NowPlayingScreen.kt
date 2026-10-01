@@ -123,6 +123,22 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import com.asmr.player.ui.player.nowplaying.ArtworkBox
+import com.asmr.player.ui.player.nowplaying.currentSliceIdForPosition
+import com.asmr.player.ui.player.nowplaying.multilineLyricsReserveHeight
+import com.asmr.player.ui.player.nowplaying.NowPlayingFullscreenVideo
+import com.asmr.player.ui.player.nowplaying.NowPlayingLyricsPreview
+import com.asmr.player.ui.player.nowplaying.NowPlayingLyricsSurface
+import com.asmr.player.ui.player.nowplaying.nowPlayingLyricTypographyMetrics
+import com.asmr.player.ui.player.nowplaying.NowPlayingVideoPlayerCoordinator
+import com.asmr.player.ui.player.nowplaying.PlaybackControls
+import com.asmr.player.ui.player.nowplaying.PlayerProgress
+import com.asmr.player.ui.player.nowplaying.PlayerSurfaceHeader
+import com.asmr.player.ui.player.nowplaying.rememberPlayerVideoAspectRatio
+import com.asmr.player.ui.player.nowplaying.SliceOverviewBar
+import com.asmr.player.ui.player.nowplaying.SliceTimeEditDialog
+import com.asmr.player.ui.player.nowplaying.TabletLandscapeQueuePanel
+import com.asmr.player.ui.player.nowplaying.VolumeControl
 
 private enum class NowPlayingSurfaceMode {
     PLAYER,

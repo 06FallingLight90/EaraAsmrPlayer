@@ -1,4 +1,4 @@
-package com.asmr.player.ui.player
+package com.asmr.player.ui.player.nowplaying
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -32,6 +32,7 @@ import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.util.Formatting
 import kotlin.math.abs
 import kotlin.math.roundToLong
+import com.asmr.player.ui.player.SliceUiState
 
 
 

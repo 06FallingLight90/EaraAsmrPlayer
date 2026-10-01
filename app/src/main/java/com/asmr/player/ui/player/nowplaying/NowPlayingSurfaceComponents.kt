@@ -1,4 +1,4 @@
-package com.asmr.player.ui.player
+package com.asmr.player.ui.player.nowplaying
 
 import android.view.LayoutInflater
 import android.view.SurfaceHolder
@@ -45,6 +45,13 @@ import com.asmr.player.ui.common.cover.AsmrImageLoadingPlaceholder
 import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.util.SubtitleEntry
 import kotlin.math.roundToInt
+import com.asmr.player.ui.player.AppleLyricsView
+import com.asmr.player.ui.player.CoverArtworkEdgeBlend
+import com.asmr.player.ui.player.coverDragPreviewGesture
+import com.asmr.player.ui.player.CoverDragPreviewState
+import com.asmr.player.ui.player.LyricReadableColors
+import com.asmr.player.ui.player.NowPlayingPortraitArtworkCornerRadius
+import com.asmr.player.ui.player.PlayerViewModel
 
 
 

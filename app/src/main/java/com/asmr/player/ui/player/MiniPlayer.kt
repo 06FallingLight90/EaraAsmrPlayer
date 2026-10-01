@@ -87,6 +87,7 @@ import kotlinx.coroutines.flow.map
 import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import com.asmr.player.ui.player.nowplaying.nextPlaybackRequest
 
 enum class MiniPlayerDisplayMode {
     CoverOnly,

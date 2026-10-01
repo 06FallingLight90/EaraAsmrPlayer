@@ -4,6 +4,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import com.asmr.player.ui.player.nowplaying.multilineLyricsReserveHeight
 
 class NowPlayingHomeLayoutCoverTest {
     @Test

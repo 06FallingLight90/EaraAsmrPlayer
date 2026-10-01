@@ -5,6 +5,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.asmr.player.ui.player.nowplaying.fittingUpcomingLyricCount
+import com.asmr.player.ui.player.nowplaying.nowPlayingLyricTypographyMetrics
+import com.asmr.player.ui.player.nowplaying.phoneLandscapeCoreButtonSpacing
+import com.asmr.player.ui.player.nowplaying.shouldAnimateLyricTrackAdvance
 
 class NowPlayingLandscapeLayoutTest {
 
