@@ -3,11 +3,18 @@ package com.asmr.player.data.repository
 import androidx.room.withTransaction
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.entities.AlbumEntity
+import com.asmr.player.data.local.db.entities.AlbumFtsEntity
 import com.asmr.player.data.local.db.entities.AlbumTagEntity
 import com.asmr.player.data.local.db.entities.TagEntity
 import com.asmr.player.data.local.db.entities.TagSource
+import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.db.entities.TrackTagEntity
+import com.asmr.player.data.local.library.shouldBackfillLegacyOnlineSavedAlbumRoot
 import com.asmr.player.util.TagNormalizer
+import com.asmr.player.util.buildTagsToken
+import com.asmr.player.util.parseAlbumTags
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -170,5 +177,163 @@ class LibraryWriteRepository @Inject constructor(
     suspend fun deleteAlbumEntity(entity: AlbumEntity) {
         database.onlineSavedResourceDao().deleteByAlbumId(entity.id)
         database.albumDao().deleteAlbum(entity)
+    }
+
+    // ---------- R2-B4b：扫描/初始化/聚合写族（行为契约见 docs/behavior-notes/library-delete-family.md 附录） ----------
+
+    /** 刷新专辑 FTS 行：tags + USER 标签 CSV 合并建 tagsToken（原 VM upsertAlbumFtsIndex 逐字下沉）。 */
+    suspend fun upsertAlbumFtsIndex(albumId: Long, entity: AlbumEntity) {
+        val userTagsCsv = database.tagDao().getAlbumTagsCsvOnce(albumId, TagSource.USER).orEmpty()
+        val combinedTagsCsv = buildString {
+            append(entity.tags)
+            if (userTagsCsv.isNotBlank()) {
+                if (isNotEmpty() && last() != ',') append(',')
+                append(userTagsCsv)
+            }
+        }
+        val tagsToken = buildTagsToken(combinedTagsCsv)
+        database.albumFtsDao().upsert(
+            listOf(
+                AlbumFtsEntity(
+                    albumId = albumId,
+                    title = entity.title,
+                    circle = entity.circle,
+                    cv = entity.cv,
+                    rjCode = entity.rjCode,
+                    workId = entity.workId,
+                    tagsToken = tagsToken
+                )
+            )
+        )
+    }
+
+    /**
+     * 按 CSV 整替专辑标签（指定 source）：insertTags → getTagsByNormalized →
+     * deleteAlbumTagsByAlbumIdExceptSource（保留 USER 源）→ insertAlbumTags（原 VM upsertAlbumTagsFromCsv 逐字下沉）。
+     * 空标签直接返回，无任何写。
+     */
+    suspend fun upsertAlbumTagsFromCsv(albumId: Long, tagsCsv: String, source: Int) {
+        val tags = parseAlbumTags(tagsCsv)
+        if (tags.isEmpty()) return
+
+        val tagEntities = tags.map { (name, normalized) ->
+            TagEntity(name = name, nameNormalized = normalized)
+        }
+        val tagDao = database.tagDao()
+        tagDao.insertTags(tagEntities)
+
+        val normalizedList = tags.map { it.second }
+        val persisted = tagDao.getTagsByNormalized(normalizedList)
+        val idByNormalized = persisted.associateBy({ it.nameNormalized }, { it.id })
+
+        tagDao.deleteAlbumTagsByAlbumIdExceptSource(albumId, TagSource.USER)
+        val refs = normalizedList.mapNotNull { normalized ->
+            val tagId = idByNormalized[normalized] ?: return@mapNotNull null
+            AlbumTagEntity(albumId = albumId, tagId = tagId, source = source)
+        }
+        if (refs.isNotEmpty()) tagDao.insertAlbumTags(refs)
+    }
+
+    /**
+     * 首次启动把专辑 tags CSV 播种为 AUTO 标签引用（原 VM ensureTagTablesInitialized 的事务段逐字下沉）。
+     * countTags 空表判定与专辑清单获取由调用方完成。
+     */
+    suspend fun seedAutoTagsFromAlbumTags(albums: List<AlbumEntity>) {
+        val firstNameByNormalized = LinkedHashMap<String, String>()
+        albums.flatMap { parseAlbumTags(it.tags) }.forEach { (name, normalized) ->
+            if (!firstNameByNormalized.containsKey(normalized)) firstNameByNormalized[normalized] = name
+        }
+        if (firstNameByNormalized.isEmpty()) return
+
+        val tagDao = database.tagDao()
+        val tagEntities = firstNameByNormalized.map { (normalized, name) ->
+            TagEntity(name = name, nameNormalized = normalized)
+        }
+        tagDao.insertTags(tagEntities)
+        val persisted = tagDao.getTagsByNormalized(firstNameByNormalized.keys.toList())
+        val idByNormalized = persisted.associateBy({ it.nameNormalized }, { it.id })
+
+        database.withTransaction {
+            albums.forEach { album ->
+                val pairs = parseAlbumTags(album.tags)
+                if (pairs.isEmpty()) return@forEach
+                val refs = pairs.mapNotNull { (_, normalized) ->
+                    val tagId = idByNormalized[normalized] ?: return@mapNotNull null
+                    AlbumTagEntity(albumId = album.id, tagId = tagId, source = TagSource.AUTO)
+                }
+                if (refs.isNotEmpty()) {
+                    tagDao.deleteAlbumTagsByAlbumIdExceptSource(album.id, TagSource.USER)
+                    tagDao.insertAlbumTags(refs)
+                }
+            }
+        }
+    }
+
+    /** 透传 updateAlbum（封面/路径改写等单行更新由调用方组装 entity）。 */
+    suspend fun updateAlbum(entity: AlbumEntity) {
+        database.albumDao().updateAlbum(entity)
+    }
+
+    /** 专辑音频聚合三字段（数量/总时长/总字节）。fileSizeQuery 由调用方注入（文件系统探查属平台侧）。 */
+    data class AlbumAudioAggregate(
+        val trackCount: Int,
+        val totalDuration: Double,
+        val totalSizeBytes: Long,
+    )
+
+    /** 计算聚合：总字节经 fileSizeQuery 逐轨探查（IO 在 Dispatchers.IO 上），数量/时长为纯求和。 */
+    suspend fun computeAlbumAudioAggregate(
+        trackSpecs: List<TrackEntity>,
+        fileSizeQuery: suspend (String) -> Long?,
+    ): AlbumAudioAggregate {
+        val totalSizeBytes = withContext(Dispatchers.IO) {
+            trackSpecs.sumOf { track -> fileSizeQuery(track.path) ?: 0L }
+        }
+        return AlbumAudioAggregate(
+            trackCount = trackSpecs.size,
+            totalDuration = trackSpecs.sumOf { it.duration },
+            totalSizeBytes = totalSizeBytes,
+        )
+    }
+
+    /** 重算并回写专辑音频聚合三字段（原 VM refreshAlbumAudioAggregate 逐字下沉，size 探查经注入）。 */
+    suspend fun refreshAlbumAudioAggregate(albumId: Long, fileSizeQuery: suspend (String) -> Long?) {
+        if (albumId <= 0L) return
+        val entity = database.albumDao().getAlbumById(albumId) ?: return
+        val tracks = database.trackDao().getTracksForAlbumOnce(albumId)
+        val aggregate = computeAlbumAudioAggregate(tracks, fileSizeQuery)
+        database.albumDao().updateAlbum(
+            entity.copy(
+                audioTrackCount = aggregate.trackCount,
+                audioTotalDuration = aggregate.totalDuration,
+                audioTotalSizeBytes = aggregate.totalSizeBytes,
+            )
+        )
+    }
+
+    /**
+     * 旧版在线保存专辑的本地根回填事务（原 VM backfillLegacyOnlineSavedAlbumRoots 事务体逐字下沉）。
+     * 单事务包全部专辑；tracks 判定与 FTS/缓存写都在事务内。
+     * [resolveLegacyDir] 注入目录创建（File IO 不可回滚，与原实现一样发生在事务内，返回绝对路径）。
+     */
+    suspend fun backfillLegacyOnlineSavedAlbumRoots(
+        albums: List<AlbumEntity>,
+        resolveLegacyDir: suspend (AlbumEntity) -> String,
+    ) {
+        database.withTransaction {
+            albums.forEach { entity ->
+                if (entity.localPath?.trim().orEmpty().isNotBlank() || entity.downloadPath?.trim().orEmpty().isNotBlank()) {
+                    return@forEach
+                }
+                val tracks = database.trackDao().getTracksForAlbumOnce(entity.id)
+                if (!shouldBackfillLegacyOnlineSavedAlbumRoot(entity, tracks)) return@forEach
+
+                val dirPath = resolveLegacyDir(entity)
+                val updated = entity.copy(localPath = dirPath)
+                database.albumDao().updateAlbum(updated)
+                runCatching { database.localTreeCacheDao().deleteByAlbum(entity.id) }
+                upsertAlbumFtsIndex(updated.id, updated)
+            }
+        }
     }
 }

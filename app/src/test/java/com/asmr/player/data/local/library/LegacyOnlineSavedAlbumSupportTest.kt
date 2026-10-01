@@ -1,4 +1,4 @@
-package com.asmr.player.ui.library
+package com.asmr.player.data.local.library
 
 import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.data.local.db.entities.TrackEntity

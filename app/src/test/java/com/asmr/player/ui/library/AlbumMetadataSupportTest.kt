@@ -1,5 +1,7 @@
 package com.asmr.player.ui.library
 
+import com.asmr.player.util.buildTagsToken
+import com.asmr.player.util.parseAlbumTags
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

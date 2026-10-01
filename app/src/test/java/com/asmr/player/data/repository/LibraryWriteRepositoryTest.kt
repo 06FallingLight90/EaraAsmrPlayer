@@ -193,7 +193,7 @@ class LibraryWriteRepositoryTest {
     fun deleteAlbumWithContent_removesTracksSubtitlesTagsResourcesAndAlbum() = runBlocking {
         val albumId = seedAlbum("A")
         val track1 = seedTrack(albumId, "/p/A/01.mp3")
-        val track2 = seedTrack(albumId, "/p/A/02.mp3")
+        seedTrack(albumId, "/p/A/02.mp3")
         seedSubtitle(track1)
         seedUserAlbumTag(albumId, "tag", "tag")
         val resourceIds = db.onlineSavedResourceDao().insertAll(
@@ -288,5 +288,98 @@ class LibraryWriteRepositoryTest {
         assertTrue(db.trackDao().getTracksForAlbumOnce(albumId).isEmpty())
         assertNull(db.albumDao().getAlbumById(albumId))
         assertTrue(db.onlineSavedResourceDao().getForAlbumOnce(albumId).isEmpty())
+    }
+
+    // ---------- B4b：扫描/初始化/聚合写族 ----------
+
+    @Test
+    fun seedAutoTagsFromAlbumTags_createsAutoRefsAndKeepsUserRefs() = runBlocking {
+        val albumId = seedAlbum("A")
+        seedUserAlbumTag(albumId, "keep", "keep")
+        val albums = listOf(
+            db.albumDao().getAlbumById(albumId)!!.copy(tags = "ボイス, ＣＧ集, ボイス")
+        )
+
+        repo.seedAutoTagsFromAlbumTags(albums)
+
+        val autoRefs = db.tagDao().getAlbumTagsOnce(albumId).filter { it.source == TagSource.AUTO }
+        val autoNames = autoRefs.mapNotNull { ref -> db.tagDao().getTagById(ref.tagId)?.nameNormalized }.sorted()
+        assertEquals(listOf("cg集", "ボイス"), autoNames) // CSV 播种，重复归一形去重
+        assertEquals(1, db.tagDao().getAlbumTagsOnce(albumId).count { it.source == TagSource.USER }) // USER 源保留
+        assertEquals(3L, db.tagDao().countTags()) // keep + ボイス + cg集
+    }
+
+    @Test
+    fun upsertAlbumTagsFromCsv_replacesTargetSourceOnly() = runBlocking {
+        val albumId = seedAlbum("A")
+        seedUserAlbumTag(albumId, "user-tag", "usertag")
+        runBlocking {
+            val scanTagId = db.tagDao().insertTags(listOf(TagEntity(name = "old-scan", nameNormalized = "oldscan"))).first()
+            db.tagDao().insertAlbumTags(listOf(AlbumTagEntity(albumId = albumId, tagId = scanTagId, source = TagSource.SCAN)))
+        }
+
+        repo.upsertAlbumTagsFromCsv(albumId, "new-scan", TagSource.SCAN)
+
+        val scanNames = db.tagDao().getAlbumTagsOnce(albumId)
+            .filter { it.source == TagSource.SCAN }
+            .mapNotNull { ref -> db.tagDao().getTagById(ref.tagId)?.nameNormalized }
+        assertEquals(listOf("newscan"), scanNames)
+        assertEquals(1, db.tagDao().getAlbumTagsOnce(albumId).count { it.source == TagSource.USER }) // USER 源不动
+    }
+
+    @Test
+    fun refreshAlbumAudioAggregate_rewritesAlbumAggregateFields() = runBlocking {
+        val albumId = seedAlbum("A")
+        seedTrack(albumId, "/p/A/01.mp3")
+        seedTrack(albumId, "/p/A/02.mp3")
+        db.trackDao().updateTracks(
+            listOf(
+                db.trackDao().getTracksForAlbumOnce(albumId)[0].copy(duration = 10.0),
+                db.trackDao().getTracksForAlbumOnce(albumId)[1].copy(duration = 20.0)
+            )
+        )
+        val sizes = mapOf("/p/A/01.mp3" to 100L, "/p/A/02.mp3" to 250L)
+
+        repo.refreshAlbumAudioAggregate(albumId) { path -> sizes[path] }
+
+        val entity = db.albumDao().getAlbumById(albumId)!!
+        assertEquals(2, entity.audioTrackCount)
+        assertEquals(30.0, entity.audioTotalDuration, 0.001)
+        assertEquals(350L, entity.audioTotalSizeBytes)
+    }
+
+    @Test
+    fun backfillLegacyOnlineSavedAlbumRoots_fillsOnlyEligibleAlbums() = runBlocking {
+        val eligible = db.albumDao().insertAlbum(
+            AlbumEntity(title = "web", path = "web://rj/RJ999999", workId = "RJ999999", rjCode = "RJ999999")
+        )
+        val ineligible = db.albumDao().insertAlbum(
+            AlbumEntity(title = "local", path = "/p/local", localPath = "/p/local", workId = "RJ888888", rjCode = "RJ888888")
+        )
+        db.localTreeCacheDao().upsert(LocalTreeCacheEntity(albumId = eligible, cacheKey = "k", stamp = 1L, payloadJson = "{}", updatedAt = 1L))
+        val albums = db.albumDao().getAllAlbumsOnce()
+
+        repo.backfillLegacyOnlineSavedAlbumRoots(albums) { entity ->
+            "/legacy/${entity.rjCode}"
+        }
+
+        val filled = db.albumDao().getAlbumById(eligible)!!
+        assertEquals("/legacy/RJ999999", filled.localPath)
+        assertNull(db.localTreeCacheDao().getByAlbumAndKey(eligible, "k")) // 事务内清缓存
+        assertEquals("/p/local", db.albumDao().getAlbumById(ineligible)!!.localPath) // 不合条件不动
+    }
+
+    @Test
+    fun computeAlbumAudioAggregate_sumsCountsDurationsAndSizes() = runBlocking {
+        val specs = listOf(
+            TrackEntity(albumId = 1L, title = "a", path = "/a.mp3", duration = 1.5),
+            TrackEntity(albumId = 1L, title = "b", path = "/b.mp3", duration = 2.5)
+        )
+
+        val aggregate = repo.computeAlbumAudioAggregate(specs) { path -> if (path == "/a.mp3") 10L else null }
+
+        assertEquals(2, aggregate.trackCount)
+        assertEquals(4.0, aggregate.totalDuration, 0.001)
+        assertEquals(10L, aggregate.totalSizeBytes) // null 探查按 0 计
     }
 }

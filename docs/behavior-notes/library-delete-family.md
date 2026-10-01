@@ -59,6 +59,16 @@
 - `refreshAlbumAudioAggregate`（重算聚合三字段）。
 - 全部消息/进度/回调编排；下载任务清理；文件系统删除（deletePathSafely）。
 
+## 四、附录（R2-B4b 下沉的扫描/初始化/聚合写族）
+- `upsertAlbumFtsIndex(albumId, entity)`：USER 标签 CSV 与 entity.tags 合并 → buildTagsToken → albumFtsDao.upsert（REPLACE）。纯数据，逐字下沉。
+- `upsertAlbumTagsFromCsv(albumId, tagsCsv, source)`：空 CSV 早退；insertTags（IGNORE）→ getTagsByNormalized → **deleteAlbumTagsByAlbumIdExceptSource(albumId, USER)（保留 USER 源！）** → insertAlbumTags(指定 source)。
+- `seedAutoTagsFromAlbumTags(albums)`：原 ensureTagTablesInitialized 的写段。首现归一形建 tag 行（IGNORE）→ 单事务内逐专辑 deleteAlbumTagsByAlbumIdExceptSource(USER) + 插 AUTO refs。空表早退（countTags 判定在调用方）。
+- `updateAlbum(entity)`：透传单行更新。
+- `computeAlbumAudioAggregate(specs, fileSizeQuery)`：总字节经注入的 fileSizeQuery 逐轨探查（IO 在 Dispatchers.IO），null 记 0；数量/时长纯求和。
+- `refreshAlbumAudioAggregate(albumId, fileSizeQuery)`：albumId≤0 早退、专辑行缺失早退 → 读全轨 → compute → 回写三字段。
+- `backfillLegacyOnlineSavedAlbumRoots(albums, resolveLegacyDir)`：**单事务包全部专辑**（原样）。逐专辑：localPath/downloadPath 均非空跳过 → 读轨 + shouldBackfillLegacyOnlineSavedAlbumRoot 判定 → resolveLegacyDir（File IO，注入；不可回滚，与原实现同在事务内）→ updateAlbum(localPath) → runCatching 清目录树缓存 → FTS 刷新。
+- 平台接缝（fileSizeQuery / resolveLegacyDir / exists 探查）由 VM 注入，Repository 不反向依赖 ui。
+
 ## 验证
 - seam 测试：`app/src/test/java/com/asmr/player/data/repository/LibraryWriteRepositoryTest.kt`（Robolectric + 内存 Room，逐条对应上文契约）。
-- 全量测试基线只增不减（885/0/4 起）。
+- 全量测试基线只增不减（895/0/4 起，B4a 后）。

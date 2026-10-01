@@ -83,7 +83,9 @@ import com.asmr.player.util.SubtitleMatchSupport
 import com.asmr.player.util.SyncCoordinator
 import com.asmr.player.util.TagNormalizer
 import com.asmr.player.util.TrackKeyNormalizer
+import com.asmr.player.util.buildTagsToken
 import com.asmr.player.util.isOnlineTrackPath
+import com.asmr.player.util.parseAlbumTags
 import com.asmr.player.work.AlbumCoverThumbWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext

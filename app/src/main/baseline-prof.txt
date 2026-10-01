@@ -55128,7 +55128,7 @@ SPLcom/asmr/player/ui/library/LibraryViewModel;->getUserTagsByAlbumId()Lkotlinx/
 SPLcom/asmr/player/ui/library/LibraryViewModel;->getUserTagsByTrackId()Lkotlinx/coroutines/flow/StateFlow;
 SPLcom/asmr/player/ui/library/LibraryViewModel;->isGlobalSyncRunning()Lkotlinx/coroutines/flow/StateFlow;
 SPLcom/asmr/player/ui/library/LibraryViewModel;->onCleared()V
-SPLcom/asmr/player/ui/library/AlbumMetadataSupportKt;->parseAlbumTags(Ljava/lang/String;)Ljava/util/List;
+SPLcom/asmr/player/util/TagNormalizerKt;->parseAlbumTags(Ljava/lang/String;)Ljava/util/List;
 SPLcom/asmr/player/ui/library/LibraryViewModel;->setExpandedTrackAlbums(Ljava/util/Set;)V
 SPLcom/asmr/player/ui/library/LibraryViewModel;->toAlbum(Lcom/asmr/player/data/local/db/entities/AlbumEntity;)Lcom/asmr/player/domain/model/Album;
 SPLcom/asmr/player/ui/library/LibraryViewModel_HiltModules$KeyModule;->provide()Ljava/lang/String;

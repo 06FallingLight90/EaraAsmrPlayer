@@ -23,21 +23,20 @@ import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.dao.AlbumDao
-import com.asmr.player.data.local.db.entities.AlbumFtsEntity
 import com.asmr.player.data.local.db.dao.TrackDao
 import com.asmr.player.data.local.db.dao.LibraryTrackRow
 import com.asmr.player.data.local.db.dao.LibraryTrackAlbumHeaderRow
 import com.asmr.player.data.local.db.dao.TagWithCount
 import com.asmr.player.data.local.db.entities.AlbumEntity
-import com.asmr.player.data.local.db.entities.AlbumTagEntity
 import com.asmr.player.data.local.db.entities.LocalTreeCacheEntity
 import com.asmr.player.data.local.db.entities.SubtitleEntity
-import com.asmr.player.data.local.db.entities.TagEntity
 import com.asmr.player.data.local.db.entities.TagSource
 import com.asmr.player.data.local.db.entities.TrackEntity
-import com.asmr.player.data.local.db.entities.TrackTagEntity
 import com.asmr.player.data.local.db.entities.titleForDisplay
 import com.asmr.player.data.local.library.LocalAlbumMergeService
+import com.asmr.player.data.local.library.ensureLibraryAlbumDir
+import com.asmr.player.data.local.library.legacyOnlineSavedAlbumFolderName
+import com.asmr.player.data.local.library.shouldBackfillLegacyOnlineSavedAlbumRoot
 import com.asmr.player.data.remote.api.AsmrOneApi
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncCandidate
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncResolveResult
@@ -68,6 +67,7 @@ import com.asmr.player.util.TrackKeyNormalizer
 import com.asmr.player.util.isOnlineTrackPath
 import com.asmr.player.util.isScannableLocalDirectoryName
 import com.asmr.player.util.isVirtualAlbumPath
+import com.asmr.player.util.parseAlbumTags
 import com.asmr.player.util.EmbeddedMediaExtractor
 import com.asmr.player.work.AlbumCoverThumbWorker
 import com.asmr.player.work.TrackDurationWorker
@@ -348,39 +348,10 @@ class LibraryViewModel @Inject constructor(
         )
     }
 
-    private data class AlbumAudioAggregate(
-        val trackCount: Int,
-        val totalDuration: Double,
-        val totalSizeBytes: Long,
-    )
-
-    private suspend fun computeAlbumAudioAggregate(
-        trackSpecs: List<TrackEntity>,
-    ): AlbumAudioAggregate {
-        val totalSizeBytes = withContext(Dispatchers.IO) {
-            trackSpecs.sumOf { track ->
-                queryTrackFileSize(context, track.path) ?: 0L
-            }
-        }
-        return AlbumAudioAggregate(
-            trackCount = trackSpecs.size,
-            totalDuration = trackSpecs.sumOf { it.duration },
-            totalSizeBytes = totalSizeBytes,
-        )
-    }
-
     private suspend fun refreshAlbumAudioAggregate(albumId: Long) {
-        if (albumId <= 0L) return
-        val entity = albumDao.getAlbumById(albumId) ?: return
-        val tracks = trackDao.getTracksForAlbumOnce(albumId)
-        val aggregate = computeAlbumAudioAggregate(tracks)
-        albumDao.updateAlbum(
-            entity.copy(
-                audioTrackCount = aggregate.trackCount,
-                audioTotalDuration = aggregate.totalDuration,
-                audioTotalSizeBytes = aggregate.totalSizeBytes,
-            )
-        )
+        libraryWriteRepository.refreshAlbumAudioAggregate(albumId) { path ->
+            queryTrackFileSize(context, path)
+        }
     }
 
     suspend fun loadInheritedTagsForAlbum(albumId: Long): List<String> {
@@ -936,7 +907,7 @@ class LibraryViewModel @Inject constructor(
                             localPath = entity.localPath?.takeIf { !it.startsWith(uriString) },
                             coverPath = if (entity.coverPath.startsWith(uriString)) "" else entity.coverPath
                         )
-                        albumDao.updateAlbum(updated)
+                        libraryWriteRepository.updateAlbum(updated)
                         upsertAlbumFtsIndex(updated.id, updated)
                     }
                 } else {
@@ -950,7 +921,7 @@ class LibraryViewModel @Inject constructor(
                         localPath = entity.localPath?.takeIf { !it.startsWith(uriString) },
                         coverPath = if (entity.coverPath.startsWith(uriString)) "" else entity.coverPath
                     )
-                    albumDao.updateAlbum(updated)
+                    libraryWriteRepository.updateAlbum(updated)
                     upsertAlbumFtsIndex(updated.id, updated)
                 }
             }
@@ -1315,7 +1286,7 @@ class LibraryViewModel @Inject constructor(
             workId = resolveCloudSyncWorkId(entity.workId, resolvedWorkno),
             rjCode = resolvedWorkno
         )
-        albumDao.updateAlbum(updated)
+        libraryWriteRepository.updateAlbum(updated)
         upsertAlbumFtsIndex(updated.id, updated)
         upsertAlbumTagsFromCsv(updated.id, updated.tags, TagSource.AUTO)
         if (updated.coverPath.trim().isBlank() && updated.coverThumbPath.trim().isBlank()) {
@@ -1468,7 +1439,7 @@ class LibraryViewModel @Inject constructor(
         if (coverFile.exists() && coverFile.length() > 0L && thumbFile.exists() && thumbFile.length() > 0L) {
             val entity = runCatching { albumDao.getAlbumById(albumId) }.getOrNull()
             if (entity != null && (entity.coverPath != coverFile.absolutePath || entity.coverThumbPath != thumbFile.absolutePath)) {
-                runCatching { albumDao.updateAlbum(entity.copy(coverPath = coverFile.absolutePath, coverThumbPath = thumbFile.absolutePath)) }
+                runCatching { libraryWriteRepository.updateAlbum(entity.copy(coverPath = coverFile.absolutePath, coverThumbPath = thumbFile.absolutePath)) }
             }
             return true
         }
@@ -1525,7 +1496,7 @@ class LibraryViewModel @Inject constructor(
 
         return runCatching {
             val entity = albumDao.getAlbumById(albumId) ?: return true
-            albumDao.updateAlbum(entity.copy(coverPath = coverFile.absolutePath, coverThumbPath = thumbFile.absolutePath))
+            libraryWriteRepository.updateAlbum(entity.copy(coverPath = coverFile.absolutePath, coverThumbPath = thumbFile.absolutePath))
             debugLog("ensureAlbumCoverSaved ok albumId=$albumId cover=${coverFile.length()} thumb=${thumbFile.length()}")
             true
         }.getOrElse { e ->
@@ -1627,7 +1598,7 @@ class LibraryViewModel @Inject constructor(
                                 downloadPath = entity.downloadPath?.takeIf { dp -> prefixes.none { pfx -> dp.startsWith(pfx) } },
                                 coverPath = entity.coverPath.takeIf { cp -> prefixes.none { pfx -> cp.startsWith(pfx) } }.orEmpty()
                             )
-                            albumDao.updateAlbum(updated)
+                            libraryWriteRepository.updateAlbum(updated)
                             upsertAlbumFtsIndex(updated.id, updated)
                         }
                     }
@@ -1960,69 +1931,19 @@ class LibraryViewModel @Inject constructor(
         val albums = runCatching { albumDao.getAllAlbumsOnce() }.getOrDefault(emptyList())
         if (albums.isEmpty()) return
 
-        database.withTransaction {
-            albums.forEach { entity ->
-                if (entity.localPath?.trim().orEmpty().isNotBlank() || entity.downloadPath?.trim().orEmpty().isNotBlank()) {
-                    return@forEach
-                }
-                val tracks = trackDao.getTracksForAlbumOnce(entity.id)
-                if (!shouldBackfillLegacyOnlineSavedAlbumRoot(entity, tracks)) return@forEach
-
-                val albumDir = legacyOnlineSavedAlbumDir(entity)
-                ensureLibraryAlbumDir(albumDir)
-                val updated = entity.copy(localPath = albumDir.absolutePath)
-                albumDao.updateAlbum(updated)
-                runCatching { database.localTreeCacheDao().deleteByAlbum(entity.id) }
-                upsertAlbumFtsIndex(updated.id, updated)
-            }
+        libraryWriteRepository.backfillLegacyOnlineSavedAlbumRoots(albums) { entity ->
+            val albumDir = legacyOnlineSavedAlbumDir(entity)
+            ensureLibraryAlbumDir(albumDir)
+            albumDir.absolutePath
         }
     }
 
     private suspend fun upsertAlbumFtsIndex(albumId: Long, entity: AlbumEntity) {
-        val userTagsCsv = database.tagDao().getAlbumTagsCsvOnce(albumId, TagSource.USER).orEmpty()
-        val combinedTagsCsv = buildString {
-            append(entity.tags)
-            if (userTagsCsv.isNotBlank()) {
-                if (isNotEmpty() && last() != ',') append(',')
-                append(userTagsCsv)
-            }
-        }
-        val tagsToken = buildTagsToken(combinedTagsCsv)
-        database.albumFtsDao().upsert(
-            listOf(
-                AlbumFtsEntity(
-                    albumId = albumId,
-                    title = entity.title,
-                    circle = entity.circle,
-                    cv = entity.cv,
-                    rjCode = entity.rjCode,
-                    workId = entity.workId,
-                    tagsToken = tagsToken
-                )
-            )
-        )
+        libraryWriteRepository.upsertAlbumFtsIndex(albumId, entity)
     }
 
     private suspend fun upsertAlbumTagsFromCsv(albumId: Long, tagsCsv: String, source: Int) {
-        val tags = parseAlbumTags(tagsCsv)
-        if (tags.isEmpty()) return
-
-        val tagEntities = tags.map { (name, normalized) ->
-            TagEntity(name = name, nameNormalized = normalized)
-        }
-        val tagDao = database.tagDao()
-        tagDao.insertTags(tagEntities)
-
-        val normalizedList = tags.map { it.second }
-        val persisted = tagDao.getTagsByNormalized(normalizedList)
-        val idByNormalized = persisted.associateBy({ it.nameNormalized }, { it.id })
-
-        tagDao.deleteAlbumTagsByAlbumIdExceptSource(albumId, TagSource.USER)
-        val refs = normalizedList.mapNotNull { normalized ->
-            val tagId = idByNormalized[normalized] ?: return@mapNotNull null
-            AlbumTagEntity(albumId = albumId, tagId = tagId, source = source)
-        }
-        if (refs.isNotEmpty()) tagDao.insertAlbumTags(refs)
+        libraryWriteRepository.upsertAlbumTagsFromCsv(albumId, tagsCsv, source)
     }
 
     private suspend fun ensureTagTablesInitialized() {
@@ -2031,35 +1952,7 @@ class LibraryViewModel @Inject constructor(
         if (tagCount > 0L) return
 
         val albums = runCatching { albumDao.getAllAlbumsOnce() }.getOrDefault(emptyList())
-        val allPairs = albums.flatMap { parseAlbumTags(it.tags) }
-        if (allPairs.isEmpty()) return
-
-        val firstNameByNormalized = LinkedHashMap<String, String>()
-        allPairs.forEach { (name, normalized) ->
-            if (!firstNameByNormalized.containsKey(normalized)) firstNameByNormalized[normalized] = name
-        }
-
-        val tagEntities = firstNameByNormalized.map { (normalized, name) ->
-            TagEntity(name = name, nameNormalized = normalized)
-        }
-        tagDao.insertTags(tagEntities)
-        val persisted = tagDao.getTagsByNormalized(firstNameByNormalized.keys.toList())
-        val idByNormalized = persisted.associateBy({ it.nameNormalized }, { it.id })
-
-        database.withTransaction {
-            albums.forEach { album ->
-                val pairs = parseAlbumTags(album.tags)
-                if (pairs.isEmpty()) return@forEach
-                val refs = pairs.mapNotNull { (_, normalized) ->
-                    val tagId = idByNormalized[normalized] ?: return@mapNotNull null
-                    AlbumTagEntity(albumId = album.id, tagId = tagId, source = TagSource.AUTO)
-                }
-                if (refs.isNotEmpty()) {
-                    tagDao.deleteAlbumTagsByAlbumIdExceptSource(album.id, TagSource.USER)
-                    tagDao.insertAlbumTags(refs)
-                }
-            }
-        }
+        libraryWriteRepository.seedAutoTagsFromAlbumTags(albums)
     }
 
     private suspend fun scanFromDownloadedDir(
@@ -2104,7 +1997,9 @@ class LibraryViewModel @Inject constructor(
                 .filter { it.isFile && setOf("mp3", "flac", "wav", "m4a", "ogg", "aac", "opus").contains(it.extension.lowercase()) }
                 .map { file -> TrackEntity(albumId = 0L, title = file.nameWithoutExtension, path = file.absolutePath, duration = 0.0, group = "") }
                 .toList()
-            val aggregate = computeAlbumAudioAggregate(aggregateTracks)
+            val aggregate = libraryWriteRepository.computeAlbumAudioAggregate(aggregateTracks) { path ->
+                queryTrackFileSize(context, path)
+            }
             val entity = AlbumEntity(
                 id = existing?.id ?: 0L,
                 title = existing?.title?.takeIf { it.isNotBlank() && it != title } ?: title,
@@ -2137,7 +2032,7 @@ class LibraryViewModel @Inject constructor(
                         val saved = EmbeddedMediaExtractor.saveArtworkToCache(context, albumId, bmp)
                         if (!saved.isNullOrBlank()) {
                             val updated = entity.copy(coverPath = saved)
-                            albumDao.updateAlbum(updated)
+                            libraryWriteRepository.updateAlbum(updated)
                         }
                     }
                 }
@@ -2184,7 +2079,7 @@ class LibraryViewModel @Inject constructor(
                         downloadPath = null,
                         coverPath = if (entity.coverPath.startsWith(dl)) "" else entity.coverPath
                     )
-                    albumDao.updateAlbum(updated)
+                    libraryWriteRepository.updateAlbum(updated)
                     upsertAlbumFtsIndex(updated.id, updated)
                 }
             }
@@ -2594,7 +2489,7 @@ class LibraryViewModel @Inject constructor(
                             val saved = EmbeddedMediaExtractor.saveArtworkToCache(context, insertedAlbumId, bmp)
                             if (!saved.isNullOrBlank()) {
                                 val updated = persisted!!.copy(coverPath = saved)
-                                albumDao.updateAlbum(updated)
+                                libraryWriteRepository.updateAlbum(updated)
                             }
                         }
                     }
@@ -2627,7 +2522,7 @@ class LibraryViewModel @Inject constructor(
                 database.trackTagDao().deleteTrackTagsByTrackIds(removedIds)
                 trackDao.deleteTracksByIds(removedIds)
             }
-            albumDao.updateAlbum(entity.copy(downloadPath = null))
+            libraryWriteRepository.updateAlbum(entity.copy(downloadPath = null))
             database.localTreeCacheDao().deleteByAlbum(entity.id)
         }
     }
@@ -2666,7 +2561,7 @@ class LibraryViewModel @Inject constructor(
                             localPath = entity.localPath?.takeIf { !it.startsWith(root) },
                             coverPath = if (entity.coverPath.startsWith(root)) "" else entity.coverPath
                         )
-                        albumDao.updateAlbum(updated)
+                        libraryWriteRepository.updateAlbum(updated)
                         upsertAlbumFtsIndex(updated.id, updated)
                     }
                 } else {
@@ -2682,7 +2577,7 @@ class LibraryViewModel @Inject constructor(
                         localPath = entity.localPath?.takeIf { !it.startsWith(root) },
                         coverPath = if (entity.coverPath.startsWith(root)) "" else entity.coverPath
                     )
-                    albumDao.updateAlbum(updated)
+                    libraryWriteRepository.updateAlbum(updated)
                     upsertAlbumFtsIndex(updated.id, updated)
                 }
             }
@@ -2812,7 +2707,7 @@ class LibraryViewModel @Inject constructor(
                 }
 
                 if (updated != entity) {
-                    albumDao.updateAlbum(updated)
+                    libraryWriteRepository.updateAlbum(updated)
                     upsertAlbumFtsIndex(updated.id, updated)
                 }
             }
@@ -2887,7 +2782,7 @@ class LibraryViewModel @Inject constructor(
         database.withTransaction {
             val entity = albumDao.getAlbumById(albumId) ?: return@withTransaction
             if (coverPath.isNotBlank()) {
-                albumDao.updateAlbum(entity.copy(coverPath = coverPath))
+                libraryWriteRepository.updateAlbum(entity.copy(coverPath = coverPath))
             }
 
             persistedPaths = listOfNotNull(entity.path, entity.localPath, entity.downloadPath)
