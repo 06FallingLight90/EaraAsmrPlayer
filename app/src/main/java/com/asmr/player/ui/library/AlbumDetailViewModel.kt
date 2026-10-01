@@ -128,6 +128,7 @@ import com.asmr.player.ui.library.albumdetail.AlbumDetailUiState
 import com.asmr.player.ui.library.albumdetail.AsmrOneLeafDownload
 import com.asmr.player.ui.library.albumdetail.asmrOneTrackRjCandidates
 import com.asmr.player.ui.library.albumdetail.asmrOneTracksCacheKey
+import com.asmr.player.ui.library.albumdetail.collectSubtitleCandidates
 import com.asmr.player.ui.library.albumdetail.listenTogetherSummaryRj
 import com.asmr.player.ui.library.albumdetail.withPreservedListenTogetherListenerCount
 import com.asmr.player.ui.library.albumdetail.withUpdatedLocalCover
@@ -2829,32 +2830,21 @@ class AlbumDetailViewModel @Inject constructor(
             }
         }
 
-        val subtitleCandidates = mutableListOf<Pair<com.asmr.player.util.SubtitleMatchCandidate, LeafFile>>()
-
-        fun collectSubtitleCandidates(nodes: List<AsmrOneTrackNodeResponse>, parentPath: String) {
-            nodes.forEach { node ->
-                val children = node.children.orEmpty()
-                val rawTitle = node.title?.trim().orEmpty().ifBlank { "item" }
-                val url = node.mediaDownloadUrl ?: node.streamUrl
-                val safeTitle = sanitizeFolderName(rawTitle)
-                val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
-                if (children.isNotEmpty() || url.isNullOrBlank()) {
-                    if (children.isNotEmpty()) collectSubtitleCandidates(children, path)
-                    return@forEach
-                }
-                val fileType = treeFileTypeForNode(rawTitle, url, node.type)
-                val leaf = LeafFile(
-                    rawTitle = rawTitle,
-                    safeTitle = safeTitle,
-                    url = url,
-                    duration = node.duration,
-                    fileType = fileType
-                )
-                if (subtitleExts.contains(leaf.ext)) {
-                    val candidate = SubtitleMatchSupport.inferCandidate(path, leaf.url)
-                    if (candidate != null) subtitleCandidates += candidate to leaf
-                }
+        val subtitleCandidates = collectSubtitleCandidates(
+            tree,
+            subtitleExts,
+            extOf = { rawTitle, url ->
+                val ext0 = rawTitle.substringAfterLast('.', "").lowercase()
+                if (ext0.isNotBlank()) ext0 else url.substringBefore('?').substringAfterLast('.', "").lowercase()
             }
+        ).map { entry ->
+            entry.candidate to LeafFile(
+                rawTitle = entry.rawTitle,
+                safeTitle = entry.safeTitle,
+                url = entry.url,
+                duration = entry.duration,
+                fileType = treeFileTypeForNode(entry.rawTitle, entry.url, entry.node.type)
+            )
         }
 
         fun walk(nodes: List<AsmrOneTrackNodeResponse>, parentPath: String) {
@@ -2918,7 +2908,6 @@ class AlbumDetailViewModel @Inject constructor(
                 walk(children, path)
             }
         }
-        collectSubtitleCandidates(tree, "")
         walk(tree, "")
         return out.map { leaf ->
             if (leaf.fileType != TreeFileType.Audio) {

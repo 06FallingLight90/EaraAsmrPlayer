@@ -1067,37 +1067,18 @@ internal fun buildRemoteTreeIndex(
         val displayTitle: String = sanitizeFolderName(baseName).ifBlank { safeTitle.substringBeforeLast('.') }
     }
 
-    val subtitleCandidates = mutableListOf<Pair<com.asmr.player.util.SubtitleMatchCandidate, LeafFile>>()
-
-    fun collectSubtitleCandidates(nodes: List<AsmrOneTrackNodeResponse>, parentPath: String) {
-        nodes.forEach { node ->
-            val children = node.children.orEmpty()
-            val url = node.mediaDownloadUrl ?: node.streamUrl
-            val rawTitle = node.title?.trim().orEmpty().ifBlank { "item" }
-            val safeTitle = sanitizeFolderName(rawTitle)
-            val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
-            if (children.isEmpty()) {
-                if (!url.isNullOrBlank()) {
-                    val leaf = LeafFile(
-                        rawTitle = rawTitle,
-                        safeTitle = safeTitle,
-                        url = url,
-                        duration = node.duration,
-                        fileType = treeFileTypeForNode(rawTitle, url, node.type),
-                        dlsitePlayImageCrypt = node.dlsitePlayImageCrypt,
-                        dlsitePlayImageWidth = node.dlsitePlayImageWidth,
-                        dlsitePlayImageHeight = node.dlsitePlayImageHeight,
-                        dlsitePlayOptimizedName = node.dlsitePlayOptimizedName
-                    )
-                    if (subtitleExts.contains(leaf.ext)) {
-                        val candidate = SubtitleMatchSupport.inferCandidate(path, leaf.url)
-                        if (candidate != null) subtitleCandidates += candidate to leaf
-                    }
-                }
-            } else {
-                collectSubtitleCandidates(children, path)
-            }
-        }
+    val subtitleCandidates = collectSubtitleCandidates(tree, subtitleExts).map { entry ->
+        entry.candidate to LeafFile(
+            rawTitle = entry.rawTitle,
+            safeTitle = entry.safeTitle,
+            url = entry.url,
+            duration = entry.duration,
+            fileType = treeFileTypeForNode(entry.rawTitle, entry.url, entry.node.type),
+            dlsitePlayImageCrypt = entry.node.dlsitePlayImageCrypt,
+            dlsitePlayImageWidth = entry.node.dlsitePlayImageWidth,
+            dlsitePlayImageHeight = entry.node.dlsitePlayImageHeight,
+            dlsitePlayOptimizedName = entry.node.dlsitePlayOptimizedName
+        )
     }
 
     fun walk(
@@ -1191,7 +1172,6 @@ internal fun buildRemoteTreeIndex(
         }
     }
 
-    collectSubtitleCandidates(tree, "")
     walk(tree, root, "")
     return RemoteTreeIndex(root = root)
 }
@@ -1828,26 +1808,13 @@ internal fun flattenAsmrOneTracksForUi(tree: List<AsmrOneTrackNodeResponse>): Li
         val baseName: String = rawTitle.substringBeforeLast('.')
     }
 
-    val subtitleCandidates = mutableListOf<Pair<com.asmr.player.util.SubtitleMatchCandidate, LeafFile>>()
-
-    fun collectSubtitleCandidates(nodes: List<AsmrOneTrackNodeResponse>, parentPath: String) {
-        nodes.forEach { node ->
-            val children = node.children.orEmpty()
-            val url = node.mediaDownloadUrl ?: node.streamUrl
-            val rawTitle = node.title?.trim().orEmpty().ifBlank { "item" }
-            val safeTitle = sanitizeFolderName(rawTitle)
-            val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
-            if (children.isEmpty()) {
-                if (url.isNullOrBlank()) return@forEach
-                val leaf = LeafFile(rawTitle = rawTitle, safeTitle = safeTitle, url = url, duration = node.duration)
-                if (subtitleExts.contains(leaf.ext)) {
-                    val candidate = SubtitleMatchSupport.inferCandidate(path, leaf.url)
-                    if (candidate != null) subtitleCandidates += candidate to leaf
-                }
-            } else {
-                collectSubtitleCandidates(children, path)
-            }
-        }
+    val subtitleCandidates = collectSubtitleCandidates(tree, subtitleExts).map { entry ->
+        entry.candidate to LeafFile(
+            rawTitle = entry.rawTitle,
+            safeTitle = entry.safeTitle,
+            url = entry.url,
+            duration = entry.duration
+        )
     }
 
     fun walk(nodes: List<AsmrOneTrackNodeResponse>, parentPath: String) {
@@ -1893,7 +1860,6 @@ internal fun flattenAsmrOneTracksForUi(tree: List<AsmrOneTrackNodeResponse>): Li
         }
     }
 
-    collectSubtitleCandidates(tree, "")
     walk(tree, "")
     return out
 }

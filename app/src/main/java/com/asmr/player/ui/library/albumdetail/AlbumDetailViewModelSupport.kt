@@ -45,6 +45,8 @@ import com.asmr.player.ui.nav.AlbumCoverHint
 import com.asmr.player.util.OnlineLyricsStore
 import com.asmr.player.util.RemoteSubtitleSource
 import com.asmr.player.util.SyncCoordinator
+import com.asmr.player.util.SubtitleMatchCandidate
+import com.asmr.player.util.SubtitleMatchSupport
 import com.asmr.player.util.TrackKeyNormalizer
 import com.asmr.player.util.DlsiteWorkNo
 import com.asmr.player.data.remote.crawler.asmrOneWorkMatchesRj
@@ -829,6 +831,52 @@ internal fun flattenAsmrOneLeafDownloads(tree: List<AsmrOneTrackNodeResponse>): 
             } else if (children.isNotEmpty()) {
                 walk(children, path)
             }
+        }
+    }
+    walk(tree, "")
+    return out
+}
+
+/** 字幕候选条目：携带构造各调用方自有 LeafFile 所需的原始字段（A3-1 去重）。 */
+internal data class SubtitleCandidateEntry(
+    val candidate: SubtitleMatchCandidate,
+    val path: String,
+    val rawTitle: String,
+    val safeTitle: String,
+    val url: String,
+    val duration: Double?,
+    val node: AsmrOneTrackNodeResponse
+)
+
+/**
+ * asmr.one 树的字幕候选收集（三份 flatten 局部实现共用的递归核心）：
+ * 叶子（无 children 且 url 非空）且扩展名命中 subtitleExts 时，
+ * 以目录路径推断字幕候选。extOf 允许调用方自定义扩展名解析
+ * （如 OnlineSave 流程从 URL 回退取扩展名）。
+ */
+internal fun collectSubtitleCandidates(
+    tree: List<AsmrOneTrackNodeResponse>,
+    subtitleExts: Set<String>,
+    extOf: (rawTitle: String, url: String) -> String = { rawTitle, _ ->
+        rawTitle.substringAfterLast('.', "").lowercase()
+    }
+): List<SubtitleCandidateEntry> {
+    val out = mutableListOf<SubtitleCandidateEntry>()
+    fun walk(nodes: List<AsmrOneTrackNodeResponse>, parentPath: String) {
+        nodes.forEach { node ->
+            val children = node.children.orEmpty()
+            val url = node.mediaDownloadUrl ?: node.streamUrl
+            val rawTitle = node.title?.trim().orEmpty().ifBlank { "item" }
+            val safeTitle = sanitizeFolderName(rawTitle)
+            val path = if (parentPath.isBlank()) safeTitle else "$parentPath/$safeTitle"
+            if (children.isNotEmpty()) {
+                walk(children, path)
+                return@forEach
+            }
+            if (url.isNullOrBlank()) return@forEach
+            if (!subtitleExts.contains(extOf(rawTitle, url))) return@forEach
+            val candidate = SubtitleMatchSupport.inferCandidate(path, url) ?: return@forEach
+            out += SubtitleCandidateEntry(candidate, path, rawTitle, safeTitle, url, node.duration, node)
         }
     }
     walk(tree, "")
