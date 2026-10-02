@@ -28,5 +28,9 @@ jobs:
           chmod +x gradlew
       - name: Architecture guards (file size / import direction)
         run: python3 tools/ci_guard.py
+      - name: Compile androidTest and baselineprofile assets
+        # 防止"写了但从不跑"的测试资产腐烂（20261002 体检 P1-6）：
+        # androidTest 迁移/分页测试与 baselineprofile 至少保持可编译
+        run: ./gradlew :app:assembleDebugAndroidTest :baselineprofile:assemble
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest
