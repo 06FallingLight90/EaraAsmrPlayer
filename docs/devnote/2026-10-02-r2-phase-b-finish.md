@@ -29,3 +29,12 @@
 3. **internal 暴露**：public 方法/嵌套类暴露 internal TreeFileType 参数（ScanCacheLeaf/OnlineSaveResourceSpec）→ 相关成员改 internal，勿动 TreeFileType 可见性。
 4. **AlbumTagsCsv/TrackTagsCsv 在 dao 包不在 entities 包**——import 前先 grep 定义位置。
 5. Edit 工具 old_string 里误带行号前缀 ": " 导致匹配失败；old_string 含重复行（import TagNormalizer×2）时 replace 顺序要小心。
+
+## 实机走查（B6 门禁，2026-10-02 15:30 收官）
+结果 **5/6 通过，1 项被既有问题阻塞**（非 B5 回归，diff 佐证）：
+- ✅ 库页渲染/详情页（本地树+操作栏+在线元信息）
+- ✅ 目录树面包屑：根目录→トラックリスト 子目录进入正常，媒体计数随目录变化（根 0 项/子目录 5 项）
+- ✅ **切片后台循环（B2c 修复实机验证通过）**：曲目2 建 3 切片→开启仅播放切片→跳首切片 4:14 ✓→后台 9.8min→回前台位置 14:04 ∈ 切片#1[13:48-16:08]（引擎后台持续运转）→至末切片末端 SkipToNext 跳曲目3（无切片→线性）——全时间轴与墙钟吻合；修复前症状（后台停摆+回前台瞬间跳转）未出现。DB 佐证：track_slices 8 行（本次测试新增 id=7/8 两切片在曲目2，**未清理，可在切片管理手动删**）
+- ✅ 通知点开：桌面+通知栏点播放器通知 → MainActivity 前台显示在播内容
+- ⛔ 下载全链：本地专辑的下载/保存按钮 enabled=false（asmrOneTree 为空）。根因：`api.asmr-200.com/api/search/...` 请求 ~2.6s 后被主动 Canceled（dlsite sign url 同样被取消），在线树拉不下来——**phase-A 前既有现象**（`git diff refactor-r2/phase-A..HEAD -- AlbumDetailScreen.kt` 零改动；B5 对 VM 的改动是纯数据访问改写，加载/取消逻辑零触碰）。强网环境或换专辑可能可测，留待后续
+- 🔍 顺带发现（非重构问题，留档）：① `am start --es start_route now_playing` 直接 FATAL——`now_playing` 是 MainContainer overlay 不是导航图路由，navigateSingleTop 抛 IllegalArgumentException 崩溃（route extra 未校验，冷启动 route 表外值会崩）；② media_session 的 PlaybackState 稀疏更新（仅 seek/播放态变化时），**不能**当实时位置真值，UI 时间标签才是；③ 迷你播放器 CoverOnly 模式=右下角圆形封面钮，点击只切 Expanded，标题区点击才开 NowPlaying；④ 横屏布局不提供裁剪按钮/切片开关（`!landscapeControls` 分支），且旋转导致 activity 重建会丢失 NowPlaying overlay 状态（remember 非 saveable）——测试必须竖屏；⑤ run-as 拉库：PowerShell 文本管道损坏二进制，须 `adb exec-out` + python subprocess 字节写入，再 python sqlite3 读（MIUI 无 sqlite3 且 run-as 不能写 /sdcard）；⑥ 含二次元封面的 screencap 过图像审查会被拦，UI 验证走 uiautomator dump 文本。
