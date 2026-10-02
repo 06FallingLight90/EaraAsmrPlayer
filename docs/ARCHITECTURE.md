@@ -125,6 +125,8 @@ UI（ui/player/PlayerViewModel.kt 等）
 
 ## 7. 已知问题与重构状态
 
+> 门禁报告索引：各阶段审查报告落 [docs/iteration/](iteration/)（`phase-1/2/3-review.md` 为第一轮，`r2-phase-A/B-review.md` 为第二轮），含审查发现（P0/P1/P2 分级）与实机走查证据。
+
 ### 7.1 第一轮重构（阶段 1–3，已完成）
 
 对照 `docs/project-quality-review-20260929.md`（2026-09-29 体检；下述 P0/P1 编号均属该报告，仅作历史索引）：
@@ -140,11 +142,11 @@ UI（ui/player/PlayerViewModel.kt 等）
 
 ### 7.2 第二轮重构 R2（绞杀者局部重写，进行中）
 
-计划 `.trae/documents/refactor-plan-r2.md`（未入库）；依据 2026-10-01 体检（总评 C，未入库）用户四决策：用户无感知 / 局部重写 / 隐性行为随改随文档化 / 双兜底（seam 测试先行 + 实机走查）。
+计划 [docs/refactor-plan-r2.md](refactor-plan-r2.md)；依据 [2026-10-01 体检](project-quality-review-20261001.md)（总评 C）用户四决策：用户无感知 / 局部重写 / 隐性行为随改随文档化 / 双兜底（seam 测试先行 + 实机走查）。
 
 - **阶段 A 已完成**（tag `refactor-r2/phase-A`）：目录=包名 22 文件统一；ci_guard 重写（真实包名匹配 + 全仓扫描 + 9 条方向规则 + 反例自检）；`collectSubtitleCandidates` 三份收敛；runBlocking 超时兜底 / OkHttp 显式超时 / DownloadWorker IO 重试 ≤2。
 - **阶段 B 已完成**（tag `refactor-r2/phase-B` @ 9afcccb）：data→上层反向 import 清零（B1 模型下沉）；service 去 `MainActivity` import（B2，含**切片后台循环修复** `awaitFrameCommitOrTimeout`，上游 issue #322，实机验证通过）；`PlaybackController` 接口（B3）；两个 God VM 数据访问收进 `LibraryReadRepository`/`LibraryWriteRepository`（B4/B5，行为档案见 7.3）；ui→DAO 存量 19 处/15 文件入 baseline（B6）。测试 880→**906** 只增不减；门禁实机走查 5/6（下载全链被既有在线树请求取消问题阻塞，`git diff refactor-r2/phase-A..HEAD` 佐证非回归）。
-- **阶段 C 待开工**：MainContainer 路由族拆分 / NowPlaying / Settings 区块化 / 两 God VM 方法族拆分 / ratchet 收紧 1500→800。开工前先做 2026-10-02 体检（未入库）的「第一阶段：补闸门与校准」——size ratchet 收紧（现松弛 805 行）+ 新守卫规则 `ui-to-data-remote`（UI 直连 `data.remote` 160 处 / 27 文件当前零覆盖，最大结构洞）等。
+- **阶段 C 待开工**：MainContainer 路由族拆分 / NowPlaying / Settings 区块化 / 两 God VM 方法族拆分 / ratchet 收紧 1500→800。开工前先做 [2026-10-02 体检](project-quality-review-20261002.md)的「第一阶段：补闸门与校准」——size ratchet 收紧（现松弛 805 行）+ 新守卫规则 `ui-to-data-remote`（UI 直连 `data.remote` 160 处 / 27 文件当前零覆盖，最大结构洞）等。
 
 ### 7.3 行为档案索引（隐性行为文档化）
 

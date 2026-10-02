@@ -5,7 +5,7 @@
 > 代码规模：主源集 **435 个 .kt / 111,207 行**；test 181 文件 / **906 个 @Test / 20,721 行**；androidTest 18 / 36；`:baselineprofile` 4
 > 口径：**静态层**（用户确认不运行测试套件，测试结论标注"未重跑"）；**本轮纳入文档化维度**（上一轮经用户同意跳过）；已排除 `.build_asmr_player_android/`、`.gradle-user-home/` 等构建产物目录
 > 方法：机械检查脚本 + **Kotlin 依赖图独立复算**（官方 `dependency_metrics.py` 不支持 Kotlin，改用内联 python 复算一级/二级包边）+ 5 维度并行子代理审查 + 关键行号逐条 grep/读文件复核
-> 关联：[project-quality-review-20261001.md](project-quality-review-20261001.md)（上轮，总评 C）｜[project-quality-review-20260929.md](project-quality-review-20260929.md)｜`.trae/documents/refactor-plan-r2.md`（本轮重构计划）
+> 关联：[project-quality-review-20261001.md](project-quality-review-20261001.md)（上轮，总评 C）｜[project-quality-review-20260929.md](project-quality-review-20260929.md)｜[docs/refactor-plan-r2.md](refactor-plan-r2.md)（本轮重构计划）
 
 ## 总体评级：C+ — 需要专项治理，但治理路线已在执行且成效可验证
 

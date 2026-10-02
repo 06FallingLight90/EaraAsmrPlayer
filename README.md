@@ -53,7 +53,7 @@
 
 ```bash
 ./gradlew :app:assembleDebug        # 构建 Debug APK
-./gradlew :app:testDebugUnitTest    # 单元测试（当前基线约 906 个用例）
+./gradlew :app:testDebugUnitTest    # 单元测试（当前基线见 docs/ARCHITECTURE.md §6，只增不减）
 ```
 
 Windows 本机如需重定向 Gradle 缓存，可使用仓库自带的 `gradlew-local.bat` 辅助脚本。架构说明见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
