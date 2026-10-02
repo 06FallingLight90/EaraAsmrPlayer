@@ -10,26 +10,16 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.withTransaction
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.asmr.player.BuildConfig
 import com.asmr.player.cache.AppCacheManager
-import com.asmr.player.data.local.db.AppDatabase
-import com.asmr.player.data.local.db.dao.AlbumDao
 import com.asmr.player.data.local.db.dao.TagWithCount
-import com.asmr.player.data.local.db.dao.TrackDao
 import com.asmr.player.data.local.db.entities.AlbumEntity
-import com.asmr.player.data.local.db.entities.AlbumFtsEntity
-import com.asmr.player.data.local.db.entities.AlbumTagEntity
-import com.asmr.player.data.local.db.entities.RemoteSubtitleSourceEntity
-import com.asmr.player.data.local.db.entities.OnlineSavedResourceEntity
-import com.asmr.player.data.local.db.entities.TagEntity
 import com.asmr.player.data.local.db.entities.TagSource
 import com.asmr.player.data.local.db.entities.TrackEntity
-import com.asmr.player.data.local.db.entities.TrackTagEntity
 import com.asmr.player.data.local.db.entities.titleForDisplay
 import com.asmr.player.data.lyrics.LyricsLoader
 import com.asmr.player.data.lyrics.deriveLyricsRelativePathNoExt
@@ -66,6 +56,8 @@ import com.asmr.player.data.remote.download.RelativeDownloadItem
 import com.asmr.player.data.remote.scraper.DLSiteScraper
 import com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 import com.asmr.player.data.remote.scraper.DlsiteRecommendations
+import com.asmr.player.data.repository.LibraryReadRepository
+import com.asmr.player.data.repository.LibraryWriteRepository
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
@@ -83,9 +75,7 @@ import com.asmr.player.util.SubtitleMatchSupport
 import com.asmr.player.util.SyncCoordinator
 import com.asmr.player.util.TagNormalizer
 import com.asmr.player.util.TrackKeyNormalizer
-import com.asmr.player.util.buildTagsToken
 import com.asmr.player.util.isOnlineTrackPath
-import com.asmr.player.util.parseAlbumTags
 import com.asmr.player.work.AlbumCoverThumbWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -179,9 +169,8 @@ internal fun albumDetailAsmrOneFailureMessage(isLocalLibraryDetail: Boolean): St
 @HiltViewModel
 class AlbumDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val database: AppDatabase,
-    private val albumDao: AlbumDao,
-    private val trackDao: TrackDao,
+    private val libraryReadRepository: LibraryReadRepository,
+    private val libraryWriteRepository: LibraryWriteRepository,
     private val asmrOneCrawler: AsmrOneCrawler,
     private val asmrOneAvailabilityApi: AsmrOneAvailabilityApi,
     private val settingsRepository: SettingsRepository,
@@ -200,37 +189,10 @@ class AlbumDetailViewModel @Inject constructor(
 
     private val isLocalLibraryDetail = savedStateHandle.get<Long>("albumId")?.let { it > 0L } == true
 
-    private data class AlbumAudioAggregate(
-        val trackCount: Int,
-        val totalDuration: Double,
-        val totalSizeBytes: Long,
-    )
-
-    private suspend fun computeAlbumAudioAggregate(
-        tracks: List<TrackEntity>,
-    ): AlbumAudioAggregate {
-        val totalSizeBytes = withContext(Dispatchers.IO) {
-            tracks.sumOf { track -> queryTrackFileSize(context, track.path) ?: 0L }
-        }
-        return AlbumAudioAggregate(
-            trackCount = tracks.size,
-            totalDuration = tracks.sumOf { it.duration },
-            totalSizeBytes = totalSizeBytes,
-        )
-    }
-
     private suspend fun refreshAlbumAudioAggregate(albumId: Long) {
-        if (albumId <= 0L) return
-        val entity = albumDao.getAlbumById(albumId) ?: return
-        val tracks = trackDao.getTracksForAlbumOnce(albumId)
-        val aggregate = computeAlbumAudioAggregate(tracks)
-        albumDao.updateAlbum(
-            entity.copy(
-                audioTrackCount = aggregate.trackCount,
-                audioTotalDuration = aggregate.totalDuration,
-                audioTotalSizeBytes = aggregate.totalSizeBytes,
-            )
-        )
+        libraryWriteRepository.refreshAlbumAudioAggregate(albumId) { path ->
+            queryTrackFileSize(context, path)
+        }
     }
 
     private val _uiState = MutableStateFlow<AlbumDetailUiState>(
@@ -243,12 +205,10 @@ class AlbumDetailViewModel @Inject constructor(
     internal val cloudSyncSelectionDialogState: StateFlow<CloudSyncSelectionDialogState?> = _cloudSyncSelectionDialogState.asStateFlow()
     private var pendingCloudSyncSelection: CompletableDeferred<String?>? = null
 
-    val availableTags: StateFlow<List<TagWithCount>> = database.tagDao()
-        .getTagsWithCounts(TagSource.USER)
+    val availableTags: StateFlow<List<TagWithCount>> = libraryReadRepository.observeTagsWithCounts(TagSource.USER)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val userTagsByTrackId: StateFlow<Map<Long, List<String>>> = database.trackTagDao()
-        .getTrackTagsBySource(TagSource.USER)
+    val userTagsByTrackId: StateFlow<Map<Long, List<String>>> = libraryReadRepository.observeTrackTagsBySource(TagSource.USER)
         .map { rows ->
             rows.associate { row ->
                 val tags = row.tagsCsv
@@ -921,7 +881,7 @@ class AlbumDetailViewModel @Inject constructor(
             rjCode = resolvedWorkno
         )
         withContext(Dispatchers.IO) {
-            albumDao.updateAlbum(updated)
+            libraryWriteRepository.updateAlbum(updated)
             upsertAlbumFtsIndex(updated.id, updated)
             upsertAlbumTagsFromCsv(updated.id, updated.tags, TagSource.AUTO)
             if (updated.coverPath.trim().isBlank() && updated.coverThumbPath.trim().isBlank()) {
@@ -1033,7 +993,7 @@ class AlbumDetailViewModel @Inject constructor(
         if (localId <= 0L) return
 
         localTracksObserveJob = viewModelScope.launch {
-            trackDao.getTracksForAlbum(localId)
+            libraryReadRepository.observeTracksForAlbum(localId)
                 .map { entities -> entities.map { it.toDomain() } }
                 .flowOn(Dispatchers.Default)
                 .distinctUntilChanged()
@@ -1069,24 +1029,7 @@ class AlbumDetailViewModel @Inject constructor(
                 .distinctBy { it.second }
                 .toList()
 
-            val tagDao = database.tagDao()
-            val trackTagDao = database.trackTagDao()
-            database.withTransaction {
-                trackTagDao.deleteTrackTagsByTrackIdAndSource(trackId, TagSource.USER)
-                if (pairs.isNotEmpty()) {
-                    val tagEntities = pairs.map { (name, normalized) ->
-                        TagEntity(name = name, nameNormalized = normalized)
-                    }
-                    tagDao.insertTags(tagEntities)
-                    val persisted = tagDao.getTagsByNormalized(pairs.map { it.second })
-                    val idByNormalized = persisted.associateBy({ it.nameNormalized }, { it.id })
-                    val refs = pairs.mapNotNull { (_, normalized) ->
-                        val tagId = idByNormalized[normalized] ?: return@mapNotNull null
-                        TrackTagEntity(trackId = trackId, tagId = tagId, source = TagSource.USER)
-                    }
-                    if (refs.isNotEmpty()) trackTagDao.insertTrackTags(refs)
-                }
-            }
+            libraryWriteRepository.replaceTrackUserTags(trackId, pairs)
         }
     }
 
@@ -1110,7 +1053,7 @@ class AlbumDetailViewModel @Inject constructor(
             }
             _uiState.value = AlbumDetailUiState.Loading
             try {
-                val entity = withContext(Dispatchers.IO) { albumDao.getAlbumById(local.id) } ?: run {
+                val entity = withContext(Dispatchers.IO) { libraryReadRepository.getAlbumById(local.id) } ?: run {
                     messageManager.showError("专辑不存在")
                     loadAlbum(local.id, normalized, force = true)
                     return@launch
@@ -1118,7 +1061,7 @@ class AlbumDetailViewModel @Inject constructor(
 
                 val updatedWorkId = resolveCloudSyncWorkId(entity.workId, normalized)
                 withContext(Dispatchers.IO) {
-                    albumDao.updateAlbum(entity.copy(workId = updatedWorkId, rjCode = normalized))
+                    libraryWriteRepository.updateAlbum(entity.copy(workId = updatedWorkId, rjCode = normalized))
                 }
 
                 when (
@@ -1193,9 +1136,9 @@ class AlbumDetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    val entity = albumDao.getAlbumById(local.id) ?: return@withContext
-                    albumDao.updateAlbum(entity.copy(coverPath = value, coverThumbPath = ""))
-                    runCatching { database.localTreeCacheDao().deleteByAlbum(entity.id) }
+                    val entity = libraryReadRepository.getAlbumById(local.id) ?: return@withContext
+                    libraryWriteRepository.updateAlbum(entity.copy(coverPath = value, coverThumbPath = ""))
+                    runCatching { libraryWriteRepository.clearLocalTreeCache(entity.id) }
                 }
                 updateCurrentCoverState(local.id, value, "")
                 enqueueAlbumCoverThumbWork(local.id)
@@ -1228,50 +1171,11 @@ class AlbumDetailViewModel @Inject constructor(
     }
 
     private suspend fun upsertAlbumFtsIndex(albumId: Long, entity: AlbumEntity) {
-        val userTagsCsv = database.tagDao().getAlbumTagsCsvOnce(albumId, TagSource.USER).orEmpty()
-        val combinedTagsCsv = buildString {
-            append(entity.tags)
-            if (userTagsCsv.isNotBlank()) {
-                if (isNotEmpty() && last() != ',') append(',')
-                append(userTagsCsv)
-            }
-        }
-        val tagsToken = buildTagsToken(combinedTagsCsv)
-        database.albumFtsDao().upsert(
-            listOf(
-                AlbumFtsEntity(
-                    albumId = albumId,
-                    title = entity.title,
-                    circle = entity.circle,
-                    cv = entity.cv,
-                    rjCode = entity.rjCode,
-                    workId = entity.workId,
-                    tagsToken = tagsToken
-                )
-            )
-        )
+        libraryWriteRepository.upsertAlbumFtsIndex(albumId, entity)
     }
 
     private suspend fun upsertAlbumTagsFromCsv(albumId: Long, tagsCsv: String, source: Int) {
-        val tags = parseAlbumTags(tagsCsv)
-        if (tags.isEmpty()) return
-
-        val tagEntities = tags.map { (name, normalized) ->
-            TagEntity(name = name, nameNormalized = normalized)
-        }
-        val tagDao = database.tagDao()
-        tagDao.insertTags(tagEntities)
-
-        val normalizedList = tags.map { it.second }
-        val persisted = tagDao.getTagsByNormalized(normalizedList)
-        val idByNormalized = persisted.associateBy({ it.nameNormalized }, { it.id })
-
-        tagDao.deleteAlbumTagsByAlbumIdExceptSource(albumId, TagSource.USER)
-        val refs = normalizedList.mapNotNull { normalized ->
-            val tagId = idByNormalized[normalized] ?: return@mapNotNull null
-            AlbumTagEntity(albumId = albumId, tagId = tagId, source = source)
-        }
-        if (refs.isNotEmpty()) tagDao.insertAlbumTags(refs)
+        libraryWriteRepository.upsertAlbumTagsFromCsv(albumId, tagsCsv, source)
     }
 
     private suspend fun resolveInitialDlsiteLoadTarget(
@@ -2129,12 +2033,12 @@ class AlbumDetailViewModel @Inject constructor(
     }
 
     private suspend fun loadLocalAlbumByIdWithAvailabilityCheck(albumId: Long): LocalAlbumLoadResult {
-        val entity = albumDao.getAlbumById(albumId)
+        val entity = libraryReadRepository.getAlbumById(albumId)
         if (entity == null) {
             notifyLocalAlbumRemoved(albumId, emptySet())
             return LocalAlbumLoadResult.Removed
         }
-        val tracks = trackDao.getTracksForAlbumOnce(albumId)
+        val tracks = libraryReadRepository.getTracksForAlbumOnce(albumId)
         val isMissing = withContext(Dispatchers.IO) {
             shouldRemoveMissingLocalAlbum(entity, tracks, ::queryLocalSourceAvailability)
         }
@@ -2142,33 +2046,12 @@ class AlbumDetailViewModel @Inject constructor(
             return LocalAlbumLoadResult.Available(entityToDomain(entity, tracks))
         }
 
-        var removedMediaIds: Set<String> = emptySet()
-        withContext(Dispatchers.IO) {
-            database.withTransaction {
-                val latest = albumDao.getAlbumById(albumId) ?: return@withTransaction
-                val latestTracks = trackDao.getTracksForAlbumOnce(albumId)
-                if (!shouldRemoveMissingLocalAlbum(latest, latestTracks, ::queryLocalSourceAvailability)) {
-                    return@withTransaction
-                }
-                val trackIds = latestTracks.map { it.id }
-                removedMediaIds = latestTracks.map { it.path }.filter(String::isNotBlank).toSet()
-                if (trackIds.isNotEmpty()) {
-                    database.subtitleTaskDao().deleteItemsForTracks(trackIds)
-                    database.remoteSubtitleSourceDao().deleteByTrackIds(trackIds)
-                    database.trackTagDao().deleteTrackTagsByTrackIds(trackIds)
-                }
-                trackDao.deleteSubtitlesForAlbum(albumId)
-                trackDao.deleteTracksForAlbum(albumId)
-                database.trackPlaybackProgressDao().deleteByAlbumId(albumId)
-                database.localTreeCacheDao().deleteByAlbum(albumId)
-                database.onlineSavedResourceDao().deleteByAlbumId(albumId)
-                database.tagDao().deleteAlbumTagsByAlbumId(albumId)
-                database.albumFtsDao().deleteByAlbumId(albumId)
-                database.playStatDao().deleteByAlbumId(albumId)
-                albumDao.deleteAlbum(latest)
+        val removedMediaIds = withContext(Dispatchers.IO) {
+            libraryWriteRepository.deleteAlbumIfMissingLocally(albumId) { latest, latestTracks ->
+                shouldRemoveMissingLocalAlbum(latest, latestTracks, ::queryLocalSourceAvailability)
             }
         }
-        val remaining = albumDao.getAlbumById(albumId)
+        val remaining = libraryReadRepository.getAlbumById(albumId)
         if (remaining != null) {
             return LocalAlbumLoadResult.Available(entityToDomain(remaining))
         }
@@ -2218,8 +2101,8 @@ class AlbumDetailViewModel @Inject constructor(
 
     private suspend fun loadLocalAlbumByRj(rjCode: String): Album? {
         val normalized = rjCode.trim().uppercase()
-        val entity = albumDao.getAlbumByWorkIdOnce(normalized)
-            ?: albumDao.getAlbumByWorkIdOnce(rjCode.trim())
+        val entity = libraryReadRepository.getAlbumByWorkIdOnce(normalized)
+            ?: libraryReadRepository.getAlbumByWorkIdOnce(rjCode.trim())
             ?: return null
         return entityToDomain(entity)
     }
@@ -2421,7 +2304,7 @@ class AlbumDetailViewModel @Inject constructor(
         if (localAlbum.id <= 0L || tree.isEmpty()) return LocalIncrementalSelectionPaths()
 
         return withContext(Dispatchers.IO) {
-            val savedResources = database.onlineSavedResourceDao().getForAlbumOnce(localAlbum.id)
+            val savedResources = libraryReadRepository.getOnlineSavedResourcesForAlbum(localAlbum.id)
             val localIndex = loadOrBuildLocalTreeIndex(
                 context = context,
                 albumId = localAlbum.id,
@@ -2496,125 +2379,34 @@ class AlbumDetailViewModel @Inject constructor(
                     return url.trim().substringBefore('#').substringBefore('?')
                 }
 
-                var insertedCount = 0
-                var resourceSavedCount = 0
-                var albumIdResult = 0L
-                database.withTransaction {
-                    val existing = targetLocalAlbumId
-                        ?.let { albumDao.getAlbumById(it) }
-                        ?: if (workKey.isNotBlank()) {
-                            albumDao.getAlbumByWorkIdOnce(workKey)
-                        } else {
-                            null
-                        }
-
-                    val tagsCsv = displayAlbum.tags.joinToString(",")
-                    val entity = AlbumEntity(
-                        id = existing?.id ?: 0L,
-                        title = existing?.title?.takeIf { it.isNotBlank() } ?: displayAlbum.title,
-                        path = existing?.path?.takeIf { it.isNotBlank() } ?: onlinePath,
-                        localPath = existing?.localPath?.takeIf { it.isNotBlank() } ?: albumDir.absolutePath,
-                        downloadPath = existing?.downloadPath,
-                        circle = existing?.circle?.takeIf { it.isNotBlank() } ?: displayAlbum.circle,
-                        cv = existing?.cv?.takeIf { it.isNotBlank() } ?: displayAlbum.cv,
-                        tags = existing?.tags?.takeIf { it.isNotBlank() } ?: tagsCsv,
-                        coverUrl = existing?.coverUrl?.takeIf { it.isNotBlank() } ?: displayAlbum.coverUrl,
-                        coverPath = existing?.coverPath.orEmpty(),
-                        coverThumbPath = existing?.coverThumbPath.orEmpty(),
-                        workId = existing?.workId?.takeIf { it.isNotBlank() } ?: displayAlbum.workId.trim().ifBlank { workKey },
-                        rjCode = existing?.rjCode?.takeIf { it.isNotBlank() } ?: displayAlbum.rjCode.trim().ifBlank { rj },
-                        description = existing?.description?.takeIf { it.isNotBlank() } ?: displayAlbum.description.trim()
-                    )
-                    val insertedId = runCatching { albumDao.insertAlbum(entity) }.getOrDefault(0L)
-                    val albumId = if (insertedId > 0L) insertedId else (existing?.id ?: 0L)
-                    if (albumId <= 0L) return@withTransaction
-                    albumIdResult = albumId
-                    runCatching { database.localTreeCacheDao().deleteByAlbum(albumId) }
-
-                    val fts = AlbumFtsEntity(
-                        albumId = albumId,
-                        title = entity.title,
-                        circle = entity.circle,
-                        cv = entity.cv,
-                        rjCode = entity.rjCode,
-                        workId = entity.workId,
-                        tagsToken = entity.tags.replace(',', ' ').trim()
-                    )
-                    runCatching { database.albumFtsDao().upsert(listOf(fts)) }
-
-                    val existingTracks = runCatching { trackDao.getTracksForAlbumOnce(albumId) }.getOrDefault(emptyList())
-                    val existingUrlKeys = existingTracks
-                        .asSequence()
-                        .map { canonicalUrl(it.path) }
-                        .filter { it.isNotBlank() }
-                        .toSet()
-
-                    val seenUrlKeys = linkedSetOf<String>()
-                    val newLeaves = playableSelected.filter { leaf ->
-                        val urlKey = canonicalUrl(leaf.url)
-                        val duplicate = urlKey.isBlank() ||
-                            existingUrlKeys.contains(urlKey) ||
-                            seenUrlKeys.contains(urlKey)
-                        if (!duplicate) {
-                            seenUrlKeys.add(urlKey)
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    val newTracks = newLeaves.map { leaf ->
-                        TrackEntity(
-                            albumId = albumId,
+                val saveResult = libraryWriteRepository.saveOnlineSelectedToLibrary(
+                    targetLocalAlbumId = targetLocalAlbumId,
+                    workKey = workKey,
+                    onlinePath = onlinePath,
+                    albumDirPath = albumDir.absolutePath,
+                    displayAlbum = displayAlbum,
+                    rj = rj,
+                    playableLeaves = playableSelected.map { leaf ->
+                        LibraryWriteRepository.OnlineSaveTrackSpec(
                             title = leaf.title,
-                            path = leaf.url.trim(),
+                            url = leaf.url,
                             duration = leaf.duration,
-                            group = leaf.group
+                            group = leaf.group,
+                            subtitleSources = leaf.subtitleSources
                         )
-                    }
-                    if (newTracks.isNotEmpty()) {
-                        val insertedTrackIds = runCatching { trackDao.insertTracks(newTracks) }.getOrDefault(emptyList())
-                        insertedCount = insertedTrackIds.count { it > 0L }
-                        val sources = insertedTrackIds.zip(newLeaves).flatMap { (trackId, leaf) ->
-                            leaf.subtitleSources.mapNotNull { src ->
-                                val url = src.url.trim()
-                                if (url.isBlank()) return@mapNotNull null
-                                RemoteSubtitleSourceEntity(
-                                    trackId = trackId,
-                                    url = url,
-                                    language = src.language,
-                                    ext = src.ext
-                                )
-                            }
-                        }
-                        if (sources.isNotEmpty()) {
-                            runCatching { database.remoteSubtitleSourceDao().insertAll(sources) }
-                        }
-                    }
-
-                    val resourceDao = database.onlineSavedResourceDao()
-                    val existingResourcesByPath = resourceDao.getForAlbumOnce(albumId)
-                        .associateBy { it.relativePath }
-                    val changedResources = resourceSelected.mapNotNull { leaf ->
-                        val relativePath = leaf.relativePath.replace('\\', '/').trim().trimStart('/')
-                        val url = leaf.url.trim()
-                        if (relativePath.isBlank() || !url.startsWith("http", ignoreCase = true)) {
-                            return@mapNotNull null
-                        }
-                        val existingResource = existingResourcesByPath[relativePath]
-                        val resource = OnlineSavedResourceEntity(
-                            id = existingResource?.id ?: 0L,
-                            albumId = albumId,
-                            relativePath = relativePath,
-                            url = url,
-                            fileType = leaf.fileType.name
+                    },
+                    resourceLeaves = resourceSelected.map { leaf ->
+                        LibraryWriteRepository.OnlineSaveResourceSpec(
+                            relativePath = leaf.relativePath,
+                            url = leaf.url,
+                            fileType = leaf.fileType
                         )
-                        resource.takeUnless { it == existingResource }
-                    }.distinctBy { it.relativePath }
-                    if (changedResources.isNotEmpty()) {
-                        resourceDao.insertAll(changedResources)
-                        resourceSavedCount = changedResources.size
-                    }
-                }
+                    },
+                    canonicalUrl = { url -> canonicalUrl(url) },
+                )
+                val insertedCount = saveResult.insertedCount
+                val resourceSavedCount = saveResult.resourceSavedCount
+                val albumIdResult = saveResult.albumId
 
                 if (albumIdResult > 0L) {
                     refreshAlbumAudioAggregate(albumIdResult)
@@ -2689,13 +2481,13 @@ class AlbumDetailViewModel @Inject constructor(
 
         if (coverFile.exists() && coverFile.length() > 0L && thumbFile.exists() && thumbFile.length() > 0L) {
             val entity = try {
-                albumDao.getAlbumById(albumId)
+                libraryReadRepository.getAlbumById(albumId)
             } catch (_: Exception) {
                 null
             }
             if (entity != null && (entity.coverPath != coverFile.absolutePath || entity.coverThumbPath != thumbFile.absolutePath)) {
                 try {
-                    albumDao.updateAlbum(entity.copy(coverPath = coverFile.absolutePath, coverThumbPath = thumbFile.absolutePath))
+                    libraryWriteRepository.updateAlbum(entity.copy(coverPath = coverFile.absolutePath, coverThumbPath = thumbFile.absolutePath))
                 } catch (_: Exception) {
                 }
             }
@@ -2796,8 +2588,8 @@ class AlbumDetailViewModel @Inject constructor(
         }
 
         return try {
-            val entity = albumDao.getAlbumById(albumId) ?: return true
-            albumDao.updateAlbum(entity.copy(coverPath = coverFile.absolutePath, coverThumbPath = thumbFile.absolutePath))
+            val entity = libraryReadRepository.getAlbumById(albumId) ?: return true
+            libraryWriteRepository.updateAlbum(entity.copy(coverPath = coverFile.absolutePath, coverThumbPath = thumbFile.absolutePath))
             debugLog("ensureAlbumCoverSaved ok albumId=$albumId cover=${coverFile.length()} thumb=${thumbFile.length()}")
             true
         } catch (e: Exception) {
@@ -2952,7 +2744,7 @@ class AlbumDetailViewModel @Inject constructor(
     }
 
     private suspend fun loadLocalTracks(albumEntity: AlbumEntity): List<Track> {
-        val fromDb = runCatching { trackDao.getTracksForAlbumOnce(albumEntity.id) }.getOrDefault(emptyList())
+        val fromDb = runCatching { libraryReadRepository.getTracksForAlbumOnce(albumEntity.id) }.getOrDefault(emptyList())
         if (fromDb.isNotEmpty()) {
             return fromDb.map { it.toDomain() }
         }
@@ -3010,12 +2802,12 @@ class AlbumDetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    val entity = albumDao.getAlbumById(localAlbumId) ?: return@withContext
+                    val entity = libraryReadRepository.getAlbumById(localAlbumId) ?: return@withContext
                     val updated = entity.copy(
                         workId = entity.workId.ifBlank { album.workId.ifBlank { album.rjCode } },
                         rjCode = entity.rjCode.ifBlank { album.rjCode }
                     )
-                    if (updated != entity) albumDao.updateAlbum(updated)
+                    if (updated != entity) libraryWriteRepository.updateAlbum(updated)
                 }
             } catch (error: CancellationException) {
                 throw error

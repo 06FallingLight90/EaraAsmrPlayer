@@ -89,6 +89,17 @@
 - VM 的 upsertLocalTreeCache（file-album 路径）改调 write repo internal 版，CacheLeafEntry→ScanCacheLeaf 经 `TreeFileType.valueOf(name)` 映射（枚举名一致，**Gson 载荷 JSON 不变**）；stampProvider 仍为 VM 的 computePathsStamp。
 - VM 构造已无 database/albumDao/trackDao；DAO import 残余仅流式出口 Row 类型 3 条（LibraryTrackRow/LibraryTrackAlbumHeaderRow/TagWithCount）+ okhttp 2 条（阶段 C 范围），均在 ci_guard baseline。
 
+## 七、附录（R2-B5：AlbumDetailViewModel）
+- 写族（全部下沉 LibraryWriteRepository，逐字保留）：
+  - `replaceTrackUserTags`：VM 原 setUserTagsForTrack 事务与 B4a 实现完全一致，直接复用（pairs 归一去重留在 VM）。
+  - `upsertAlbumFtsIndex` / `upsertAlbumTagsFromCsv`：VM 私有版与 B4a 版逐字一致，删私有改委托。
+  - `deleteAlbumIfMissingLocally(albumId, isMissing)`：原 loadLocalAlbumByIdWithAvailabilityCheck 事务。**事务内复核** isMissing（注入 shouldRemoveMissingLocalAlbum 包装，平台可用性探查原在事务内同步调用）；删除顺序：字幕任务条目/远程字幕源/轨标签 → 专辑字幕+轨 → 播放进度/目录树缓存/在线资源/专辑标签/FTS/播放统计 → 专辑行。返回被删音轨 path 集（空集=未删，替代原外层 var 捕获）。⚠️ 不删 playlist_item/listening_sessions（原状）。
+  - `saveOnlineSelectedToLibrary(...)`：原 saveOnlineSelectedToLibrary 事务（asmr.one/DLsite 在线选择保存）。entity 由 existing（targetLocalAlbumId 优先、workKey 兜底）+ displayAlbum(domain) 合成；**FTS tagsToken = tags.replace(',',' ').trim() 与 upsertAlbumFtsIndex 写法不同——原实现两处独立，勿统一**；音轨 url 去重（canonicalUrl 注入，事务内调用）；远程字幕源/在线资源逐段 runCatching；资源按 relativePath diff 后 insertAll。返回 OnlineSaveResult(albumId/insertedCount/resourceSavedCount)。leaf 数据以 OnlineSaveTrackSpec/OnlineSaveResourceSpec 投影传入（OnlineSaveLeaf 为 VM private，数据面字段平移）。
+  - `refreshAlbumAudioAggregate`/`computeAlbumAudioAggregate`：与 B4 同实现，VM 删私有副本改委托（fileSizeQuery 注入）。
+- 读族：getAlbumById/getAlbumByWorkIdOnce/getTracksForAlbumOnce/observeTracksForAlbum(Flow)/getOnlineSavedResourcesForAlbum/observeTagsWithCounts/observeTrackTagsBySource 经 LibraryReadRepository；updateAlbum/clearLocalTreeCache/insertAlbum 经 LibraryWriteRepository。
+- VM 构造已无 database/albumDao/trackDao；DAO import 残余仅 TagWithCount（流式出口）+ okhttp（阶段 C）。
+- 平台接缝：isMissing/canonicalUrl/fileSizeQuery 由 VM 注入。
+
 ## 验证
 - seam 测试：`app/src/test/java/com/asmr/player/data/repository/LibraryWriteRepositoryTest.kt`（Robolectric + 内存 Room，逐条对应上文契约）。
 - 全量测试基线只增不减（895/0/4 起，B4a 后）。
