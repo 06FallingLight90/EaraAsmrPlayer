@@ -13,6 +13,7 @@ import com.asmr.player.data.local.db.entities.TagEntity
 import com.asmr.player.data.local.db.entities.TagSource
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.db.entities.TrackTagEntity
+import com.asmr.player.util.SubtitleEntry
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -381,5 +382,83 @@ class LibraryWriteRepositoryTest {
         assertEquals(2, aggregate.trackCount)
         assertEquals(4.0, aggregate.totalDuration, 0.001)
         assertEquals(10L, aggregate.totalSizeBytes) // null 探查按 0 计
+    }
+
+    // ---------- B4b-2：扫描/清理事务族 ----------
+
+    @Test
+    fun pruneMissingDocumentAlbums_deletesOfflineAndKeepsDownloadAlbum() = runBlocking {
+        val root = "content://tree/root"
+        val offline = db.albumDao().insertAlbum(
+            AlbumEntity(title = "offline", path = "$root/albumA", localPath = null, downloadPath = null)
+        )
+        val offlineTrack = seedTrack(offline, "$root/albumA/01.mp3")
+        seedSubtitle(offlineTrack)
+        seedUserAlbumTag(offline, "tag", "tag")
+        val download = db.albumDao().insertAlbum(
+            AlbumEntity(title = "dl", path = "/p/dl", localPath = null, downloadPath = "content://dl/albumB")
+        )
+        val downloadTrack = seedTrack(download, "$root/albumB/01.mp3")
+
+        repo.pruneMissingDocumentAlbums(listOf(db.albumDao().getAlbumById(offline)!!, db.albumDao().getAlbumById(download)!!), root)
+
+        assertNull(db.albumDao().getAlbumById(offline)) // 无在线 → 整册删
+        assertTrue(db.trackDao().getTracksForAlbumOnce(offline).isEmpty())
+        assertEquals(1, db.tagDao().getAlbumTagsOnce(offline).size) // ⚠️ 原实现不删 album_tag（孤儿残留，与 deleteAlbumWithContent 不同，锁定原状）
+        assertNotNull(db.albumDao().getAlbumById(download)) // 有 downloadPath → 走降级分支，专辑保留
+        assertTrue(db.trackDao().getTracksForAlbumOnce(download).isEmpty()) // root 前缀轨被删
+        assertEquals(0, db.trackDao().getTracksByIdsOnce(listOf(downloadTrack)).size)
+        assertEquals("content://dl/albumB", db.albumDao().getAlbumById(download)!!.downloadPath) // downloadPath 不动
+    }
+
+    @Test
+    fun syncScannedLocalAlbumTracks_replacesSubtitlesAndRemovesStaleTracks() = runBlocking {
+        val albumId = seedAlbum("A")
+        val track1 = seedTrack(albumId, "/p/A/01.mp3")
+        val track2 = seedTrack(albumId, "/p/A/02.mp3")
+        seedSubtitle(track1, "old")
+        db.remoteSubtitleSourceDao().insertAll(
+            listOf(RemoteSubtitleSourceEntity(trackId = track2, url = "https://x/s.ass", language = "ja", ext = "ass"))
+        )
+        seedUserTrackTag(track2, "ttag", "ttag")
+
+        repo.syncScannedLocalAlbumTracks(
+            tracksToUpdate = listOf(db.trackDao().getTracksForAlbumOnce(albumId).first { it.id == track1 }.copy(title = "renamed")),
+            tracksToInsert = emptyList(),
+            subtitleEntriesByAudioPath = mapOf("/p/A/01.mp3" to listOf(SubtitleEntry(0L, 100L, "hello"))),
+            subtitleEntriesByExistingTrackId = emptyMap(),
+            removedIds = listOf(track2),
+        )
+
+        assertEquals("renamed", db.trackDao().getTracksForAlbumOnce(albumId).first { it.id == track1 }.title)
+        assertEquals(listOf("hello"), db.trackDao().getSubtitlesForTrack(track1).map { it.text }) // 旧字幕整替
+        assertTrue(db.trackDao().getTracksByIdsOnce(listOf(track2)).isEmpty()) // removed：轨+字幕+远程源+轨标签全清
+        assertTrue(db.trackDao().getSubtitlesForTrack(track2).isEmpty())
+        assertTrue(db.remoteSubtitleSourceDao().getSourcesForTrackOnce(track2).isEmpty())
+        assertTrue(db.trackTagDao().getTrackTagsForTrack(track2).isEmpty())
+    }
+
+    @Test
+    fun rescanDocumentAlbum_updatesCoverClearsTreePrefixAndInsertsSpecs() = runBlocking {
+        val albumId = db.albumDao().insertAlbum(AlbumEntity(title = "web", path = "web://rj/RJ777777"))
+        val staleTrack = seedTrack(albumId, "content://tree/document/old.mp3")
+        seedSubtitle(staleTrack, "stale")
+
+        val result = repo.rescanDocumentAlbum(
+            albumId = albumId,
+            coverPath = "content://cover/new.jpg",
+            treePrefix = "content://tree/document/",
+            trackSpecs = listOf(LibraryWriteRepository.ScanTrackSpec(title = "t1", path = "content://tree/document/new.mp3", group = "")),
+            subtitlesByAudioPath = mapOf("content://tree/document/new.mp3" to listOf(SubtitleEntry(0L, 50L, "fresh"))),
+        )
+
+        assertTrue(result.wroteAnySubtitles)
+        assertEquals(listOf("web://rj/RJ777777"), result.persistedPaths) // localPath/downloadPath 为 null 时仅 path
+        assertEquals("content://cover/new.jpg", db.albumDao().getAlbumById(albumId)!!.coverPath)
+        assertTrue(db.trackDao().getTracksByIdsOnce(listOf(staleTrack)).isEmpty()) // treePrefix 旧轨清
+        assertTrue(db.trackDao().getSubtitlesForTrack(staleTrack).isEmpty())
+        val newTracks = db.trackDao().getTracksForAlbumOnce(albumId)
+        assertEquals(listOf("t1"), newTracks.map { it.title })
+        assertEquals(listOf("fresh"), db.trackDao().getSubtitlesForTrack(newTracks.single().id).map { it.text })
     }
 }

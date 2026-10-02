@@ -34,9 +34,9 @@ import com.asmr.player.data.local.db.entities.TagSource
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.db.entities.titleForDisplay
 import com.asmr.player.data.local.library.LocalAlbumMergeService
+import com.asmr.player.data.local.library.buildOnlineAlbumPath
 import com.asmr.player.data.local.library.ensureLibraryAlbumDir
 import com.asmr.player.data.local.library.legacyOnlineSavedAlbumFolderName
-import com.asmr.player.data.local.library.shouldBackfillLegacyOnlineSavedAlbumRoot
 import com.asmr.player.data.remote.api.AsmrOneApi
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncCandidate
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncResolveResult
@@ -49,6 +49,8 @@ import com.asmr.player.data.remote.download.DownloadDestination
 import com.asmr.player.data.remote.download.DownloadDestinationStore
 import com.asmr.player.data.remote.download.DownloadQueueCoordinator
 import com.asmr.player.data.repository.LibraryWriteRepository
+import com.asmr.player.data.repository.LibraryWriteRepository.ScanCacheLeaf
+import com.asmr.player.data.repository.LibraryWriteRepository.ScanTrackSpec
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
@@ -1914,13 +1916,6 @@ class LibraryViewModel @Inject constructor(
         return DlsiteWorkNo.extractWorkNo(input)
     }
 
-    private fun buildOnlineAlbumPath(entity: AlbumEntity): String? {
-        val rj = extractWorkNo(entity.rjCode.ifBlank { entity.workId }.ifBlank { entity.title })
-        val workKey = rj.ifBlank { entity.workId.trim() }.ifBlank { entity.title.trim() }.trim()
-        if (workKey.isBlank()) return null
-        return "web://rj/${workKey.uppercase()}"
-    }
-
     internal fun legacyOnlineSavedAlbumDir(entity: AlbumEntity): File {
         val baseDir = File(context.getExternalFilesDir(null), "albums")
         val folderName = legacyOnlineSavedAlbumFolderName(entity)
@@ -2060,30 +2055,7 @@ class LibraryViewModel @Inject constructor(
         }
         if (missing.isEmpty()) return
 
-        database.withTransaction {
-            missing.forEach { entity ->
-                if (entity.localPath.isNullOrBlank() && !entity.path.startsWith("content://")) {
-                    trackDao.deleteSubtitlesForAlbum(entity.id)
-                    trackDao.deleteTracksForAlbum(entity.id)
-                    deleteAlbumEntity(entity)
-                } else {
-                    val dl = entity.downloadPath?.trim().orEmpty()
-                    val tracks = trackDao.getTracksForAlbumOnce(entity.id)
-                    tracks.filter { it.path.startsWith(dl) }.forEach { track ->
-                        trackDao.deleteSubtitlesForTrack(track.id)
-                        trackDao.deleteTrackById(track.id)
-                    }
-
-                    val updated = entity.copy(
-                        path = if (entity.path.startsWith(dl)) (entity.localPath ?: entity.path) else entity.path,
-                        downloadPath = null,
-                        coverPath = if (entity.coverPath.startsWith(dl)) "" else entity.coverPath
-                    )
-                    libraryWriteRepository.updateAlbum(updated)
-                    upsertAlbumFtsIndex(updated.id, updated)
-                }
-            }
-        }
+        libraryWriteRepository.pruneMissingDownloadedAlbums(missing)
     }
 
     private fun enqueueTrackDurationWork(albumId: Long) {
@@ -2199,50 +2171,13 @@ class LibraryViewModel @Inject constructor(
             .map { it.id }
             .toList()
 
-        database.withTransaction {
-            val subtitlesByTrackId = linkedMapOf<Long, List<SubtitleEntry>>()
-            subtitlesByTrackId.putAll(subtitleEntriesByExistingTrackId.filterKeys { it > 0L })
-
-            if (tracksToUpdate.isNotEmpty()) trackDao.updateTracks(tracksToUpdate)
-            tracksToUpdate.forEach { trackEntity ->
-                val entriesForTrack = subtitleEntriesByAudioPath[trackEntity.path].orEmpty()
-                if (trackEntity.id > 0L && entriesForTrack.isNotEmpty()) {
-                    subtitlesByTrackId[trackEntity.id] = entriesForTrack
-                }
-            }
-            if (tracksToInsert.isNotEmpty()) {
-                val insertedTrackIds = trackDao.insertTracks(tracksToInsert)
-                insertedTrackIds.zip(tracksToInsert).forEach { (trackId, trackEntity) ->
-                    val entriesForTrack = subtitleEntriesByAudioPath[trackEntity.path].orEmpty()
-                    if (trackId > 0L && entriesForTrack.isNotEmpty()) {
-                        subtitlesByTrackId[trackId] = entriesForTrack
-                    }
-                }
-            }
-
-            if (subtitlesByTrackId.isNotEmpty()) {
-                val trackIds = subtitlesByTrackId.keys.toList()
-                val subtitlesToInsert = subtitlesByTrackId.flatMap { (trackId, entries) ->
-                    entries.map { entry ->
-                        SubtitleEntity(
-                            trackId = trackId,
-                            startMs = entry.startMs,
-                            endMs = entry.endMs,
-                            text = entry.text
-                        )
-                    }
-                }
-                trackDao.deleteSubtitlesForTracks(trackIds)
-                trackDao.insertSubtitles(subtitlesToInsert)
-            }
-
-            if (removedIds.isNotEmpty()) {
-                trackDao.deleteSubtitlesForTracks(removedIds)
-                database.remoteSubtitleSourceDao().deleteByTrackIds(removedIds)
-                database.trackTagDao().deleteTrackTagsByTrackIds(removedIds)
-                trackDao.deleteTracksByIds(removedIds)
-            }
-        }
+        libraryWriteRepository.syncScannedLocalAlbumTracks(
+            tracksToUpdate = tracksToUpdate,
+            tracksToInsert = tracksToInsert,
+            subtitleEntriesByAudioPath = subtitleEntriesByAudioPath,
+            subtitleEntriesByExistingTrackId = subtitleEntriesByExistingTrackId,
+            removedIds = removedIds,
+        )
 
         if (subtitleEntriesByAudioPath.isNotEmpty() || subtitleEntriesByExistingTrackId.isNotEmpty()) {
             playerConnection.requestLyricsReload()
@@ -2303,13 +2238,7 @@ class LibraryViewModel @Inject constructor(
             }
             val subtitleCandidateList = subtitleCandidates.map { it.first }
 
-            data class TrackSpec(
-                val title: String,
-                val path: String,
-                val group: String
-            )
-
-            val trackSpecs = ArrayList<TrackSpec>(audioFiles.size)
+            val trackSpecs = ArrayList<ScanTrackSpec>(audioFiles.size)
             val audioRelativeBaseByPath = LinkedHashMap<String, String>(audioFiles.size)
             audioFiles.sortedBy { it.documentId }.forEach { audio ->
                 currentCoroutineContext().ensureActive()
@@ -2319,7 +2248,7 @@ class LibraryViewModel @Inject constructor(
                 val group = if (audio.relativePath.contains("/")) audio.relativePath.substringBeforeLast('/').substringAfterLast('/') else ""
                 val relativeBase = audio.relativePath.substringBeforeLast('.')
                 trackSpecs.add(
-                    TrackSpec(
+                    ScanTrackSpec(
                         title = trackTitle,
                         path = audioUri.toString(),
                         group = group
@@ -2335,147 +2264,44 @@ class LibraryViewModel @Inject constructor(
                 val entries = node?.let { readSubtitleFromUri(uri, it.documentId, it.displayName) }.orEmpty()
                 spec.path to entries
             }
-            var wroteAnySubtitles = false
 
-            var insertedAlbumId = 0L
-            database.withTransaction {
-                val entity = AlbumEntity(
-                    id = existing?.id ?: 0L,
-                    title = existing?.title?.takeIf { it.isNotBlank() && it != title } ?: title,
-                    path = existing?.path?.takeIf { it.isNotBlank() } ?: albumPath,
-                    localPath = if (asDownloadRoot) existing?.localPath else albumPath,
-                    downloadPath = if (asDownloadRoot) albumPath else existing?.downloadPath,
-                    circle = existing?.circle ?: "",
-                    cv = existing?.cv ?: "",
-                    tags = existing?.tags ?: "",
-                    coverUrl = existing?.coverUrl ?: "",
-                    coverPath = coverPath.ifBlank { existing?.coverPath.orEmpty() },
-                    coverThumbPath = existing?.coverThumbPath.orEmpty(),
-                    workId = existing?.workId?.takeIf { it.isNotBlank() } ?: rj,
-                    rjCode = existing?.rjCode?.takeIf { it.isNotBlank() } ?: rj,
-                    description = existing?.description ?: ""
-                )
-                insertedAlbumId = albumDao.insertAlbum(entity)
-                upsertAlbumFtsIndex(insertedAlbumId, entity.copy(id = insertedAlbumId))
-                upsertAlbumTagsFromCsv(insertedAlbumId, entity.tags, TagSource.SCAN)
-
-                val allExistingTracks = trackDao.getTracksForAlbumOnce(insertedAlbumId)
-                val existingUnderRoot = allExistingTracks
-                    .filter { it.path.startsWith(albumPath) }
-                    .associateBy { it.path }
-                val scannedPaths = trackSpecs.map { it.path }.toSet()
-                val toDelete = existingUnderRoot.values.filter { it.path !in scannedPaths }.map { it.id }
-                if (toDelete.isNotEmpty()) {
-                    trackDao.deleteSubtitlesForTracks(toDelete)
-                    database.remoteSubtitleSourceDao().deleteByTrackIds(toDelete)
-                    database.trackTagDao().deleteTrackTagsByTrackIds(toDelete)
-                    trackDao.deleteTracksByIds(toDelete)
+            val entity = AlbumEntity(
+                id = existing?.id ?: 0L,
+                title = existing?.title?.takeIf { it.isNotBlank() && it != title } ?: title,
+                path = existing?.path?.takeIf { it.isNotBlank() } ?: albumPath,
+                localPath = if (asDownloadRoot) existing?.localPath else albumPath,
+                downloadPath = if (asDownloadRoot) albumPath else existing?.downloadPath,
+                circle = existing?.circle ?: "",
+                cv = existing?.cv ?: "",
+                tags = existing?.tags ?: "",
+                coverUrl = existing?.coverUrl ?: "",
+                coverPath = coverPath.ifBlank { existing?.coverPath.orEmpty() },
+                coverThumbPath = existing?.coverThumbPath.orEmpty(),
+                workId = existing?.workId?.takeIf { it.isNotBlank() } ?: rj,
+                rjCode = existing?.rjCode?.takeIf { it.isNotBlank() } ?: rj,
+                description = existing?.description ?: ""
+            )
+            val leaves = all.asSequence()
+                .mapNotNull { node ->
+                    val t = treeFileTypeForName(node.displayName)
+                    if (t == TreeFileType.Other) return@mapNotNull null
+                    val abs = DocumentsContract.buildDocumentUriUsingTree(uri, node.documentId).toString()
+                    ScanCacheLeaf(relativePath = node.relativePath, absolutePath = abs, fileType = t)
                 }
+                .distinctBy { it.relativePath }
+                .toList()
 
-                val filteredTrackSpecs = trackSpecs
-                val tracksToInsert = mutableListOf<Pair<TrackEntity, TrackSpec>>()
-                val tracksToUpdate = mutableListOf<Pair<TrackEntity, TrackSpec>>()
-                filteredTrackSpecs.forEach { spec ->
-                    val existingTrack = existingUnderRoot[spec.path]
-                    if (existingTrack == null) {
-                        tracksToInsert += TrackEntity(
-                            albumId = insertedAlbumId,
-                            title = spec.title,
-                            path = spec.path,
-                            duration = 0.0,
-                            group = spec.group,
-                        ) to spec
-                    } else {
-                        tracksToUpdate += existingTrack.copy(title = spec.title, group = spec.group) to spec
-                    }
-                }
-
-                if (tracksToUpdate.isNotEmpty()) {
-                    trackDao.updateTracks(tracksToUpdate.map { it.first })
-                    tracksToUpdate.forEach { (track, spec) ->
-                        val entries = subtitlesByAudioPath[spec.path].orEmpty()
-                        if (entries.isNotEmpty()) {
-                            trackDao.deleteSubtitlesForTrack(track.id)
-                            trackDao.insertSubtitles(
-                                entries.map { entry ->
-                                    SubtitleEntity(
-                                        trackId = track.id,
-                                        startMs = entry.startMs,
-                                        endMs = entry.endMs,
-                                        text = entry.text,
-                                    )
-                                },
-                            )
-                            wroteAnySubtitles = true
-                        }
-                    }
-                }
-                if (tracksToInsert.isNotEmpty()) {
-                    val insertedTrackIds = trackDao.insertTracks(tracksToInsert.map { it.first })
-                    val subtitlesToInsert = ArrayList<SubtitleEntity>()
-                    insertedTrackIds.zip(tracksToInsert.map { it.second }).forEach { (trackId, spec) ->
-                        val entries = subtitlesByAudioPath[spec.path].orEmpty()
-                        entries.forEach { e ->
-                            subtitlesToInsert.add(
-                                SubtitleEntity(
-                                    trackId = trackId,
-                                    startMs = e.startMs,
-                                    endMs = e.endMs,
-                                    text = e.text
-                                )
-                            )
-                        }
-                    }
-                    if (subtitlesToInsert.isNotEmpty()) {
-                        trackDao.insertSubtitles(subtitlesToInsert)
-                        wroteAnySubtitles = true
-                    }
-                }
-
-                val allAfterInsert = trackDao.getTracksForAlbumOnce(insertedAlbumId)
-                val localAfterInsert = allAfterInsert.filter { !it.path.trim().startsWith("http", ignoreCase = true) }
-                val localPathToId = LinkedHashMap<String, Long>()
-                localAfterInsert.forEach { t ->
-                    localPathToId.putIfAbsent(t.path, t.id)
-                }
-                val onlineTracks = allAfterInsert.filter { it.path.trim().startsWith("http", ignoreCase = true) }
-                onlineTracks.forEach { online ->
-                    val targetId = localPathToId[online.path]
-                    if (targetId != null) {
-                        val sourceSubs = trackDao.getSubtitlesForTrack(online.id)
-                        if (sourceSubs.isNotEmpty()) {
-                            val targetHasSubs = trackDao.getSubtitlesForTrack(targetId).isNotEmpty()
-                            if (!targetHasSubs) {
-                                trackDao.insertSubtitles(
-                                    sourceSubs.map { s ->
-                                        SubtitleEntity(
-                                            trackId = targetId,
-                                            startMs = s.startMs,
-                                            endMs = s.endMs,
-                                            text = s.text
-                                        )
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                refreshAlbumAudioAggregate(insertedAlbumId)
-
-                val leaves = all.asSequence()
-                    .mapNotNull { node ->
-                        val t = cacheFileTypeForName(node.displayName)
-                        if (t == CacheTreeFileType.Other) return@mapNotNull null
-                        val abs = DocumentsContract.buildDocumentUriUsingTree(uri, node.documentId).toString()
-                        CacheLeafEntry(relativePath = node.relativePath, absolutePath = abs, fileType = t)
-                    }
-                    .distinctBy { it.relativePath }
-                    .toList()
-                val paths = listOfNotNull(entity.path, entity.localPath, entity.downloadPath).map { it.trim() }.filter { it.isNotBlank() }.distinct()
-                upsertLocalTreeCache(albumId = insertedAlbumId, albumPaths = paths, leaves = leaves)
-            }
-            if (wroteAnySubtitles) {
+            val scanResult = libraryWriteRepository.upsertScannedDocumentAlbum(
+                entity = entity,
+                scanRootPath = albumPath,
+                trackSpecs = trackSpecs,
+                subtitlesByAudioPath = subtitlesByAudioPath,
+                cacheLeaves = leaves,
+                fileSizeQuery = { path -> queryTrackFileSize(context, path) },
+                stampProvider = { paths -> computePathsStamp(paths) },
+            )
+            val insertedAlbumId = scanResult.albumId
+            if (scanResult.wroteAnySubtitles) {
                 playerConnection.requestLyricsReload()
             }
             runCatching {
@@ -2514,16 +2340,7 @@ class LibraryViewModel @Inject constructor(
             val download = entity.downloadPath?.trim().orEmpty()
             download.isNotBlank() && download.startsWith(rootUriString) && !foundAlbumPaths.contains(download)
         }.forEach { entity ->
-            val tracks = trackDao.getTracksForAlbumOnce(entity.id)
-            val removedIds = tracks.filter { it.path.startsWith(rootUriString) }.map { it.id }
-            if (removedIds.isNotEmpty()) {
-                trackDao.deleteSubtitlesForTracks(removedIds)
-                database.remoteSubtitleSourceDao().deleteByTrackIds(removedIds)
-                database.trackTagDao().deleteTrackTagsByTrackIds(removedIds)
-                trackDao.deleteTracksByIds(removedIds)
-            }
-            libraryWriteRepository.updateAlbum(entity.copy(downloadPath = null))
-            database.localTreeCacheDao().deleteByAlbum(entity.id)
+            libraryWriteRepository.pruneDocumentDownloadAlbum(entity, rootUriString)
         }
     }
 
@@ -2540,48 +2357,7 @@ class LibraryViewModel @Inject constructor(
         }
         if (missing.isEmpty()) return
 
-        database.withTransaction {
-            missing.forEach { entity ->
-                if (entity.downloadPath.isNullOrBlank()) {
-                    val tracks = trackDao.getTracksForAlbumOnce(entity.id)
-                    val hasOnline = isVirtualAlbumPath(entity.path) || tracks.any { isOnlineTrackPath(it.path) }
-                    if (!hasOnline) {
-                        trackDao.deleteSubtitlesForAlbum(entity.id)
-                        trackDao.deleteTracksForAlbum(entity.id)
-                        deleteAlbumEntity(entity)
-                    } else {
-                        val root = rootUriString.trim()
-                        tracks.filter { it.path.startsWith(root) }.forEach { track ->
-                            trackDao.deleteSubtitlesForTrack(track.id)
-                            trackDao.deleteTrackById(track.id)
-                        }
-                        val updatedPath = if (entity.path.startsWith(root)) (buildOnlineAlbumPath(entity) ?: entity.path) else entity.path
-                        val updated = entity.copy(
-                            path = updatedPath,
-                            localPath = entity.localPath?.takeIf { !it.startsWith(root) },
-                            coverPath = if (entity.coverPath.startsWith(root)) "" else entity.coverPath
-                        )
-                        libraryWriteRepository.updateAlbum(updated)
-                        upsertAlbumFtsIndex(updated.id, updated)
-                    }
-                } else {
-                    val root = rootUriString.trim()
-                    val tracks = trackDao.getTracksForAlbumOnce(entity.id)
-                    tracks.filter { it.path.startsWith(root) }.forEach { track ->
-                        trackDao.deleteSubtitlesForTrack(track.id)
-                        trackDao.deleteTrackById(track.id)
-                    }
-
-                    val updated = entity.copy(
-                        path = if (entity.path.startsWith(root)) entity.downloadPath else entity.path,
-                        localPath = entity.localPath?.takeIf { !it.startsWith(root) },
-                        coverPath = if (entity.coverPath.startsWith(root)) "" else entity.coverPath
-                    )
-                    libraryWriteRepository.updateAlbum(updated)
-                    upsertAlbumFtsIndex(updated.id, updated)
-                }
-            }
-        }
+        libraryWriteRepository.pruneMissingDocumentAlbums(missing, rootUriString)
     }
 
     private fun existsLocalUri(uriString: String): Boolean {
@@ -2604,114 +2380,16 @@ class LibraryViewModel @Inject constructor(
             return if (v.startsWith("content://")) existsLocalUri(v) else fileExists(v)
         }
 
-        database.withTransaction {
-            albums.forEach { entity ->
-                val local = entity.localPath?.trim().orEmpty()
-                val download = entity.downloadPath?.trim().orEmpty()
-                val main = entity.path.trim()
-
-                val localMissing = local.isNotBlank() && !uriOrFileExists(local)
-                val downloadMissing = download.isNotBlank() && !fileExists(download)
-                val mainMissing = main.isNotBlank() && !uriOrFileExists(main)
-
-                var cachedTracks: List<TrackEntity>? = null
-                var cachedHasOnlineTracks: Boolean? = null
-
-                var anyValid = when {
-                    local.isNotBlank() -> !localMissing
-                    download.isNotBlank() -> !downloadMissing
-                    else -> !mainMissing
-                } || (!localMissing && local.isNotBlank()) || (!downloadMissing && download.isNotBlank())
-
-                if (!anyValid) {
-                    val hasOnlineTracks = cachedHasOnlineTracks ?: run {
-                        val ts = cachedTracks ?: trackDao.getTracksForAlbumOnce(entity.id).also { cachedTracks = it }
-                        (isVirtualAlbumPath(entity.path) || ts.any { isOnlineTrackPath(it.path) })
-                            .also { cachedHasOnlineTracks = it }
-                    }
-                    if (!hasOnlineTracks) {
-                        trackDao.deleteSubtitlesForAlbum(entity.id)
-                        trackDao.deleteTracksForAlbum(entity.id)
-                        deleteAlbumEntity(entity)
-                        return@forEach
-                    }
-                }
-
-                var updated = entity
-
-                if (localMissing) {
-                    val ts = cachedTracks ?: trackDao.getTracksForAlbumOnce(entity.id).also { cachedTracks = it }
-                    ts.filter { it.path.startsWith(local) }.forEach { track ->
-                        trackDao.deleteSubtitlesForTrack(track.id)
-                        trackDao.deleteTrackById(track.id)
-                    }
-                    updated = updated.copy(
-                        path = if (updated.path.startsWith(local)) (download.ifBlank { updated.path }) else updated.path,
-                        localPath = null,
-                        coverPath = if (updated.coverPath.startsWith(local)) "" else updated.coverPath
-                    )
-                }
-
-                if (downloadMissing) {
-                    val ts = cachedTracks ?: trackDao.getTracksForAlbumOnce(entity.id).also { cachedTracks = it }
-                    ts.filter { it.path.startsWith(download) }.forEach { track ->
-                        trackDao.deleteSubtitlesForTrack(track.id)
-                        trackDao.deleteTrackById(track.id)
-                    }
-                    updated = updated.copy(
-                        path = if (updated.path.startsWith(download)) (local.ifBlank { updated.path }) else updated.path,
-                        downloadPath = null,
-                        coverPath = if (updated.coverPath.startsWith(download)) "" else updated.coverPath
-                    )
-                }
-
-                val hasOnlineTracks = cachedHasOnlineTracks ?: run {
-                    val ts = cachedTracks ?: trackDao.getTracksForAlbumOnce(entity.id).also { cachedTracks = it }
-                    ts.any { isOnlineTrackPath(it.path) }.also { cachedHasOnlineTracks = it }
-                }
-
-                if (updated.localPath.isNullOrBlank() &&
-                    updated.downloadPath.isNullOrBlank() &&
-                    shouldBackfillLegacyOnlineSavedAlbumRoot(
-                        updated,
-                        cachedTracks ?: trackDao.getTracksForAlbumOnce(entity.id).also { cachedTracks = it }
-                    )
-                ) {
-                    val albumDir = legacyOnlineSavedAlbumDir(updated)
-                    ensureLibraryAlbumDir(albumDir)
-                    updated = updated.copy(localPath = albumDir.absolutePath)
-                    runCatching { database.localTreeCacheDao().deleteByAlbum(updated.id) }
-                }
-
-                if (updated.path.isNotBlank() && !uriOrFileExists(updated.path) && hasOnlineTracks) {
-                    val onlinePath = buildOnlineAlbumPath(updated)
-                    if (!onlinePath.isNullOrBlank()) {
-                        updated = updated.copy(path = onlinePath)
-                    }
-                }
-
-                if (updated.localPath.isNullOrBlank() && updated.downloadPath.isNullOrBlank() && updated.path.isNotBlank()) {
-                    val stillMissing = !uriOrFileExists(updated.path)
-                    if (stillMissing) {
-                        if (!hasOnlineTracks) {
-                            trackDao.deleteSubtitlesForAlbum(entity.id)
-                            trackDao.deleteTracksForAlbum(entity.id)
-                            deleteAlbumEntity(entity)
-                            return@forEach
-                        }
-                        val onlinePath = buildOnlineAlbumPath(updated)
-                        if (!onlinePath.isNullOrBlank()) {
-                            updated = updated.copy(path = onlinePath)
-                        }
-                    }
-                }
-
-                if (updated != entity) {
-                    libraryWriteRepository.updateAlbum(updated)
-                    upsertAlbumFtsIndex(updated.id, updated)
-                }
-            }
-        }
+        libraryWriteRepository.pruneOrphanedAlbums(
+            albums = albums,
+            uriOrFileExists = { uriOrFileExists(it) },
+            fileExists = { fileExists(it) },
+            resolveLegacyDir = { entity ->
+                val albumDir = legacyOnlineSavedAlbumDir(entity)
+                ensureLibraryAlbumDir(albumDir)
+                albumDir.absolutePath
+            },
+        )
     }
 
     private suspend fun scanSingleAlbumFromDocumentUri(albumId: Long, albumUriString: String) {
@@ -2735,13 +2413,7 @@ class LibraryViewModel @Inject constructor(
         }
         val subtitleCandidateList = subtitleCandidates.map { it.first }
 
-        data class TrackSpec(
-            val title: String,
-            val path: String,
-            val group: String
-        )
-
-        val trackSpecs = ArrayList<TrackSpec>(audioFiles.size)
+        val trackSpecs = ArrayList<ScanTrackSpec>(audioFiles.size)
         val audioRelativeBaseByPath = LinkedHashMap<String, String>(audioFiles.size)
         audioFiles.forEach { audio ->
             maybeUpdateBulkCurrentFile(audio.displayName)
@@ -2750,7 +2422,7 @@ class LibraryViewModel @Inject constructor(
             val group = if (audio.relativePath.contains("/")) audio.relativePath.substringBeforeLast('/').substringAfterLast('/') else ""
             val relativeBase = audio.relativePath.substringBeforeLast('.')
             trackSpecs.add(
-                TrackSpec(
+                ScanTrackSpec(
                     title = trackTitle,
                     path = audioUri.toString(),
                     group = group
@@ -2766,7 +2438,6 @@ class LibraryViewModel @Inject constructor(
             val entries = node?.let { readSubtitleFromUri(treeUri, it.documentId, it.displayName) }.orEmpty()
             spec.path to entries
         }
-        var wroteAnySubtitles = false
 
         val cacheLeaves = all.mapNotNull { node ->
             val type = cacheFileTypeForName(node.displayName)
@@ -2777,68 +2448,22 @@ class LibraryViewModel @Inject constructor(
             CacheLeafEntry(relativePath = rawRel, absolutePath = docUri, fileType = type)
         }
         val treePrefix = treeUri.toString().trimEnd('/') + "/document/"
-        var persistedPaths: List<String> = emptyList()
 
-        database.withTransaction {
-            val entity = albumDao.getAlbumById(albumId) ?: return@withTransaction
-            if (coverPath.isNotBlank()) {
-                libraryWriteRepository.updateAlbum(entity.copy(coverPath = coverPath))
-            }
-
-            persistedPaths = listOfNotNull(entity.path, entity.localPath, entity.downloadPath)
-                .map { it.trim() }
-                .filter { it.isNotBlank() }
-                .distinct()
-
-            val allExistingTracks = trackDao.getTracksForAlbumOnce(albumId)
-
-            val toDelete = allExistingTracks.filter { it.path.startsWith(treePrefix) }.map { it.id }
-            if (toDelete.isNotEmpty()) {
-                trackDao.deleteSubtitlesForTracks(toDelete)
-                trackDao.deleteTracksByIds(toDelete)
-            }
-
-            val filteredTrackSpecs = trackSpecs
-
-            val tracksToInsert = filteredTrackSpecs.map { spec ->
-                TrackEntity(
-                    albumId = albumId,
-                    title = spec.title,
-                    path = spec.path,
-                    duration = 0.0,
-                    group = spec.group
-                )
-            }
-            if (tracksToInsert.isNotEmpty()) {
-                val insertedTrackIds = trackDao.insertTracks(tracksToInsert)
-                val subtitlesToInsert = ArrayList<SubtitleEntity>()
-                insertedTrackIds.zip(filteredTrackSpecs).forEach { (trackId, spec) ->
-                    val entries = subtitlesByAudioPath[spec.path].orEmpty()
-                    entries.forEach { e ->
-                        subtitlesToInsert.add(
-                            SubtitleEntity(
-                                trackId = trackId,
-                                startMs = e.startMs,
-                                endMs = e.endMs,
-                                text = e.text
-                            )
-                        )
-                    }
-                }
-                if (subtitlesToInsert.isNotEmpty()) {
-                    trackDao.insertSubtitles(subtitlesToInsert)
-                    wroteAnySubtitles = true
-                }
-            }
-        }
-        if (wroteAnySubtitles) {
+        val rescanResult = libraryWriteRepository.rescanDocumentAlbum(
+            albumId = albumId,
+            coverPath = coverPath,
+            treePrefix = treePrefix,
+            trackSpecs = trackSpecs,
+            subtitlesByAudioPath = subtitlesByAudioPath,
+        )
+        if (rescanResult.wroteAnySubtitles) {
             playerConnection.requestLyricsReload()
         }
         refreshAlbumAudioAggregate(albumId)
-        if (persistedPaths.isNotEmpty() && cacheLeaves.isNotEmpty()) {
+        if (rescanResult.persistedPaths.isNotEmpty() && cacheLeaves.isNotEmpty()) {
             upsertLocalTreeCache(
                 albumId = albumId,
-                albumPaths = persistedPaths,
+                albumPaths = rescanResult.persistedPaths,
                 leaves = cacheLeaves.distinctBy { it.relativePath }
             )
         }

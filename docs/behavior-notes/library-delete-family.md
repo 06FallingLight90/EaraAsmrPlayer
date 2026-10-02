@@ -69,6 +69,17 @@
 - `backfillLegacyOnlineSavedAlbumRoots(albums, resolveLegacyDir)`：**单事务包全部专辑**（原样）。逐专辑：localPath/downloadPath 均非空跳过 → 读轨 + shouldBackfillLegacyOnlineSavedAlbumRoot 判定 → resolveLegacyDir（File IO，注入；不可回滚，与原实现同在事务内）→ updateAlbum(localPath) → runCatching 清目录树缓存 → FTS 刷新。
 - 平台接缝（fileSizeQuery / resolveLegacyDir / exists 探查）由 VM 注入，Repository 不反向依赖 ui。
 
+## 五、附录（R2-B4b-2 扫描/清理事务族）
+- `upsertLocalTreeCache(albumId, albumPaths, leaves, stampProvider)`：路径 trim/去空/去重 → Gson 载荷 → key=排序 join("|") → stamp 经注入（File/Document lastModified，平台 IO）。leaves 用 TreeFileType，枚举名与原 VM 私有 CacheTreeFileType 一致，**载荷 JSON 不变**。
+- `pruneMissingDownloadedAlbums(missing)`：单事务。localPath 空且 path 非 content:// → 字幕+轨+专辑实体；否则删 root 前缀轨 + path 改写（startsWith→localPath 优先）+ downloadPath 置 null + coverPath 清空（若前缀命中）+ FTS。missing 筛选（File.exists）在调用方，原样。
+- `pruneDocumentDownloadAlbum(entity, root)`：**无事务**（原样）。删 root 前缀轨（含远程字幕源/轨标签）→ downloadPath 置 null → 清目录树缓存。
+- `pruneMissingDocumentAlbums(missing, root)`：单事务。downloadPath 空：无在线 → 字幕+轨+专辑实体（**不删 album_tag，孤儿残留原状**）；有在线 → 删 root 前缀轨 + path 在线化（buildOnlineAlbumPath）+ localPath/coverPath 前缀清理 + FTS。downloadPath 非空：删 root 前缀轨 + path→downloadPath（若前缀命中）+ localPath/coverPath 清理 + FTS，**downloadPath 不动**。
+- `pruneOrphanedAlbums(albums, uriOrFileExists, fileExists, resolveLegacyDir)`：单事务。**探查双语义保留**：local/main 用 uriOrFileExists（content:// 走 DocumentsContract），download 仅用 fileExists（File.exists）。缓存 tracks/hasOnline 探查结果（每专辑最多读一次轨表）。回填判定→在线化→最终 stillMissing 判定→updated != entity 才写回 + FTS。resolveLegacyDir 注入（File IO 在事务内，原样）。
+- `syncScannedLocalAlbumTracks(...)`：单事务。updateTracks → insertTracks → 按 (existingTrackId 映射 + 音轨 path 映射) 建字幕表 → 先删后插字幕 → removedIds 清理（字幕+远程字幕源+轨标签+轨）。diff/解析在调用方。
+- `upsertScannedDocumentAlbum(entity, scanRootPath, ...)`：单事务。insertAlbum → FTS → SCAN 标签 → root 前缀旧轨清理（含远程源/轨标签）→ 轨 diff（insert/update）→ 字幕按 path 匹配写入 → **在线→本地字幕合并**（目标无字幕才拷贝）→ refreshAlbumAudioAggregate → 目录树缓存。entity/leaves/specs 为调用方预计算纯数据（外提自事务，行为等价）。
+- `rescanDocumentAlbum(albumId, coverPath, treePrefix, ...)`：单事务。专辑缺失早退（persistedPaths 保持空表）→ coverPath 非空更新 → persistedPaths 计算 → treePrefix 旧轨清理（**只删字幕+轨，不删远程源/轨标签**——原样）→ 插入 specs + 字幕。
+- 平台接缝（fileSizeQuery/stampProvider/uriOrFileExists/fileExists/resolveLegacyDir）由 VM 注入。
+
 ## 验证
 - seam 测试：`app/src/test/java/com/asmr/player/data/repository/LibraryWriteRepositoryTest.kt`（Robolectric + 内存 Room，逐条对应上文契约）。
 - 全量测试基线只增不减（895/0/4 起，B4a 后）。
