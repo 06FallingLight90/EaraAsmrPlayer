@@ -39,6 +39,8 @@ class LibraryReadRepository @Inject constructor(
 
     fun observeLibraryTracks(query: SupportSQLiteQuery): Flow<List<LibraryTrackRow>> = database.trackDao().queryLibraryTracks(query)
 
+    fun observeTracksForAlbum(albumId: Long): Flow<List<TrackEntity>> = database.trackDao().getTracksForAlbum(albumId)
+
     // ---------- PagingSource factory（原 VM Pager pagingSourceFactory 参数化） ----------
 
     fun albumsPaged(query: SupportSQLiteQuery): PagingSource<Int, AlbumEntity> = database.albumDao().queryAlbumsPaged(query)
@@ -49,6 +51,8 @@ class LibraryReadRepository @Inject constructor(
     // ---------- 一次性查询 ----------
 
     suspend fun getAlbumById(albumId: Long): AlbumEntity? = database.albumDao().getAlbumById(albumId)
+
+    suspend fun getAlbumByWorkIdOnce(workId: String): AlbumEntity? = database.albumDao().getAlbumByWorkIdOnce(workId)
 
     suspend fun getAllAlbumsOnce(): List<AlbumEntity> = database.albumDao().getAllAlbumsOnce()
 
