@@ -18,6 +18,9 @@ REPO = Path(__file__).resolve().parent.parent
 SRC = REPO / "app" / "src" / "main" / "java"
 SELFTEST = Path(__file__).resolve().parent / "guard-selftest"
 SIZE_LIMIT = 1500
+# pin 配额松弛容差：cap 超出实测行数这么多即判定"还债未同步收缩 baseline"，
+# 失败提示重写 cap（20261002 体检 Quick Win #1：ratchet 要推动下降，不只防回潮）
+SIZE_SLACK_TOLERANCE = 50
 SIZE_BASELINE = Path(__file__).resolve().parent / "size-guard-baseline.txt"
 IMPORT_BASELINE = Path(__file__).resolve().parent / "import-direction-baseline.txt"
 
@@ -28,14 +31,35 @@ ROOT_ENTRY_TYPES = (
     "com.asmr.player.ThemeStartupSupport",
 )
 
+# feature-to-feature 白名单：ui.common / ui.theme 是跨特征共享层，任何 ui.* 可引
+UI_FEATURE_WHITELIST = ("common", "theme")
+
+
+def ui_feature(fq: str) -> str:
+    """取 com.asmr.player.ui.<feature> 的 feature 段；非 ui 包或 ui 根返回 ''。"""
+    parts = fq.split(".")
+    return parts[4] if len(parts) > 4 else ""
+
 # (规则名, 源包前缀元组, 禁止的导入前缀元组)
+# feature-to-feature 例外：目标 ui.common/theme 放行、同特征放行（见 match_imports）
 RULES = [
     ("data-to-upper",
      ("com.asmr.player.data",),
      ("com.asmr.player.playback.", "com.asmr.player.ui.", "com.asmr.player.main.")),
+    ("data-to-feature",
+     ("com.asmr.player.data",),
+     ("com.asmr.player.listentogether.", "com.asmr.player.hotlistening.",
+      "com.asmr.player.subtitle.", "com.asmr.player.translation.",
+      "com.asmr.player.performance.", "com.asmr.player.benchmark.")),
     ("ui-to-dao",
      ("com.asmr.player.ui",),
-     ("com.asmr.player.data.local.db.dao.",)),
+     ("com.asmr.player.data.local.db.dao.", "com.asmr.player.data.local.db.AppDatabaseProvider")),
+    ("ui-to-data-remote",
+     ("com.asmr.player.ui",),
+     ("com.asmr.player.data.remote.",)),
+    ("feature-to-feature",
+     ("com.asmr.player.ui",),
+     ("com.asmr.player.ui.",)),
     ("ui-to-net-stack",
      ("com.asmr.player.ui",),
      ("okhttp3.", "retrofit2.", "com.google.gson.")),
@@ -57,6 +81,9 @@ RULES = [
     ("playback-to-ui",
      ("com.asmr.player.playback",),
      ("com.asmr.player.ui.",)),
+    ("playback-to-service",
+     ("com.asmr.player.playback",),
+     ("com.asmr.player.service.",)),
 ]
 
 
@@ -98,6 +125,18 @@ def read_import_baseline() -> set:
     }
 
 
+def size_pin_failures(line_count: int, cap: int) -> list:
+    """单个 size pin 的判定逻辑（独立成函数供 selftest 复用）。"""
+    problems = []
+    if line_count > cap:
+        problems.append(f"已超 baseline 上限（{line_count} > {cap}），禁止继续增长")
+    elif cap - line_count > SIZE_SLACK_TOLERANCE:
+        problems.append(
+            f"baseline 配额松弛 {cap - line_count} 行（cap {cap}，实测 {line_count}，"
+            f"容差 {SIZE_SLACK_TOLERANCE}），请收缩 baseline 使 cap 贴合实测")
+    return problems
+
+
 def match_imports(rel: str, pkg: str, lines) -> list:
     """返回该文件触发的违规 [(rule, rel, line_no, fq)]。"""
     hits = []
@@ -109,8 +148,14 @@ def match_imports(rel: str, pkg: str, lines) -> list:
             if not s.startswith("import "):
                 continue
             fq = s[len("import "):].strip()
-            if any(fq.startswith(p) for p in forbidden):
-                hits.append((rule, rel, no, fq))
+            if not any(fq.startswith(p) for p in forbidden):
+                continue
+            if rule == "feature-to-feature" and (
+                ui_feature(fq) in UI_FEATURE_WHITELIST
+                or ui_feature(fq) == ui_feature(pkg)
+            ):
+                continue
+            hits.append((rule, rel, no, fq))
     return hits
 
 
@@ -153,11 +198,26 @@ def selftest() -> list:
     return problems
 
 
+def selftest_size() -> list:
+    """size pin 判定逻辑的场景自检（无夹具文件，纯合成数据）。"""
+    problems = []
+    if not size_pin_failures(1200, 1100):
+        problems.append("[selftest] size: 超上限场景未失败")
+    if not size_pin_failures(1000, 1100):
+        problems.append("[selftest] size: 配额松弛场景未失败")
+    if size_pin_failures(1060, 1100):
+        problems.append("[selftest] size: 容差内场景误报")
+    if size_pin_failures(1100, 1100):
+        problems.append("[selftest] size: 贴线场景误报")
+    return problems
+
+
 def main() -> int:
     failures = []
 
     # --- 规则自检（防空转）---
     failures.extend(selftest())
+    failures.extend(selftest_size())
 
     # --- 行数守护（"路径: 行数上限" pin）---
     size_pins = read_size_baseline()
@@ -168,9 +228,8 @@ def main() -> int:
         if line_count > SIZE_LIMIT:
             if rel in size_pins:
                 pinned_seen.add(rel)
-                if line_count > size_pins[rel]:
-                    failures.append(
-                        f"[size] {rel} 已超 baseline 上限（{line_count} > {size_pins[rel]}），禁止继续增长")
+                for problem in size_pin_failures(line_count, size_pins[rel]):
+                    failures.append(f"[size] {rel} {problem}")
             else:
                 failures.append(f"[size] 新增超限文件 {rel}（{line_count} 行 > {SIZE_LIMIT}），禁止入库")
     for rel in sorted(set(size_pins) - pinned_seen):
