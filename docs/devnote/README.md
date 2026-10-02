@@ -10,8 +10,7 @@
 | [2026-09-30-refactor-start.md](2026-09-30-refactor-start.md) | 重构启动：S0 绿基线（840 tests）与测试基建修复、S1 CI 门禁 | 排查测试 / CI 问题时 |
 | [2026-10-01-r2-start.md](2026-10-01-r2-start.md) | 第二轮重构 R2 启动：阶段 A（目录=包名、ci_guard 重写、A3 修复类变更）与切片 bug #322 定位 | 了解 R2 计划 / 阶段 A 成果时 |
 | [2026-10-02-r2-phase-b-finish.md](2026-10-02-r2-phase-b-finish.md) | R2 阶段 B 收官：数据访问层下沉 LibraryRead/WriteRepository、B6 门禁（906 tests）、实机走查 5/6 与调试手段留档 | 了解 repository 边界 / 实机走查方法时 |
-| [agent-collab.md](agent-collab.md) | agent 协作约定：入库可移植性原则、构建验证循环、运行环境注意事项 | agent 开始改代码前 |
-| [refactor-collab.md](refactor-collab.md) | 重构工作约定：行为保持、任务循环、范围纪律、新证据处理 | agent 执行重构任务前 |
+| [agent-collab.md](agent-collab.md) | **agent 协作总纲（唯一）**：硬规则与 git 纪律、入库可移植性、构建验证循环、重构任务循环与范围纪律、阶段门禁三件套、行为档案机制、守护修改流程 | agent 开始改代码前（重构任务亦然，§6-§9） |
 
 ## 记录约定
 

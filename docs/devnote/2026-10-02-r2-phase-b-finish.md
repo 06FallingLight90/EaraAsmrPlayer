@@ -23,6 +23,10 @@
 - 测试 885 → **906/0/4**（B4a +10、B4b +5、B4c +3、B5 复用 B4 的 repo 测试；只增不减）。
 - ci_guard 绿全程保持。
 
+## 新增文件
+- `AGENTS.md`（仓库根，**本机**——被 .gitignore 忽略）：agent 工作入口指针文件，指向协作总纲 / devnote / ARCHITECTURE / behavior-notes，并承载本机构建事实（构建命令、adb 路径、测试基线）。换机器需重建。
+- **协作文档整合（入库）**：`agent-collab.md` 重写为唯一「Agent 协作总纲」，吸收 `refactor-collab.md`（已删除）全部内容，并收录原 R2 计划（gitignored）中的流程纪律——git 硬规则、阶段门禁三件套、行为档案机制、守护修改流程（原为补全缺口）；AGENTS.md 硬规则段收敛为指针，devnote README 索引同步。
+
 ## 本轮新踩坑
 1. **PS5.1 无 `??` 运算符**：聚合测试报告脚本里用 `??` 直接 ParserError，老老实实 if/else。
 2. **理想化断言三连**：三次测试失败全是我把"原实现没做的事"当成应有行为（remote_subtitle_sources→track_tag→album_tag 孤儿残留）。教训：**逐字下沉时测试断言必须对着原实现写，不能对着直觉写**；行为档案同步记录这些不对称。
