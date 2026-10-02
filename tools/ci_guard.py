@@ -198,6 +198,25 @@ def selftest() -> list:
     return problems
 
 
+def selftest_feature_whitelist() -> list:
+    """feature-to-feature 白名单正向断言：common/theme 与同特征必须放行。"""
+    problems = []
+    pkg = "com.asmr.player.ui.library"
+    cases = {
+        "import com.asmr.player.ui.settings.SettingsViewModel": False,
+        "import com.asmr.player.ui.common.dialog.SomeDialog": True,
+        "import com.asmr.player.ui.theme.AppTheme": True,
+        "import com.asmr.player.ui.library.LibraryViewModel": True,
+    }
+    for imp, should_pass in cases.items():
+        caught = match_imports("selftest", pkg, [imp])
+        if should_pass and caught:
+            problems.append(f"[selftest] feature-to-feature 白名单误伤 {imp}")
+        if not should_pass and not caught:
+            problems.append(f"[selftest] feature-to-feature 白名单漏放 {imp}")
+    return problems
+
+
 def selftest_size() -> list:
     """size pin 判定逻辑的场景自检（无夹具文件，纯合成数据）。"""
     problems = []
@@ -217,6 +236,7 @@ def main() -> int:
 
     # --- 规则自检（防空转）---
     failures.extend(selftest())
+    failures.extend(selftest_feature_whitelist())
     failures.extend(selftest_size())
 
     # --- 行数守护（"路径: 行数上限" pin）---
