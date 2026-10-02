@@ -1,4 +1,4 @@
-app/src/main/java/com/asmr/player/main/MainContainer.kt: 1552
+app/src/main/java/com/asmr/player/main/MainContainer.kt: 1344
 app/src/main/java/com/asmr/player/ui/downloads/DownloadsScreen.kt: 2281
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt: 1523
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt: 2996
