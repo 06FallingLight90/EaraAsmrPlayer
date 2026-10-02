@@ -1077,117 +1077,14 @@ fun MainContainer(
         drawerState = drawerState,
         gesturesEnabled = drawerGesturesEnabled,
         drawerContent = {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(300.dp)
-                    .glassMenu(
-                        shape = RoundedCornerShape(topEnd = 26.dp, bottomEnd = 26.dp),
-                        baseColor = drawerContainerColor,
-                        elevation = if (colorScheme.isDark) 0.dp else 6.dp,
-                        isDark = colorScheme.isDark
-                    )
-            ) {
-                ModalDrawerSheet(
-                    drawerContainerColor = Color.Transparent,
-                    drawerContentColor = colorScheme.onSurface,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    val navItems = listOf(
-                        Triple(Icons.Rounded.Home, "本地库", "library"),
-                        Triple(Icons.Rounded.Search, "在线搜索", "search"),
-                        Triple(Icons.Rounded.Favorite, "我的收藏", "playlist_system/favorites"),
-                        Triple(Icons.AutoMirrored.Rounded.QueueMusic, "我的列表", "playlists"),
-                        Triple(Icons.Rounded.Folder, "我的分组", "groups"),
-                        Triple(Icons.Rounded.Sync, "任务管理", "downloads"),
-                        Triple(Icons.Rounded.Route, "ASMR 看板", "listening_calendar"),
-                        Triple(Icons.Rounded.Settings, "设置", "settings")
-                    )
-
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_launcher_foreground),
-                                contentDescription = null,
-                                tint = colorScheme.onSurface,
-                                modifier = Modifier.size(46.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                stringResource(R.string.app_name),
-                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                                color = colorScheme.onSurface
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                flingBehavior = rememberCalmScrollableFlingBehavior(),
-                                contentPadding = PaddingValues(top = 10.dp, bottom = 32.dp)
-                            ) {
-                                items(navItems, key = { it.third }) { (icon, label, route) ->
-                                    val isAlbumDetailFromSearch =
-                                        currentRoute?.startsWith("album_detail_rj") == true
-                                    val isAlbumDetailFromLibrary =
-                                        currentRoute?.startsWith("album_detail/") == true &&
-                                            !currentRoute.startsWith("album_detail_rj")
-                                    val isSelected = when (route) {
-                                        "library" -> currentRoute == route || isAlbumDetailFromLibrary
-                                        "search" -> currentRoute == route || isAlbumDetailFromSearch
-                                        "groups" -> currentRoute == route ||
-                                            currentRoute?.startsWith("group/") == true
-                                        "playlist_system/favorites" -> {
-                                            currentRoute == "playlist_system/{type}" &&
-                                                navBackStackEntry?.arguments?.getString("type") == "favorites"
-                                        }
-                                        else -> currentRoute == route
-                                    }
-                                    DrawerNavCardItem(
-                                        icon = icon,
-                                        label = label,
-                                        selected = isSelected,
-                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                                        onClick = { openPrimaryRoute(route) }
-                                    )
-                                }
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopCenter)
-                                    .fillMaxWidth()
-                                    .height(18.dp)
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(drawerContainerColor, Color.Transparent)
-                                        )
-                                    )
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .fillMaxWidth()
-                                    .height(28.dp)
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(Color.Transparent, drawerContainerColor)
-                                        )
-                                    )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-                        DrawerSiteStatusFooter(drawerStatusViewModel, modifier = Modifier.padding(horizontal = 18.dp))
-                        Spacer(modifier = Modifier.height(18.dp))
-                    }
-                }
-            }
+            MainDrawerContent(
+                currentRoute = currentRoute,
+                navBackStackEntry = navBackStackEntry,
+                drawerContainerColor = drawerContainerColor,
+                colorScheme = colorScheme,
+                drawerStatusViewModel = drawerStatusViewModel,
+                onOpenPrimaryRoute = { route -> openPrimaryRoute(route) }
+            )
         }
     ) {
         val miniPlayerVisible = showMiniPlayerBar &&
@@ -1265,293 +1162,25 @@ fun MainContainer(
                         containerColor = Color.Transparent,
                         contentColor = colorScheme.onBackground,
                         topBar = {
-                            Box {
-                                EaraTopBarContainer {
-                                    Column {
-                                        Spacer(modifier = Modifier.windowInsetsTopHeight(StableWindowInsets.statusBars))
-                                        CenterAlignedTopAppBar(
-                                            modifier = Modifier.height(EaraMainTopBarHeight),
-                                            title = {
-                                                val entry = navBackStackEntry
-                                                val resolvedTitleRoute = if (currentScreenIsPrimary || albumDetailTransitionActive) {
-                                                    visualPrimaryRoute
-                                                } else {
-                                                    currentRoute
-                                                }
-                                                val groupName = if (resolvedTitleRoute == "group/{groupId}/{groupName}") {
-                                                    decodeRouteArg(entry?.arguments?.getString("groupName").orEmpty())
-                                                } else ""
-                                                val playlistName = if (resolvedTitleRoute == "playlist/{playlistId}/{playlistName}") {
-                                                    decodeRouteArg(entry?.arguments?.getString("playlistName").orEmpty())
-                                                } else ""
-                                                val systemPlaylistType = if (resolvedTitleRoute == "playlist_system/{type}") {
-                                                    entry?.arguments?.getString("type").orEmpty()
-                                                } else ""
-                                                val appName = stringResource(R.string.app_name)
-                                                val titleText = when {
-                                                    resolvedTitleRoute == "library" -> "本地库"
-                                                    resolvedTitleRoute == "library_filter" -> "筛选"
-                                                    resolvedTitleRoute == "search" -> "在线搜索"
-                                                    resolvedTitleRoute == Routes.SearchAssist -> "在线搜索"
-                                                    resolvedTitleRoute == Routes.SearchAssistPattern -> "在线搜索"
-                                                    resolvedTitleRoute == Routes.HotListening -> "热门收听"
-                                                    resolvedTitleRoute == "playlists" -> "我的列表"
-                                                    resolvedTitleRoute == "playlist/{playlistId}/{playlistName}" ->
-                                                        playlistName.ifBlank { "我的列表" }
-                                                    resolvedTitleRoute == "playlist_system/favorites" -> "我的收藏"
-                                                    resolvedTitleRoute == "playlist_system/{type}" -> when (systemPlaylistType) {
-                                                        "favorites" -> "我的收藏"
-                                                        else -> "我的收藏"
-                                                    }
-                                                    resolvedTitleRoute == "groups" -> "我的分组"
-                                                    resolvedTitleRoute == "group/{groupId}/{groupName}" ->
-                                                        groupName.ifBlank { "我的分组" }
-                                                    resolvedTitleRoute == "settings" -> "设置"
-                                                    resolvedTitleRoute == "downloads" -> "任务管理"
-                                                    resolvedTitleRoute == "listening_calendar" -> "ASMR 看板"
-                                                    resolvedTitleRoute == "dlsite_login" -> "DLsite 登录"
-                                                    resolvedTitleRoute?.startsWith("playlist_picker") == true -> "添加到我的列表"
-                                                    resolvedTitleRoute?.startsWith("album_detail") == true -> "专辑详情"
-                                                    else -> appName
-                                                }
-                                                AnimatedContent(
-                                                    targetState = titleText,
-                                                    modifier = Modifier
-                                                        .height(40.dp)
-                                                        .offset(y = 4.dp),
-                                                    contentAlignment = Alignment.Center,
-                                                    transitionSpec = {
-                                                        (fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing))
-                                                            + slideInHorizontally(animationSpec = tween(220, easing = LinearOutSlowInEasing)) { it / 4 })
-                                                            .togetherWith(
-                                                                fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing))
-                                                                    + slideOutHorizontally(animationSpec = tween(180, easing = FastOutLinearInEasing)) { -it / 4 }
-                                                            )
-                                                    },
-                                                    label = "headerTitle"
-                                                ) { targetText ->
-                                                    Text(
-                                                        text = targetText,
-                                                        color = if (albumDetailTransitionActive) {
-                                                            colorScheme.onSurface
-                                                        } else {
-                                                            topBarContentColor
-                                                        },
-                                                        style = MaterialTheme.typography.titleMedium.copy(
-                                                            fontWeight = FontWeight.SemiBold
-                                                        )
-                                                    )
-                                                }
-                                            },
-                                            windowInsets = WindowInsets(0, 0, 0, 0),
-                                            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                                                containerColor = Color.Transparent,
-                                                titleContentColor = topBarContentColor,
-                                                navigationIconContentColor = topBarContentColor,
-                                                actionIconContentColor = if (albumDetailTransitionActive) {
-                                                    colorScheme.onSurface
-                                                } else {
-                                                    topBarContentColor
-                                                }
-                                            ),
-                                            navigationIcon = {
-                                                Box {
-                                                    if (showPrimaryBrand || albumDetailTransitionActive) {
-                                                        PrimaryTopBarBrand(
-                                                            appName = stringResource(R.string.app_name),
-                                                            tint = colorScheme.primaryStrong
-                                                        )
-                                                    }
-                                                    if (showBackButton &&
-                                                        !albumDetailTransitionActive &&
-                                                        hasPreviousBackStackEntry
-                                                    ) {
-                                                        EaraTopBarIconButton(
-                                                            onClick = { navController.popBackStack() }
-                                                        ) {
-                                                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = null)
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            actions = {
-                                                val headerActionRoute = if (albumDetailTransitionActive) {
-                                                    visualPrimaryRoute
-                                                } else {
-                                                    currentRoute
-                                                }
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    if (headerActionRoute != null &&
-                                                        (isPrimaryRoute(headerActionRoute) || headerActionRoute == "playlist_system/{type}") &&
-                                                        !(headerActionRoute == "settings" && settingsDetailPageVisible)
-                                                    ) {
-                                                        val downloadTasks by downloadsViewModel.tasks.collectAsStateWithLifecycle()
-                                                        val activeSubtitleTaskCount by downloadsViewModel.activeSubtitleTaskCount.collectAsStateWithLifecycle()
-                                                        val activeDownloadCount = remember(downloadTasks) {
-                                                            downloadTasks.sumOf { task ->
-                                                                task.items.count {
-                                                                    it.state == DownloadItemState.RUNNING || it.state == DownloadItemState.ENQUEUED
-                                                                }
-                                                            }
-                                                        }
-                                                        val activeTaskCount = activeDownloadCount + activeSubtitleTaskCount
-                                                        PageTranslationHeaderAction(headerActionRoute, Modifier.padding(end = 4.dp))
-                                                        Box {
-                                                            EaraTopBarIconButton(
-                                                                onClick = { navController.navigate("downloads") },
-                                                                modifier = Modifier.padding(end = 4.dp)
-                                                            ) {
-                                                                Icon(Icons.Rounded.Inbox, contentDescription = "任务管理")
-                                                            }
-                                                            if (activeTaskCount > 0) {
-                                                                Badge(
-                                                                    modifier = Modifier
-                                                                        .align(Alignment.TopEnd)
-                                                                ) {
-                                                                    Text(activeTaskCount.toString())
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                    if (headerActionRoute == "library") {
-                                                        val viewMode by libraryViewModel.libraryViewMode.collectAsStateWithLifecycle()
-                                                        if (viewMode != null) {
-                                                            var viewMenuExpanded by remember { mutableStateOf(false) }
-                                                            Box {
-                                                                val normalized = (viewMode ?: 0).coerceIn(0, 2)
-                                                                val icon = when (normalized) {
-                                                                    1 -> Icons.Rounded.GridView
-                                                                    2 -> Icons.Rounded.Audiotrack
-                                                                    else -> Icons.AutoMirrored.Rounded.ViewList
-                                                                }
-                                                                EaraTopBarIconButton(
-                                                                    onClick = { viewMenuExpanded = true },
-                                                                    modifier = Modifier.padding(end = 4.dp)
-                                                                ) {
-                                                                    Icon(imageVector = icon, contentDescription = "切换视图")
-                                                                }
-                                                                MaterialTheme(
-                                                                    colorScheme = materialColorScheme.copy(
-                                                                        surface = dynamicContainerColor,
-                                                                        surfaceContainer = dynamicContainerColor
-                                                                    )
-                                                                ) {
-                                                                    DropdownMenu(
-                                                                        expanded = viewMenuExpanded,
-                                                                        onDismissRequest = { viewMenuExpanded = false },
-                                                                        modifier = Modifier.background(dynamicContainerColor)
-                                                                    ) {
-                                                                        DropdownMenuItem(
-                                                                            text = { Text("专辑列表") },
-                                                                            leadingIcon = {
-                                                                                Icon(Icons.AutoMirrored.Rounded.ViewList, contentDescription = null)
-                                                                            },
-                                                                            onClick = {
-                                                                                viewMenuExpanded = false
-                                                                                libraryViewModel.setLibraryViewMode(0)
-                                                                            }
-                                                                        )
-                                                                        HorizontalDivider(
-                                                                            modifier = Modifier.padding(horizontal = 8.dp),
-                                                                            thickness = 0.5.dp,
-                                                                            color = materialColorScheme.outlineVariant.copy(alpha = 0.3f)
-                                                                        )
-                                                                        DropdownMenuItem(
-                                                                            text = { Text("专辑卡片") },
-                                                                            leadingIcon = {
-                                                                                Icon(Icons.Rounded.GridView, contentDescription = null)
-                                                                            },
-                                                                            onClick = {
-                                                                                viewMenuExpanded = false
-                                                                                libraryViewModel.setLibraryViewMode(1)
-                                                                            }
-                                                                        )
-                                                                        HorizontalDivider(
-                                                                            modifier = Modifier.padding(horizontal = 8.dp),
-                                                                            thickness = 0.5.dp,
-                                                                            color = materialColorScheme.outlineVariant.copy(alpha = 0.3f)
-                                                                        )
-                                                                        DropdownMenuItem(
-                                                                            text = { Text("音轨列表") },
-                                                                            leadingIcon = {
-                                                                                Icon(Icons.Rounded.Audiotrack, contentDescription = null)
-                                                                            },
-                                                                            onClick = {
-                                                                                viewMenuExpanded = false
-                                                                                libraryViewModel.setLibraryViewMode(2)
-                                                                            }
-                                                                        )
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    } else if (headerActionRoute == "search") {
-                                                        val searchViewModel: SearchViewModel = hiltViewModel(activityViewModelStoreOwner)
-                                                        val viewMode by searchViewModel.viewMode.collectAsStateWithLifecycle()
-                                                        EaraTopBarIconButton(
-                                                            onClick = { searchViewModel.setViewMode(if (viewMode == 1) 0 else 1) },
-                                                            modifier = Modifier.padding(end = 4.dp)
-                                                        ) {
-                                                            Icon(
-                                                                imageVector = if (viewMode == 1) Icons.AutoMirrored.Rounded.ViewList else Icons.Rounded.ViewModule,
-                                                                contentDescription = if (viewMode == 1) "切换为列表视图" else "切换为卡片视图"
-                                                            )
-                                                        }
-                                                    } else if (headerActionRoute == Routes.HotListening) {
-                                                        val hotListeningViewModel: HotListeningViewModel = hiltViewModel(activityViewModelStoreOwner)
-                                                        val viewMode by hotListeningViewModel.viewMode.collectAsStateWithLifecycle()
-                                                        EaraTopBarIconButton(
-                                                            onClick = { hotListeningViewModel.setViewMode(if (viewMode == 1) 0 else 1) },
-                                                            modifier = Modifier.padding(end = 4.dp)
-                                                        ) {
-                                                            Icon(
-                                                                imageVector = if (viewMode == 1) Icons.AutoMirrored.Rounded.ViewList else Icons.Rounded.ViewModule,
-                                                                contentDescription = if (viewMode == 1) "切换为列表视图" else "切换为卡片视图"
-                                                            )
-                                                        }
-                                                    } else if (headerActionRoute == "downloads") {
-                                                        val tasks by downloadsViewModel.tasks.collectAsStateWithLifecycle()
-                                                        val hasActiveDownloads = remember(tasks) {
-                                                            tasks.any { task ->
-                                                                task.items.any { it.state == DownloadItemState.RUNNING || it.state == DownloadItemState.ENQUEUED }
-                                                            }
-                                                        }
-                                                        val hasPausedDownloads = remember(tasks) {
-                                                            tasks.any { task ->
-                                                                task.items.any { it.state == DownloadItemState.PAUSED }
-                                                            }
-                                                        }
-
-                                                        if (hasActiveDownloads) {
-                                                            TextButton(
-                                                                onClick = { downloadsViewModel.pauseAll() },
-                                                                colors = ButtonDefaults.textButtonColors(contentColor = topBarContentColor)
-                                                            ) { Text("全部暂停") }
-                                                        } else if (hasPausedDownloads) {
-                                                            TextButton(
-                                                                onClick = { downloadsViewModel.resumeAll() },
-                                                                colors = ButtonDefaults.textButtonColors(contentColor = topBarContentColor)
-                                                            ) { Text("全部继续") }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        )
-
-                                        val p = bulkProgress
-                                        if (currentRoute == "library" && p?.phase == BulkPhase.ScanningLocal) {
-                                            if (p.total > 0) {
-                                                LinearProgressIndicator(
-                                                    progress = { p.fraction },
-                                                    modifier = Modifier.fillMaxWidth()
-                                                )
-                                            } else {
-                                                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            MainTopBarContent(
+                                navController = navController,
+                                navBackStackEntry = navBackStackEntry,
+                                currentRoute = currentRoute,
+                                visualPrimaryRoute = visualPrimaryRoute,
+                                currentScreenIsPrimary = currentScreenIsPrimary,
+                                showBackButton = showBackButton,
+                                showPrimaryBrand = showPrimaryBrand,
+                                hasPreviousBackStackEntry = hasPreviousBackStackEntry,
+                                albumDetailTransitionActive = albumDetailTransitionActive,
+                                settingsDetailPageVisible = settingsDetailPageVisible,
+                                activityViewModelStoreOwner = activityViewModelStoreOwner,
+                                downloadsViewModel = downloadsViewModel,
+                                libraryViewModel = libraryViewModel,
+                                topBarContentColor = topBarContentColor,
+                                colorScheme = colorScheme,
+                                materialColorScheme = materialColorScheme,
+                                dynamicContainerColor = dynamicContainerColor
+                            )
                         }
                     ) { padding ->
                         Box(
@@ -1565,272 +1194,58 @@ fun MainContainer(
                                     secondaryPageTopPadding = topContentPadding
                                 }
                             }
-                            primaryContentStateHolder.SaveableStateProvider(PRIMARY_PAGER_SAVEABLE_KEY) {
-                                HorizontalPager(
-                                    state = primaryPagerState,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(top = topContentPadding)
-                                        .graphicsLayer {
-                                            translationX = if (albumDetailTransitionActive) {
-                                                0f
-                                            } else {
-                                                primaryPageParallaxOffset.value.toPx()
-                                            }
-                                        },
-                                    beyondViewportPageCount = primaryPagerBeyondBoundsPageCount,
-                                    flingBehavior = primaryPagerFlingBehavior,
-                                    userScrollEnabled = !primaryPagerScrollLocked && !hasOverlayRoute,
-                                    key = { primaryPagerRoutes[it] }
-                                ) { page ->
-                                    val route = primaryPagerRoutes[page]
-                                    val primaryRouteActive = visualPrimaryRoute == route
-                                    val pagerRouteVisible = primaryPagerState.currentPage == page ||
-                                        (
-                                            primaryPagerState.isScrollInProgress &&
-                                                primaryPagerState.targetPage == page
-                                            )
-                                    val primaryRouteImmediatelyActive = !hasOverlayRoute &&
-                                        (primaryRouteActive || pagerRouteVisible)
-                                    // ViewModel 的 StateFlow 已经持有最新页面数据；隐藏页面无需继续
-                                    // 收集、排序和转换数据。目标页在横向手势开始时会立即恢复收集。
-                                    // 详情页退出动画中使用已保留的主页面快照状态；等详情真正弹栈后再恢复
-                                    // 数据流，避免在返回手势首帧同时启动查询、排序和列表状态转换。
-                                    val primaryRouteDataActive = primaryRouteImmediatelyActive &&
-                                        !isAlbumDetailRoute
-                                    val primaryRouteDataActiveState = rememberUpdatedState(
-                                        primaryRouteDataActive
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            // 页面内容使用独立 RenderNode 保留 display list；Pager 滚动时
-                                            // 只更新图层位置，避免逐帧重录复杂列表和设置页的绘制命令。
-                                            .graphicsLayer { clip = false }
-                                    ) {
-                                        primaryContentStateHolder.SaveableStateProvider(primaryRouteSaveableKey(route)) {
-                                            when (route) {
-                                        Routes.Library -> {
-                                            LibraryScreen(
-                                                windowSizeClass = windowSizeClass,
-                                                isActive = primaryRouteActive,
-                                                isDataActive = primaryRouteDataActive,
-                                                scrollToTopSignal = libraryScrollToTopSignal,
-                                                onAlbumClick = { album ->
-                                                    AlbumCoverHintStore.recordLocalAlbum(album)
-                                                    navigator.openAlbumDetail(
-                                                        albumId = album.id,
-                                                        rj = null
-                                                    )
-                                                },
-                                                onPlayTracks = { album, tracks, startTrack ->
-                                                    scope.launch {
-                                                        if (playerViewModel.playTracksPrepared(album, tracks, startTrack)) {
-                                                            requestMiniPlayerPlayFeedback()
-                                                        }
-                                                    }
-                                                },
-                                                onOpenPlaylistPicker = { item ->
-                                                    albumBatchPlaylistPickerRequest = BatchPlaylistPickerRequest(listOf(item))
-                                                },
-                                                onOpenGroupPicker = { albumId ->
-                                                    libraryGroupPickerAlbumId = albumId
-                                                },
-                                                onOpenFilterScreen = { navController.navigateSingleTop("library_filter") },
-                                                onSearchKeyword = ::submitMetaSearchKeyword,
-                                                viewModel = libraryViewModel
-                                            )
-                                        }
-
-                                        Routes.Search -> {
-                                            val searchViewModel: SearchViewModel = hiltViewModel(activityViewModelStoreOwner)
-                                            SearchScreen(
-                                                windowSizeClass = windowSizeClass,
-                                                isActive = primaryRouteActive,
-                                                isDataActive = primaryRouteDataActive,
-                                                scrollToTopSignal = searchScrollToTopSignal,
-                                                submittedSearchKeyword = submittedSearchKeyword,
-                                                submittedSearchOrderName = submittedSearchOrderName,
-                                                submittedSearchPurchasedOnly = submittedSearchPurchasedOnly,
-                                                submittedSearchPresaleOnly = submittedSearchPresaleOnly,
-                                                submittedSearchChineseTranslatedOnly = submittedSearchChineseTranslatedOnly,
-                                                submittedSearchCollectedOnly = submittedSearchCollectedOnly,
-                                                submittedSearchHasSubtitle = submittedSearchHasSubtitle,
-                                                submittedSearchAllAges = submittedSearchAllAges,
-                                                submittedSearchCollectedSortName = submittedSearchCollectedSortName,
-                                                submittedSearchLocale = submittedSearchLocale,
-                                                submittedSearchSignal = submittedSearchSignal,
-                                                onHorizontalPagerScrollLockChanged = { active ->
-                                                    primaryPagerScrollLocked = active
-                                                },
-                                                onOpenSearchAssist = { request ->
-                                                    searchAssistInitialRequest = request
-                                                    navController.navigateSingleTop(Routes.searchAssist(request.keyword))
-                                                },
-                                                onAlbumClick = searchAlbumClick@ { album, fromPurchasedOnly, hasResolvedDetail ->
-                                                    val workNo = album.rjCode.ifBlank { album.workId }
-                                                    if (workNo.isBlank()) return@searchAlbumClick
-                                                    AlbumCoverHintStore.record(
-                                                        albumId = album.id,
-                                                        rjCode = workNo,
-                                                        title = album.title,
-                                                        circle = album.circle,
-                                                        cv = album.cv,
-                                                        coverUrl = album.coverUrl,
-                                                        tags = album.tags,
-                                                        ratingValue = album.ratingValue,
-                                                        ratingCount = album.ratingCount,
-                                                        releaseDate = album.releaseDate,
-                                                        dlCount = album.dlCount,
-                                                        priceJpy = album.priceJpy,
-                                                        hasAsmrOne = album.hasAsmrOne,
-                                                        description = album.description,
-                                                        hasResolvedDlsiteInfo = hasResolvedDetail && !fromPurchasedOnly
-                                                    )
-                                                    openAlbumDetailFromSearch(
-                                                        albumId = album.id,
-                                                        rj = workNo,
-                                                        preferDlsitePlay = fromPurchasedOnly
-                                                    )
-                                                },
-                                                viewModel = searchViewModel
-                                            )
-                                        }
-
-                                        Routes.HotListening -> {
-                                            val hotListeningViewModel: HotListeningViewModel = hiltViewModel(activityViewModelStoreOwner)
-                                            HotListeningScreen(
-                                                windowSizeClass = windowSizeClass,
-                                                isActive = primaryRouteActive,
-                                                isDataActive = primaryRouteDataActiveState,
-                                                scrollToTopSignal = hotListeningScrollToTopSignal,
-                                                onAlbumClick = { album ->
-                                                    AlbumCoverHintStore.record(
-                                                        albumId = album.id,
-                                                        rjCode = album.rjCode.ifBlank { album.workId },
-                                                        title = album.title,
-                                                        circle = album.circle,
-                                                        cv = album.cv,
-                                                        coverUrl = album.coverUrl,
-                                                        tags = album.tags,
-                                                        ratingValue = album.ratingValue,
-                                                        ratingCount = album.ratingCount,
-                                                        releaseDate = album.releaseDate,
-                                                        dlCount = album.dlCount,
-                                                        priceJpy = album.priceJpy,
-                                                        hasAsmrOne = album.hasAsmrOne,
-                                                        description = album.description,
-                                                        hasResolvedDlsiteInfo = true
-                                                    )
-                                                    navigator.openAlbumDetailByRj(album.rjCode.ifBlank { album.workId })
-                                                },
-                                                onSearchKeyword = ::submitMetaSearchKeyword,
-                                                viewModel = hotListeningViewModel
-                                            )
-                                        }
-
-                                        "playlist_system/favorites" -> {
-                                            val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                                            SystemPlaylistScreen(
-                                                windowSizeClass = windowSizeClass,
-                                                isActive = primaryRouteActive,
-                                                isDataActive = primaryRouteDataActive,
-                                                scrollToTopSignal = favoritesScrollToTopSignal,
-                                                onPlayAll = { items, startItem ->
-                                                    playerViewModel.playPlaylistItems(items, startItem)
-                                                    if (startItem.isVideoPlaybackItem()) {
-                                                        openNowPlaying()
-                                                    } else {
-                                                        requestMiniPlayerPlayFeedback()
-                                                    }
-                                                },
-                                                viewModel = playlistsViewModel
-                                            )
-                                        }
-
-                                        "playlists" -> {
-                                            val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                                            PlaylistsScreen(
-                                                windowSizeClass = windowSizeClass,
-                                                isActive = primaryRouteActive,
-                                                isDataActive = primaryRouteDataActive,
-                                                scrollToTopSignal = playlistsScrollToTopSignal,
-                                                onPlaylistClick = { playlist ->
-                                                    val encoded = URLEncoder.encode(playlist.name, "UTF-8")
-                                                    navController.navigateSingleTop("playlist/${playlist.id}/$encoded")
-                                                },
-                                                viewModel = playlistsViewModel
-                                            )
-                                        }
-
-                                        "groups" -> {
-                                            val albumGroupsViewModel: AlbumGroupsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                                            com.asmr.player.ui.groups.AlbumGroupsScreen(
-                                                windowSizeClass = windowSizeClass,
-                                                isActive = primaryRouteActive,
-                                                isDataActive = primaryRouteDataActive,
-                                                scrollToTopSignal = groupsScrollToTopSignal,
-                                                onGroupClick = { group ->
-                                                    val encoded = encodeRouteArg(group.name)
-                                                    navController.navigateSingleTop("group/${group.id}/$encoded")
-                                                },
-                                                viewModel = albumGroupsViewModel
-                                            )
-                                        }
-
-                                        "settings" -> {
-                                            SettingsScreen(
-                                                windowSizeClass = windowSizeClass,
-                                                isActive = primaryRouteActive,
-                                                isDataActive = primaryRouteDataActive,
-                                                viewModel = settingsViewModel,
-                                                libraryViewModel = libraryViewModel,
-                                                scrollToTopSignal = settingsScrollToTopSignal,
-                                                onHorizontalControlInteractionChanged = { active ->
-                                                    primaryPagerScrollLocked = active
-                                                },
-                                                onDetailPageChanged = { visible ->
-                                                    settingsDetailPageVisible = visible
-                                                },
-                                            )
-                                        }
-
-                                        "listening_calendar" -> {
-                                            val listeningCalendarViewModel: com.asmr.player.ui.calendar.ListeningCalendarViewModel =
-                                                hiltViewModel(activityViewModelStoreOwner)
-                                            com.asmr.player.ui.calendar.ListeningCalendarScreen(
-                                                windowSizeClass = windowSizeClass,
-                                                isActive = primaryRouteActive,
-                                                isDataActive = primaryRouteDataActive,
-                                                onOpenDlsiteLogin = { navController.navigateSingleTop("dlsite_login") },
-                                                onOpenAlbum = { session ->
-                                                    AlbumCoverHintStore.record(
-                                                        albumId = session.albumId.takeIf { it > 0L },
-                                                        rjCode = session.rjCode,
-                                                        title = session.title,
-                                                        circle = session.circle,
-                                                        cv = session.cv,
-                                                        coverUrl = session.coverUrl,
-                                                        tags = session.tags
-                                                            .split(',')
-                                                            .map { it.trim() }
-                                                            .filter { it.isNotBlank() }
-                                                    )
-                                                    if (session.albumId > 0L) {
-                                                        navigator.openAlbumDetail(albumId = session.albumId, rj = null)
-                                                    } else if (session.rjCode.isNotBlank()) {
-                                                        navigator.openAlbumDetailByRjStacked(session.rjCode)
-                                                    }
-                                                },
-                                                viewModel = listeningCalendarViewModel
-                                            )
-                                        }
-
-                                        }
-                                    }
+                            MainPrimaryPagerContent(
+                                primaryContentStateHolder = primaryContentStateHolder,
+                                primaryPagerState = primaryPagerState,
+                                primaryPagerBeyondBoundsPageCount = primaryPagerBeyondBoundsPageCount,
+                                primaryPagerFlingBehavior = primaryPagerFlingBehavior,
+                                primaryPagerRoutes = primaryPagerRoutes,
+                                visualPrimaryRoute = visualPrimaryRoute,
+                                albumDetailTransitionActive = albumDetailTransitionActive,
+                                hasOverlayRoute = hasOverlayRoute,
+                                isAlbumDetailRoute = isAlbumDetailRoute,
+                                primaryPageParallaxOffset = primaryPageParallaxOffset,
+                                primaryPagerScrollLocked = primaryPagerScrollLocked,
+                                setPrimaryPagerScrollLocked = { primaryPagerScrollLocked = it },
+                                windowSizeClass = windowSizeClass,
+                                activityViewModelStoreOwner = activityViewModelStoreOwner,
+                                navigator = navigator,
+                                navController = navController,
+                                libraryViewModel = libraryViewModel,
+                                playerViewModel = playerViewModel,
+                                settingsViewModel = settingsViewModel,
+                                scope = scope,
+                                libraryScrollToTopSignal = libraryScrollToTopSignal,
+                                searchScrollToTopSignal = searchScrollToTopSignal,
+                                hotListeningScrollToTopSignal = hotListeningScrollToTopSignal,
+                                favoritesScrollToTopSignal = favoritesScrollToTopSignal,
+                                playlistsScrollToTopSignal = playlistsScrollToTopSignal,
+                                groupsScrollToTopSignal = groupsScrollToTopSignal,
+                                settingsScrollToTopSignal = settingsScrollToTopSignal,
+                                submittedSearchKeyword = submittedSearchKeyword,
+                                submittedSearchOrderName = submittedSearchOrderName,
+                                submittedSearchPurchasedOnly = submittedSearchPurchasedOnly,
+                                submittedSearchPresaleOnly = submittedSearchPresaleOnly,
+                                submittedSearchChineseTranslatedOnly = submittedSearchChineseTranslatedOnly,
+                                submittedSearchCollectedOnly = submittedSearchCollectedOnly,
+                                submittedSearchHasSubtitle = submittedSearchHasSubtitle,
+                                submittedSearchAllAges = submittedSearchAllAges,
+                                submittedSearchCollectedSortName = submittedSearchCollectedSortName,
+                                submittedSearchLocale = submittedSearchLocale,
+                                submittedSearchSignal = submittedSearchSignal,
+                                searchAssistInitialRequest = searchAssistInitialRequest,
+                                setSearchAssistInitialRequest = { searchAssistInitialRequest = it },
+                                openNowPlaying = openNowPlaying,
+                                requestMiniPlayerPlayFeedback = { requestMiniPlayerPlayFeedback() },
+                                submitMetaSearchKeyword = { submitMetaSearchKeyword(it) },
+                                setAlbumBatchPlaylistPickerRequest = { albumBatchPlaylistPickerRequest = it },
+                                setLibraryGroupPickerAlbumId = { libraryGroupPickerAlbumId = it },
+                                topContentPadding = topContentPadding,
+                                setSettingsDetailPageVisible = { settingsDetailPageVisible = it },
+                                openAlbumDetailFromSearch = { albumId, rj, preferDlsitePlay ->
+                                    openAlbumDetailFromSearch(albumId, rj, preferDlsitePlay)
                                 }
-                            }
-                            }
+                            )
 
                         }
                     }
@@ -2019,353 +1434,115 @@ fun MainContainer(
             }
 
         if (bottomChromeVisible) {
-            BoxWithConstraints(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                val bottomChromeHorizontalPadding = if (useLargeBottomChrome) 16.dp else 12.dp
-                val isCompactWidth = windowSizeClass.widthSizeClass.isCompactWidth
-                val canUseRightPanel = !isCompactWidth &&
-                    !isPhone &&
-                    isLandscape &&
-                    (currentRoute == "library" || currentRoute == "search")
-                val rightPanelExpanded = rightPanelExpandedState.value
-                val rightPanelWidth = (maxWidth - 560.dp).coerceAtMost(420.dp)
-                val showRightPanel = canUseRightPanel && rightPanelWidth >= 300.dp
-                val reservedRightTarget = if (!showRightPanel) {
-                    0.dp
-                } else if (rightPanelExpanded) {
-                    rightPanelWidth + 12.dp
-                } else {
-                    36.dp + 12.dp
-                }
-                val reservedRight by animateDpAsState(
-                    targetValue = reservedRightTarget,
-                    animationSpec = tween(durationMillis = if (rightPanelExpanded) 220 else 180),
-                    label = "miniPlayerReservedRight"
-                )
-                val chromeWidth = (maxWidth - reservedRight - (bottomChromeHorizontalPadding * 2)).coerceAtLeast(0.dp)
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .graphicsLayer { clip = false }
-                        .padding(start = bottomChromeHorizontalPadding, bottom = bottomChromeBottomPadding)
-                        .width(chromeWidth)
-                ) {
-                    PrimaryBottomChrome(
-                        activeRoute = visualPrimaryRoute,
-                        pagerState = primaryPagerState,
-                        pagerRoutes = primaryPagerRoutes,
-                        fallbackRoute = activePrimaryRoute,
-                        lockedRoute = pendingPrimaryNavigationRoute,
-                        miniPlayerVisible = miniPlayerVisible,
-                        miniPlayerDisplayMode = miniPlayerDisplayMode,
-                        miniPlayerPlayFeedbackSignal = miniPlayerPlayFeedbackSignal,
-                        largeLayout = useLargeBottomChrome,
-                        navItems = bottomNavItems,
-                        onMiniPlayerDisplayModeChange = { nextMode ->
-                            miniPlayerDisplayMode = nextMode
-                            scope.launch { settingsDataStore.setMiniPlayerDisplayMode(nextMode.name) }
-                        },
-                        onOpenNowPlaying = {
-                            if (!nowPlayingVisible) {
-                                openNowPlaying()
-                            }
-                        },
-                        onOpenQueue = onShowQueue,
-                        onNavigate = { route ->
-                            if (pendingPrimaryNavigationRoute == null && shouldTriggerPrimaryRouteScrollToTop(
-                                    requestedRoute = route,
-                                    visualPrimaryRoute = visualPrimaryRoute,
-                                    activePrimaryRoute = activePrimaryRoute,
-                                    currentPrimaryRoute = currentPrimaryRoute
-                                )) {
-                                triggerPrimaryRouteScrollToTop(route)
-                                return@PrimaryBottomChrome
-                            }
-                            openPrimaryRoute(route)
-                        }
-                    )
-                }
-            }
+            MainBottomChromeContent(
+                windowSizeClass = windowSizeClass,
+                isPhone = isPhone,
+                isLandscape = isLandscape,
+                currentRoute = currentRoute,
+                bottomChromeVisible = bottomChromeVisible,
+                useLargeBottomChrome = useLargeBottomChrome,
+                bottomChromeBottomPadding = bottomChromeBottomPadding,
+                rightPanelExpandedState = rightPanelExpandedState,
+                visualPrimaryRoute = visualPrimaryRoute,
+                primaryPagerState = primaryPagerState,
+                primaryPagerRoutes = primaryPagerRoutes,
+                activePrimaryRoute = activePrimaryRoute,
+                pendingPrimaryNavigationRoute = pendingPrimaryNavigationRoute,
+                miniPlayerVisible = miniPlayerVisible,
+                miniPlayerDisplayMode = miniPlayerDisplayMode,
+                setMiniPlayerDisplayMode = { miniPlayerDisplayMode = it },
+                miniPlayerPlayFeedbackSignal = miniPlayerPlayFeedbackSignal,
+                bottomNavItems = bottomNavItems,
+                nowPlayingVisible = nowPlayingVisible,
+                openNowPlaying = openNowPlaying,
+                onShowQueue = onShowQueue,
+                currentPrimaryRoute = currentPrimaryRoute,
+                triggerPrimaryRouteScrollToTop = { triggerPrimaryRouteScrollToTop(it) },
+                openPrimaryRoute = { openPrimaryRoute(it) },
+                scope = scope,
+                settingsDataStore = settingsDataStore
+            )
         }
 
         if (nowPlayingVisible) {
-            Box(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pointerInteropFilter { true }
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { alpha = nowPlayingBackdropAlpha }
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(colorScheme.background)
-                    )
-                    if (!colorScheme.isDark) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(colorScheme.primarySoft.copy(alpha = 0.14f))
-                        )
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { alpha = nowPlayingBackdropAlpha }
-                ) {
-                    PlayerSharedBackdrop(
-                        mediaItem = sharedPlayerItem,
-                        enabled = coverBackgroundEnabled,
-                        clarity = coverBackgroundClarity,
-                        artworkAlignment = sharedPlayerBackdropAlignment
-                    )
-                }
-                NowPlayingScreen(
-                    windowSizeClass = windowSizeClass,
-                    hardwareVolumeEventTick = nowPlayingVolumeEventTick,
-                    onInlineVolumeControlVisibilityChanged = { nowPlayingUsesInlineVolumeControl = it },
-                    onEqualizerVisibilityChanged = { nowPlayingEqualizerVisible = it },
-                    onVideoFullscreenChanged = { nowPlayingVideoFullscreen = it },
-                    onBack = closeNowPlaying,
-                    onRouteExitStarted = { exitDurationMs ->
-                        nowPlayingBackdropExitDurationMs = exitDurationMs
-                        if (isPhone && isLandscape) {
-                            nowPlayingPortraitExitPending = true
-                            nowPlayingBackdropActive = true
-                        } else {
-                            nowPlayingBackdropActive = false
-                        }
-                    },
-                    onShowQueue = onShowQueue,
-                    onShowSleepTimer = onShowSleepTimer,
-                    onOpenPlaylistPicker = { item ->
-                        nowPlayingPlaylistPickerRequest = PlaylistPickerRequest(items = listOf(item))
-                    },
-                    viewModel = playerViewModel,
-                    coverBackgroundEnabled = coverBackgroundEnabled,
-                    coverBackgroundClarity = coverBackgroundClarity,
-                    coverPreviewMode = coverPreviewMode,
-                    nowPlayingHomeLayoutMode = nowPlayingHomeLayoutMode,
-                    nowPlayingHomeLayoutHintDismissed = nowPlayingHomeLayoutHintDismissed,
-                    onNowPlayingHomeLayoutHintShown = {
-                        scope.launch { settingsDataStore.setNowPlayingHomeLayoutHintDismissed() }
-                    },
-                    onNowPlayingHomeLayoutModeChange = { mode ->
-                        scope.launch {
-                            settingsDataStore.setNowPlayingHomeLayoutMode(mode, dismissHint = true)
-                        }
-                    },
-                    nowPlayingLyricsSettings = nowPlayingLyricsSettings,
-                    lyricsPageSettings = lyricsPageSettings,
-                    audioOutputRouteKind = audioOutputRouteKind,
-                    warningSessionState = appVolumeWarningSessionState,
-                    renderBackdrop = false,
-                    sharedArtworkAlignment = sharedPlayerBackdropAlignment,
-                    sharedCoverDragPreviewState = sharedCoverDragPreviewState
-                )
-                nowPlayingPlaylistPickerRequest?.let { request ->
-                    val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    RoundedTopSheet(onDismissRequest = { nowPlayingPlaylistPickerRequest = null }) {
-                        PlaylistPickerScreen(
-                            windowSizeClass = windowSizeClass,
-                            items = request.items,
-                            onBack = { nowPlayingPlaylistPickerRequest = null },
-                            embeddedInDialog = true,
-                            viewModel = playlistsViewModel
-                        )
-                    }
-                }
-                albumBatchPlaylistPickerRequest?.let { request ->
-                    val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    RoundedTopSheet(onDismissRequest = { albumBatchPlaylistPickerRequest = null }) {
-                        PlaylistPickerScreen(
-                            windowSizeClass = windowSizeClass,
-                            items = request.items,
-                            onBack = { albumBatchPlaylistPickerRequest = null },
-                            embeddedInDialog = true,
-                            viewModel = playlistsViewModel
-                        )
-                    }
-                }
-            }
+            MainNowPlayingOverlay(
+                windowSizeClass = windowSizeClass,
+                playerViewModel = playerViewModel,
+                scope = scope,
+                settingsDataStore = settingsDataStore,
+                activityViewModelStoreOwner = activityViewModelStoreOwner,
+                nowPlayingVisible = nowPlayingVisible,
+                nowPlayingPlaylistPickerRequest = nowPlayingPlaylistPickerRequest,
+                nowPlayingBackdropAlpha = nowPlayingBackdropAlpha,
+                colorScheme = colorScheme,
+                sharedPlayerItem = sharedPlayerItem,
+                coverBackgroundEnabled = coverBackgroundEnabled,
+                coverBackgroundClarity = coverBackgroundClarity,
+                coverPreviewMode = coverPreviewMode,
+                sharedPlayerBackdropAlignment = sharedPlayerBackdropAlignment,
+                sharedCoverDragPreviewState = sharedCoverDragPreviewState,
+                nowPlayingVolumeEventTick = nowPlayingVolumeEventTick,
+                setNowPlayingUsesInlineVolumeControl = { nowPlayingUsesInlineVolumeControl = it },
+                setNowPlayingEqualizerVisible = { nowPlayingEqualizerVisible = it },
+                setNowPlayingVideoFullscreen = { nowPlayingVideoFullscreen = it },
+                closeNowPlaying = closeNowPlaying,
+                setNowPlayingBackdropExitDurationMs = { nowPlayingBackdropExitDurationMs = it },
+                isPhone = isPhone,
+                isLandscape = isLandscape,
+                setNowPlayingPortraitExitPending = { nowPlayingPortraitExitPending = it },
+                setNowPlayingBackdropActive = { nowPlayingBackdropActive = it },
+                onShowQueue = onShowQueue,
+                onShowSleepTimer = onShowSleepTimer,
+                setNowPlayingPlaylistPickerRequest = { nowPlayingPlaylistPickerRequest = it },
+                nowPlayingHomeLayoutMode = nowPlayingHomeLayoutMode,
+                nowPlayingHomeLayoutHintDismissed = nowPlayingHomeLayoutHintDismissed,
+                nowPlayingLyricsSettings = nowPlayingLyricsSettings,
+                lyricsPageSettings = lyricsPageSettings,
+                audioOutputRouteKind = audioOutputRouteKind,
+                appVolumeWarningSessionState = appVolumeWarningSessionState,
+                albumBatchPlaylistPickerRequest = albumBatchPlaylistPickerRequest,
+                setAlbumBatchPlaylistPickerRequest = { albumBatchPlaylistPickerRequest = it }
+            )
         }
 
-        if (!nowPlayingVisible) {
-            albumBatchPlaylistPickerRequest?.let { request ->
-                val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                RoundedTopSheet(onDismissRequest = { albumBatchPlaylistPickerRequest = null }) {
-                    PlaylistPickerScreen(
-                        windowSizeClass = windowSizeClass,
-                        items = request.items,
-                        onBack = { albumBatchPlaylistPickerRequest = null },
-                        embeddedInDialog = true,
-                        viewModel = playlistsViewModel
-                    )
-                }
-            }
-        }
-
-        libraryGroupPickerAlbumId?.let { albumId ->
-            val albumGroupsViewModel: AlbumGroupsViewModel = hiltViewModel(activityViewModelStoreOwner)
-            RoundedTopSheet(onDismissRequest = { libraryGroupPickerAlbumId = null }) {
-                com.asmr.player.ui.groups.AlbumGroupPickerScreen(
-                    windowSizeClass = windowSizeClass,
-                    albumId = albumId,
-                    onBack = { libraryGroupPickerAlbumId = null },
-                    embeddedInDialog = true,
-                    viewModel = albumGroupsViewModel
-                )
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .zIndex(3f),
-            contentAlignment = Alignment.CenterEnd
-        ) {
-            if (showHardwareVolumeOverlay) {
-                DismissOutsideBoundsOverlay(
-                    targetBoundsInRoot = hardwareVolumeOverlayBounds,
-                    onDismiss = {
-                        showHardwareVolumeOverlay = false
-                        hardwareVolumeOverlayBounds = null
-                    }
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(end = 18.dp),
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                AnimatedVisibility(
-                    visible = showHardwareVolumeOverlay,
-                    enter = fadeIn(animationSpec = tween(140)) + slideInHorizontally(animationSpec = tween(180)) { it / 3 },
-                    exit = fadeOut(animationSpec = tween(160)) + slideOutHorizontally(animationSpec = tween(180)) { it / 3 }
-                ) {
-                    HardwareVolumeOverlay(
-                        modifier = Modifier.onGloballyPositioned { coordinates ->
-                            hardwareVolumeOverlayBounds = coordinates.boundsInRoot()
-                        },
-                        volumePercent = appVolumePercent,
-                        audioOutputRouteKind = audioOutputRouteKind,
-                        onVolumeChange = {
-                            playerViewModel.setAppVolumePercent(it)
-                            hardwareVolumeOverlayHoldTick += 1L
-                        },
-                        onToggleMute = {
-                            if (appVolumePercent > 0) {
-                                playerViewModel.setAppVolumePercent(0)
-                            } else {
-                                playerViewModel.setAppVolumePercent(
-                                    lastNonZeroAppVolumePercent.coerceAtLeast(AppVolume.StepPercent)
-                                )
-                            }
-                            hardwareVolumeOverlayHoldTick += 1L
-                        },
-                        onInteractionActiveChanged = { active ->
-                            hardwareVolumeOverlayInteracting = active
-                            if (!active) {
-                                hardwareVolumeOverlayHoldTick += 1L
-                            }
-                        },
-                        warningSessionState = appVolumeWarningSessionState
-                    )
-                }
-            }
-        }
-
-        val automaticUpdateAvailable = (updateState as? AppUpdateState.UpdateAvailable)
-            ?.takeIf { it.source == UpdateCheckSource.Automatic && !automaticUpdateDialogDismissed }
-
-        ClipboardRjNavigationPrompt(
-            enabled = !forceImmersive && automaticUpdateAvailable == null,
-            settingsDataStore = settingsDataStore,
-            onNavigate = { rjCode ->
-                closeNowPlaying()
-                navigator.openAlbumDetailByRjStacked(rjCode)
-            }
+        MainOverlayPickers(
+            showBatchPicker = !nowPlayingVisible,
+            albumBatchPlaylistPickerRequest = albumBatchPlaylistPickerRequest,
+            setAlbumBatchPlaylistPickerRequest = { albumBatchPlaylistPickerRequest = it },
+            libraryGroupPickerAlbumId = libraryGroupPickerAlbumId,
+            setLibraryGroupPickerAlbumId = { libraryGroupPickerAlbumId = it },
+            windowSizeClass = windowSizeClass,
+            activityViewModelStoreOwner = activityViewModelStoreOwner
         )
 
-        automaticUpdateAvailable?.let { available ->
-            val release = available.release
-            FlatActionDialog(
-                message = "发现新版本：${release.tagName}",
-                onDismissRequest = { automaticUpdateDialogDismissed = true },
-                actions = listOf(
-                    FlatDialogAction(
-                        text = "立即更新",
-                        tone = FlatDialogActionTone.Primary,
-                        onClick = {
-                            automaticUpdateDialogDismissed = true
-                            automaticUpdateInstallRequested = true
-                            settingsViewModel.downloadLatestApk()
-                            messageManager.showInfo("开始下载更新…")
-                        }
-                    ),
-                    FlatDialogAction(
-                        text = "不再提醒",
-                        tone = FlatDialogActionTone.Danger,
-                        onClick = {
-                            automaticUpdateDialogDismissed = true
-                            settingsViewModel.disableAutoUpdateCheck()
-                            messageManager.showInfo("已关闭启动时自动检查更新")
-                        }
-                    ),
-                    FlatDialogAction(
-                        text = "详情",
-                        leadingIcon = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_github),
-                                contentDescription = null,
-                                modifier = Modifier.size(15.dp)
-                            )
-                        },
-                        onClick = {
-                            automaticUpdateDialogDismissed = true
-                            if (!openUpdateReleasePage(context, release)) {
-                                messageManager.showError("无法打开 GitHub 发布页")
-                            }
-                        }
-                    )
-                )
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = "当前版本：${BuildConfig.VERSION_NAME}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colorScheme.textSecondary
-                    )
-                    if (release.title.isNotBlank() && release.title != release.tagName) {
-                        Text(
-                            text = release.title,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colorScheme.textSecondary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    if (release.apkName.isNotBlank()) {
-                        Text(
-                            text = "安装包：${release.apkName}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colorScheme.textSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-        }
+        MainVolumeOverlayHost(
+            showHardwareVolumeOverlay = showHardwareVolumeOverlay,
+            setShowHardwareVolumeOverlay = { showHardwareVolumeOverlay = it },
+            hardwareVolumeOverlayBounds = hardwareVolumeOverlayBounds,
+            setHardwareVolumeOverlayBounds = { hardwareVolumeOverlayBounds = it },
+            appVolumePercent = appVolumePercent,
+            audioOutputRouteKind = audioOutputRouteKind,
+            playerViewModel = playerViewModel,
+            bumpVolumeOverlayHoldTick = { hardwareVolumeOverlayHoldTick += 1L },
+            setHardwareVolumeOverlayInteracting = { hardwareVolumeOverlayInteracting = it },
+            lastNonZeroAppVolumePercent = lastNonZeroAppVolumePercent,
+            appVolumeWarningSessionState = appVolumeWarningSessionState
+        )
+
+        MainUpdateDialogsHost(
+            updateState = updateState,
+            automaticUpdateDialogDismissed = automaticUpdateDialogDismissed,
+            setAutomaticUpdateDialogDismissed = { automaticUpdateDialogDismissed = true },
+            setAutomaticUpdateInstallRequested = { automaticUpdateInstallRequested = true },
+            settingsViewModel = settingsViewModel,
+            messageManager = messageManager,
+            context = context,
+            colorScheme = colorScheme,
+            forceImmersive = forceImmersive,
+            settingsDataStore = settingsDataStore,
+            closeNowPlaying = closeNowPlaying,
+            navigator = navigator
+        )
     }
 }
 

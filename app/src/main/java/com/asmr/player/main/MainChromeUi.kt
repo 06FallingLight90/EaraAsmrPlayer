@@ -118,6 +118,9 @@ import android.graphics.Shader
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.navigation.NavBackStackEntry
+import com.asmr.player.ui.common.list.rememberCalmScrollableFlingBehavior
+import com.asmr.player.ui.theme.AsmrColorScheme
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.animation.*
@@ -369,5 +372,131 @@ internal fun DrawerSiteStatusFooter(
                 )
             }
         )
+    }
+}
+
+/**
+ * 主侧边抽屉内容（导航项列表 + 渐隐遮罩 + 站点状态脚注）。
+ * 从 MainContainer 提取（R2-C1b），行为保持不变。
+ */
+@Composable
+internal fun MainDrawerContent(
+    currentRoute: String?,
+    navBackStackEntry: NavBackStackEntry?,
+    drawerContainerColor: Color,
+    colorScheme: AsmrColorScheme,
+    drawerStatusViewModel: DrawerStatusViewModel,
+    onOpenPrimaryRoute: (String) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(300.dp)
+            .glassMenu(
+                shape = RoundedCornerShape(topEnd = 26.dp, bottomEnd = 26.dp),
+                baseColor = drawerContainerColor,
+                elevation = if (colorScheme.isDark) 0.dp else 6.dp,
+                isDark = colorScheme.isDark
+            )
+    ) {
+        ModalDrawerSheet(
+            drawerContainerColor = Color.Transparent,
+            drawerContentColor = colorScheme.onSurface,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            val navItems = listOf(
+                Triple(Icons.Rounded.Home, "本地库", "library"),
+                Triple(Icons.Rounded.Search, "在线搜索", "search"),
+                Triple(Icons.Rounded.Favorite, "我的收藏", "playlist_system/favorites"),
+                Triple(Icons.AutoMirrored.Rounded.QueueMusic, "我的列表", "playlists"),
+                Triple(Icons.Rounded.Folder, "我的分组", "groups"),
+                Triple(Icons.Rounded.Sync, "任务管理", "downloads"),
+                Triple(Icons.Rounded.Route, "ASMR 看板", "listening_calendar"),
+                Triple(Icons.Rounded.Settings, "设置", "settings")
+            )
+
+            Column(modifier = Modifier.fillMaxSize()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(com.asmr.player.R.drawable.ic_launcher_foreground),
+                        contentDescription = null,
+                        tint = colorScheme.onSurface,
+                        modifier = Modifier.size(46.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        stringResource(com.asmr.player.R.string.app_name),
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = colorScheme.onSurface
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        flingBehavior = rememberCalmScrollableFlingBehavior(),
+                        contentPadding = PaddingValues(top = 10.dp, bottom = 32.dp)
+                    ) {
+                        items(navItems, key = { it.third }) { (icon, label, route) ->
+                            val isAlbumDetailFromSearch =
+                                currentRoute?.startsWith("album_detail_rj") == true
+                            val isAlbumDetailFromLibrary =
+                                currentRoute?.startsWith("album_detail/") == true &&
+                                    !currentRoute.startsWith("album_detail_rj")
+                            val isSelected = when (route) {
+                                "library" -> currentRoute == route || isAlbumDetailFromLibrary
+                                "search" -> currentRoute == route || isAlbumDetailFromSearch
+                                "groups" -> currentRoute == route ||
+                                    currentRoute?.startsWith("group/") == true
+                                "playlist_system/favorites" -> {
+                                    currentRoute == "playlist_system/{type}" &&
+                                        navBackStackEntry?.arguments?.getString("type") == "favorites"
+                                }
+                                else -> currentRoute == route
+                            }
+                            DrawerNavCardItem(
+                                icon = icon,
+                                label = label,
+                                selected = isSelected,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                onClick = { onOpenPrimaryRoute(route) }
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .height(18.dp)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(drawerContainerColor, Color.Transparent)
+                                )
+                            )
+                    )
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .height(28.dp)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, drawerContainerColor)
+                                )
+                            )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                DrawerSiteStatusFooter(drawerStatusViewModel, modifier = Modifier.padding(horizontal = 18.dp))
+                Spacer(modifier = Modifier.height(18.dp))
+            }
+        }
     }
 }
