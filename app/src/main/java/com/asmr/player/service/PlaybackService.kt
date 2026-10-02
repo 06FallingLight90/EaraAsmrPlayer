@@ -1045,6 +1045,19 @@ class PlaybackService : MediaSessionService() {
                     customCommand: androidx.media3.session.SessionCommand,
                     args: android.os.Bundle
                 ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
+                    // 安全修复（20261002 体检 Quick Win #5）：4 条自定义命令
+                    // （GET_AUDIO_SESSION_ID/UPDATE_SESSION_EQ/RELOAD_LYRICS/SET_VIDEO_OUTPUT_ENABLED）
+                    // 仅对本应用进程内控制器开放。第三方 App 即使绑定 MediaSession
+                    // 也不得篡改音效/视频输出或读取 audioSessionId。
+                    // 通知控制器只拿到 DEFAULT_SESSION_COMMANDS，到不了这里；
+                    // 此闸挡的是经 onConnect 拿到自定义命令集的任意非本包控制器。
+                    if (controller.packageName != applicationContext.packageName) {
+                        return com.google.common.util.concurrent.Futures.immediateFuture(
+                            androidx.media3.session.SessionResult(
+                                androidx.media3.session.SessionResult.RESULT_ERROR_NOT_SUPPORTED
+                            )
+                        )
+                    }
                     when (customCommand.customAction) {
                         "GET_AUDIO_SESSION_ID" -> {
                             val resultBundle = android.os.Bundle()
