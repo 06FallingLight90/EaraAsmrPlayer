@@ -20,16 +20,45 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Text
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.asmr.player.main.PRIMARY_PAGER_SAVEABLE_KEY
+import com.asmr.player.main.primaryRouteSaveableKey
+import com.asmr.player.ui.nav.bottomChromeNavItems
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 private const val PRIMARY_PAGE_POSITION_TAG = "primary_page_position"
 
+/**
+ * 钉住 MainContainer 主页面 Pager 的可保存状态契约：嵌套
+ * `SaveableStateProvider(PRIMARY_PAGER_SAVEABLE_KEY)` → `SaveableStateProvider(primaryRouteSaveableKey(route))`
+ * 卸载再挂载后，页面内 rememberSaveable 的状态（如 LazyListState）必须恢复。
+ * key 字面量与生产代码共享（MainNavigationSupport），防止契约无声漂移。
+ */
 @RunWith(AndroidJUnit4::class)
 class MainContainerSaveableStateTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun primaryRouteSaveableKey_matchesProductionScheme() {
+        assertEquals("primary_route:search", primaryRouteSaveableKey("search"))
+        assertEquals("primary_route:library", primaryRouteSaveableKey("library"))
+    }
+
+    @Test
+    fun primaryChromeRoutes_areAllCoveredBySaveableScheme() {
+        val routes = bottomChromeNavItems().map { it.route }
+        assertTrue(routes.size >= 8)
+        routes.forEach { route ->
+            assertTrue(
+                "route key must be prefixed scheme: $route",
+                primaryRouteSaveableKey(route).startsWith("primary_route:")
+            )
+        }
+    }
 
     @Test
     fun primaryPagerSaveableHost_restoresLazyListStateAfterRemount() {
@@ -44,9 +73,9 @@ class MainContainerSaveableStateTest {
             setPrimaryVisible = { showPrimaryPage = it }
             requestScroll = { index, offset -> pendingScroll = index to offset }
 
-            stateHolder.SaveableStateProvider("primary_pager") {
+            stateHolder.SaveableStateProvider(PRIMARY_PAGER_SAVEABLE_KEY) {
                 if (showPrimaryPage) {
-                    stateHolder.SaveableStateProvider("primary_route:search") {
+                    stateHolder.SaveableStateProvider(primaryRouteSaveableKey("search")) {
                         SaveablePrimaryPage(
                             pendingScroll = pendingScroll,
                             onScrollHandled = { pendingScroll = null }

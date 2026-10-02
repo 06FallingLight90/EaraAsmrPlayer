@@ -198,6 +198,12 @@ import kotlinx.coroutines.flow.asStateFlow
 
 internal fun encodeRouteArg(value: String): String = URLEncoder.encode(value, "UTF-8")
 
+/** HorizontalPager 整体保存宿主的 SaveableStateProvider key（MainContainer 专用契约）。 */
+internal const val PRIMARY_PAGER_SAVEABLE_KEY = "primary_pager"
+
+/** 每个主页面 route 的 SaveableStateProvider key（MainContainer 专用契约）。 */
+internal fun primaryRouteSaveableKey(route: String): String = "primary_route:$route"
+
 internal fun decodeRouteArg(value: String): String = runCatching { URLDecoder.decode(value, "UTF-8") }
     .getOrDefault(value)
 

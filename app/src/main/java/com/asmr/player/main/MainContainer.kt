@@ -1565,7 +1565,7 @@ fun MainContainer(
                                     secondaryPageTopPadding = topContentPadding
                                 }
                             }
-                            primaryContentStateHolder.SaveableStateProvider("primary_pager") {
+                            primaryContentStateHolder.SaveableStateProvider(PRIMARY_PAGER_SAVEABLE_KEY) {
                                 HorizontalPager(
                                     state = primaryPagerState,
                                     modifier = Modifier
@@ -1608,7 +1608,7 @@ fun MainContainer(
                                             // 只更新图层位置，避免逐帧重录复杂列表和设置页的绘制命令。
                                             .graphicsLayer { clip = false }
                                     ) {
-                                        primaryContentStateHolder.SaveableStateProvider("primary_route:$route") {
+                                        primaryContentStateHolder.SaveableStateProvider(primaryRouteSaveableKey(route)) {
                                             when (route) {
                                         Routes.Library -> {
                                             LibraryScreen(
@@ -1836,455 +1836,128 @@ fun MainContainer(
                     }
                 }
 
-                NavHost(
-                                navController = navController,
-                                startDestination = initialDestination,
-                                enterTransition = {
-                                    if (isAlbumDetailStackTransition(
-                                            initialRoute = initialState.destination.route,
-                                            targetRoute = targetState.destination.route
-                                        ) || targetState.usesSecondaryPageSlideTransition()
-                                    ) {
-                                        secondaryPageEnterTransition()
-                                    } else {
-                                        EnterTransition.None
-                                    }
-                                },
-                                exitTransition = { ExitTransition.None },
-                                popEnterTransition = { EnterTransition.None },
-                                popExitTransition = {
-                                    if (isAlbumDetailStackTransition(
-                                            initialRoute = initialState.destination.route,
-                                            targetRoute = targetState.destination.route
-                                        ) || initialState.usesSecondaryPageSlideTransition()
-                                    ) {
-                                        secondaryPagePopExitTransition()
-                                    } else {
-                                        ExitTransition.None
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxSize()
+                MainNavGraph(
+                    navController = navController,
+                    startDestination = initialDestination,
+                    modifier = Modifier.fillMaxSize(),
+                    contents = buildMainRouteContents(
+                        host = MainRouteHost(
+                            navController = navController,
+                            navigator = navigator,
+                            windowSizeClass = windowSizeClass,
+                            activityViewModelStoreOwner = activityViewModelStoreOwner,
+                            playerViewModel = playerViewModel,
+                            libraryViewModel = libraryViewModel,
+                            settingsViewModel = settingsViewModel,
+                            downloadsViewModel = downloadsViewModel,
+                            scope = scope,
+                            secondaryPageTopPadding = secondaryPageTopPadding,
+                            searchAssistInitialRequest = searchAssistInitialRequest,
+                            downloadsScrollToTopSignal = downloadsScrollToTopSignal,
+                            albumDetailStackPopTargetEntryId = albumDetailStackPopTargetEntryId,
+                            setAlbumDetailStackPopTargetEntryId = { albumDetailStackPopTargetEntryId = it },
+                            setAlbumDetailPageOffsetReader = { albumDetailPageOffsetReader = it },
+                            setAlbumDetailExitInProgress = { albumDetailExitInProgress = it },
+                            setManualRjInput = { manualRjInput = it },
+                            setShowManualRjDialog = { showManualRjDialog = true },
+                            setAlbumBatchPlaylistPickerRequest = { albumBatchPlaylistPickerRequest = it },
+                            openNowPlaying = openNowPlaying,
+                            requestMiniPlayerPlayFeedback = { requestMiniPlayerPlayFeedback() },
+                            submitMetaSearchKeyword = { submitMetaSearchKeyword(it) },
+                            submitSearchAssistRequest = { submitSearchAssistRequest(it) }
+                        ),
+                        searchBridge = { backStackEntry ->
+                            val submittedKeyword by backStackEntry.savedStateHandle
+                                .getStateFlow(SEARCH_ASSIST_RESULT_KEY, "")
+                                .collectAsStateWithLifecycle()
+                            val submittedOrderName by backStackEntry.savedStateHandle
+                                .getStateFlow(SEARCH_ASSIST_RESULT_ORDER_KEY, SearchAssistSearchRequest().orderName)
+                                .collectAsStateWithLifecycle()
+                            val submittedPurchasedOnly by backStackEntry.savedStateHandle
+                                .getStateFlow(SEARCH_ASSIST_RESULT_PURCHASED_ONLY_KEY, SearchAssistSearchRequest().purchasedOnly)
+                                .collectAsStateWithLifecycle()
+                            val submittedPresaleOnly by backStackEntry.savedStateHandle
+                                .getStateFlow(SEARCH_ASSIST_RESULT_PRESALE_ONLY_KEY, SearchAssistSearchRequest().presaleOnly)
+                                .collectAsStateWithLifecycle()
+                            val submittedChineseTranslatedOnly by backStackEntry.savedStateHandle
+                                .getStateFlow(
+                                    SEARCH_ASSIST_RESULT_CHINESE_TRANSLATED_ONLY_KEY,
+                                    SearchAssistSearchRequest().chineseTranslatedOnly
+                                )
+                                .collectAsStateWithLifecycle()
+                            val submittedCollectedOnly by backStackEntry.savedStateHandle
+                                .getStateFlow(SEARCH_ASSIST_RESULT_COLLECTED_ONLY_KEY, SearchAssistSearchRequest().collectedOnly)
+                                .collectAsStateWithLifecycle()
+                            val submittedHasSubtitle by backStackEntry.savedStateHandle
+                                .getStateFlow(SEARCH_ASSIST_RESULT_HAS_SUBTITLE_KEY, SearchAssistSearchRequest().hasSubtitle)
+                                .collectAsStateWithLifecycle()
+                            val submittedAllAges by backStackEntry.savedStateHandle
+                                .getStateFlow(SEARCH_ASSIST_RESULT_ALL_AGES_KEY, SearchAssistSearchRequest().allAges)
+                                .collectAsStateWithLifecycle()
+                            val submittedCollectedSortName by backStackEntry.savedStateHandle
+                                .getStateFlow(
+                                    SEARCH_ASSIST_RESULT_COLLECTED_SORT_KEY,
+                                    SearchAssistSearchRequest().collectedSortName
+                                )
+                                .collectAsStateWithLifecycle()
+                            val submittedLocale by backStackEntry.savedStateHandle
+                                .getStateFlow(SEARCH_ASSIST_RESULT_LOCALE_KEY, SearchAssistSearchRequest().locale)
+                                .collectAsStateWithLifecycle()
+                            val submittedSignal by backStackEntry.savedStateHandle
+                                .getStateFlow(SEARCH_ASSIST_RESULT_SIGNAL_KEY, 0L)
+                                .collectAsStateWithLifecycle()
+
+                            LaunchedEffect(
+                                submittedSignal,
+                                submittedKeyword,
+                                submittedOrderName,
+                                submittedPurchasedOnly,
+                                submittedPresaleOnly,
+                                submittedChineseTranslatedOnly,
+                                submittedCollectedOnly,
+                                submittedHasSubtitle,
+                                submittedAllAges,
+                                submittedCollectedSortName,
+                                submittedLocale
                             ) {
+                                if (submittedSignal <= 0L) return@LaunchedEffect
+                                submittedSearchKeyword = submittedKeyword
+                                submittedSearchOrderName = submittedOrderName
+                                submittedSearchPurchasedOnly = submittedPurchasedOnly
+                                submittedSearchPresaleOnly = submittedPresaleOnly
+                                submittedSearchChineseTranslatedOnly = submittedChineseTranslatedOnly
+                                submittedSearchCollectedOnly = submittedCollectedOnly
+                                submittedSearchHasSubtitle = submittedHasSubtitle
+                                submittedSearchAllAges = submittedAllAges
+                                submittedSearchCollectedSortName = submittedCollectedSortName
+                                submittedSearchLocale = submittedLocale
+                                submittedSearchSignal = submittedSignal
+                                backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_KEY] = ""
+                                backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_ORDER_KEY] =
+                                    SearchAssistSearchRequest().orderName
+                                backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_PURCHASED_ONLY_KEY] =
+                                    SearchAssistSearchRequest().purchasedOnly
+                                backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_PRESALE_ONLY_KEY] =
+                                    SearchAssistSearchRequest().presaleOnly
+                                backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_CHINESE_TRANSLATED_ONLY_KEY] =
+                                    SearchAssistSearchRequest().chineseTranslatedOnly
+                                backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_COLLECTED_ONLY_KEY] =
+                                    SearchAssistSearchRequest().collectedOnly
+                                backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_HAS_SUBTITLE_KEY] =
+                                    SearchAssistSearchRequest().hasSubtitle
+                                backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_ALL_AGES_KEY] =
+                                    SearchAssistSearchRequest().allAges
+                                backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_COLLECTED_SORT_KEY] =
+                                    SearchAssistSearchRequest().collectedSortName
+                                backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_LOCALE_KEY] =
+                                    SearchAssistSearchRequest().locale
+                                backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_SIGNAL_KEY] = 0L
+                            }
 
-                composable("library") {
-                    Box(modifier = Modifier.fillMaxSize())
-                }
-                                composable("library_filter") {
-                    SecondaryPageBackground(topPadding = secondaryPageTopPadding) {
-                        LibraryFilterScreen(
-                            onClose = { navController.popBackStack() },
-                            viewModel = libraryViewModel
-                        )
-                    }
-                }
-                composable("search") { backStackEntry ->
-                    val submittedKeyword by backStackEntry.savedStateHandle
-                        .getStateFlow(SEARCH_ASSIST_RESULT_KEY, "")
-                        .collectAsStateWithLifecycle()
-                    val submittedOrderName by backStackEntry.savedStateHandle
-                        .getStateFlow(SEARCH_ASSIST_RESULT_ORDER_KEY, SearchAssistSearchRequest().orderName)
-                        .collectAsStateWithLifecycle()
-                    val submittedPurchasedOnly by backStackEntry.savedStateHandle
-                        .getStateFlow(SEARCH_ASSIST_RESULT_PURCHASED_ONLY_KEY, SearchAssistSearchRequest().purchasedOnly)
-                        .collectAsStateWithLifecycle()
-                    val submittedPresaleOnly by backStackEntry.savedStateHandle
-                        .getStateFlow(SEARCH_ASSIST_RESULT_PRESALE_ONLY_KEY, SearchAssistSearchRequest().presaleOnly)
-                        .collectAsStateWithLifecycle()
-                    val submittedChineseTranslatedOnly by backStackEntry.savedStateHandle
-                        .getStateFlow(
-                            SEARCH_ASSIST_RESULT_CHINESE_TRANSLATED_ONLY_KEY,
-                            SearchAssistSearchRequest().chineseTranslatedOnly
-                        )
-                        .collectAsStateWithLifecycle()
-                    val submittedCollectedOnly by backStackEntry.savedStateHandle
-                        .getStateFlow(SEARCH_ASSIST_RESULT_COLLECTED_ONLY_KEY, SearchAssistSearchRequest().collectedOnly)
-                        .collectAsStateWithLifecycle()
-                    val submittedHasSubtitle by backStackEntry.savedStateHandle
-                        .getStateFlow(SEARCH_ASSIST_RESULT_HAS_SUBTITLE_KEY, SearchAssistSearchRequest().hasSubtitle)
-                        .collectAsStateWithLifecycle()
-                    val submittedAllAges by backStackEntry.savedStateHandle
-                        .getStateFlow(SEARCH_ASSIST_RESULT_ALL_AGES_KEY, SearchAssistSearchRequest().allAges)
-                        .collectAsStateWithLifecycle()
-                    val submittedCollectedSortName by backStackEntry.savedStateHandle
-                        .getStateFlow(
-                            SEARCH_ASSIST_RESULT_COLLECTED_SORT_KEY,
-                            SearchAssistSearchRequest().collectedSortName
-                        )
-                        .collectAsStateWithLifecycle()
-                    val submittedLocale by backStackEntry.savedStateHandle
-                        .getStateFlow(SEARCH_ASSIST_RESULT_LOCALE_KEY, SearchAssistSearchRequest().locale)
-                        .collectAsStateWithLifecycle()
-                    val submittedSignal by backStackEntry.savedStateHandle
-                        .getStateFlow(SEARCH_ASSIST_RESULT_SIGNAL_KEY, 0L)
-                        .collectAsStateWithLifecycle()
-
-                    LaunchedEffect(
-                        submittedSignal,
-                        submittedKeyword,
-                        submittedOrderName,
-                        submittedPurchasedOnly,
-                        submittedPresaleOnly,
-                        submittedChineseTranslatedOnly,
-                        submittedCollectedOnly,
-                        submittedHasSubtitle,
-                        submittedAllAges,
-                        submittedCollectedSortName,
-                        submittedLocale
-                    ) {
-                        if (submittedSignal <= 0L) return@LaunchedEffect
-                        submittedSearchKeyword = submittedKeyword
-                        submittedSearchOrderName = submittedOrderName
-                        submittedSearchPurchasedOnly = submittedPurchasedOnly
-                        submittedSearchPresaleOnly = submittedPresaleOnly
-                        submittedSearchChineseTranslatedOnly = submittedChineseTranslatedOnly
-                        submittedSearchCollectedOnly = submittedCollectedOnly
-                        submittedSearchHasSubtitle = submittedHasSubtitle
-                        submittedSearchAllAges = submittedAllAges
-                        submittedSearchCollectedSortName = submittedCollectedSortName
-                        submittedSearchLocale = submittedLocale
-                        submittedSearchSignal = submittedSignal
-                        backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_KEY] = ""
-                        backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_ORDER_KEY] =
-                            SearchAssistSearchRequest().orderName
-                        backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_PURCHASED_ONLY_KEY] =
-                            SearchAssistSearchRequest().purchasedOnly
-                        backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_PRESALE_ONLY_KEY] =
-                            SearchAssistSearchRequest().presaleOnly
-                        backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_CHINESE_TRANSLATED_ONLY_KEY] =
-                            SearchAssistSearchRequest().chineseTranslatedOnly
-                        backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_COLLECTED_ONLY_KEY] =
-                            SearchAssistSearchRequest().collectedOnly
-                        backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_HAS_SUBTITLE_KEY] =
-                            SearchAssistSearchRequest().hasSubtitle
-                        backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_ALL_AGES_KEY] =
-                            SearchAssistSearchRequest().allAges
-                        backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_COLLECTED_SORT_KEY] =
-                            SearchAssistSearchRequest().collectedSortName
-                        backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_LOCALE_KEY] =
-                            SearchAssistSearchRequest().locale
-                        backStackEntry.savedStateHandle[SEARCH_ASSIST_RESULT_SIGNAL_KEY] = 0L
-                    }
-
-                    Box(modifier = Modifier.fillMaxSize())
-                }
-                composable(route = Routes.SearchAssist) {
-                    SecondaryPageBackground(topPadding = secondaryPageTopPadding) {
-                        SearchAssistScreen(
-                            windowSizeClass = windowSizeClass,
-                            initialRequest = searchAssistInitialRequest,
-                            onSubmitSearch = ::submitSearchAssistRequest
-                        )
-                    }
-                }
-                composable(
-                    route = Routes.SearchAssistPattern,
-                    arguments = listOf(
-                        navArgument("keyword") {
-                            type = NavType.StringType
-                            defaultValue = ""
+                            Box(modifier = Modifier.fillMaxSize())
                         }
                     )
-                ) { backStackEntry ->
-                    val initialKeyword = Uri.decode(
-                        backStackEntry.arguments?.getString("keyword").orEmpty()
-                    )
-                    val initialRequest = if (initialKeyword.isBlank()) {
-                        searchAssistInitialRequest
-                    } else {
-                        searchAssistInitialRequest.copy(keyword = initialKeyword)
-                    }
-
-                    SecondaryPageBackground(topPadding = secondaryPageTopPadding) {
-                        SearchAssistScreen(
-                            windowSizeClass = windowSizeClass,
-                            initialRequest = initialRequest,
-                            onSubmitSearch = ::submitSearchAssistRequest
-                        )
-                    }
-                }
-                composable("hot_listening") {
-                    Box(modifier = Modifier.fillMaxSize())
-                }
-                composable(
-                    route = Routes.AlbumDetailByRjPattern,
-                    arguments = listOf(
-                        navArgument("rj") { defaultValue = "" },
-                        navArgument("initialTab") { type = NavType.StringType; nullable = true; defaultValue = null }
-                    )
-                ) { backStackEntry ->
-                    val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    val albumGroupsViewModel: AlbumGroupsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    val rj = backStackEntry.arguments?.getString("rj").orEmpty()
-                    AlbumDetailRouteFrame(
-                        backStackEntry = backStackEntry,
-                        previousBackStackEntry = navController.previousBackStackEntry,
-                        stackPopTargetEntryId = albumDetailStackPopTargetEntryId,
-                        onPopBackStack = { targetEntryId ->
-                            albumDetailStackPopTargetEntryId = targetEntryId
-                            navController.popBackStack()
-                        },
-                        onPageOffsetReader = { reader ->
-                            if (navController.currentBackStackEntry?.id == backStackEntry.id) {
-                                albumDetailPageOffsetReader = reader
-                            }
-                        },
-                        onExitStateChanged = { albumDetailExitInProgress = it },
-                        onEditRj = { currentRj ->
-                            manualRjInput = currentRj
-                            showManualRjDialog = true
-                        }
-                    ) { albumDetailViewModel, heroBlurLayerCache ->
-                        AlbumDetailScreen(
-                            windowSizeClass = windowSizeClass,
-                            rjCode = rj,
-                            initialTab = backStackEntry.arguments
-                                ?.getString("initialTab")
-                                .toAlbumDetailInitialTab(),
-                            onPlayTracks = { album, tracks, startTrack ->
-                                scope.launch {
-                                    if (playerViewModel.playTracksPrepared(album, tracks, startTrack)) {
-                                        requestMiniPlayerPlayFeedback()
-                                    }
-                                }
-                            },
-                            onPlayMediaItems = { items, startIndex ->
-                                playerViewModel.playMediaItems(items, startIndex)
-                                val startItem = items.getOrNull(startIndex)
-                                if (startItem.isVideoPlaybackItem()) {
-                                    openNowPlaying()
-                                } else if (startItem != null) {
-                                    requestMiniPlayerPlayFeedback()
-                                }
-                            },
-                            onAddToQueue = { album, track ->
-                                playerViewModel.addTrackToQueue(album, track)
-                            },
-                            onAddMediaItemsToQueue = { items ->
-                                playerViewModel.addMediaItemsToQueue(items)
-                            },
-                            onAddMediaItemsToFavorites = { items ->
-                                playlistsViewModel.addItemsToFavoritesInBackground(items)
-                            },
-                            onOpenPlaylistPicker = { item ->
-                                albumBatchPlaylistPickerRequest = BatchPlaylistPickerRequest(listOf(item))
-                            },
-                            onOpenDlsiteLogin = { navController.navigateSingleTop("dlsite_login") },
-                            onOpenAlbumByRj = { targetRj, work ->
-                                AlbumCoverHintStore.record(
-                                    albumId = null,
-                                    rjCode = targetRj,
-                                    title = work?.title,
-                                    circle = null,
-                                    coverUrl = resolveRecommendedWorkHeroCoverUrl(targetRj, work?.coverUrl)
-                                )
-                                navigator.openAlbumDetailByRjStacked(targetRj)
-                            },
-                            onSearchKeyword = ::submitMetaSearchKeyword,
-                            playlistsViewModel = playlistsViewModel,
-                            albumGroupsViewModel = albumGroupsViewModel,
-                            settingsViewModel = settingsViewModel,
-                            libraryViewModel = libraryViewModel,
-                            heroBlurLayerCache = heroBlurLayerCache,
-                            viewModel = albumDetailViewModel
-                        )
-                    }
-                }
-                composable(
-                    route = Routes.AlbumDetailByIdPattern,
-                    arguments = listOf(
-                        navArgument("albumId") { type = NavType.LongType },
-                        navArgument("rjCode") { type = NavType.StringType; nullable = true; defaultValue = null },
-                        navArgument("initialTab") { type = NavType.StringType; nullable = true; defaultValue = null }
-                    )
-                ) { backStackEntry ->
-                    val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    val albumGroupsViewModel: AlbumGroupsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    val albumId = backStackEntry.arguments?.getLong("albumId") ?: 0L
-                    val rjCode = backStackEntry.arguments?.getString("rjCode")
-                    AlbumDetailRouteFrame(
-                        backStackEntry = backStackEntry,
-                        previousBackStackEntry = navController.previousBackStackEntry,
-                        stackPopTargetEntryId = albumDetailStackPopTargetEntryId,
-                        onPopBackStack = { targetEntryId ->
-                            albumDetailStackPopTargetEntryId = targetEntryId
-                            navController.popBackStack()
-                        },
-                        onPageOffsetReader = { reader ->
-                            if (navController.currentBackStackEntry?.id == backStackEntry.id) {
-                                albumDetailPageOffsetReader = reader
-                            }
-                        },
-                        onExitStateChanged = { albumDetailExitInProgress = it },
-                        onLocalAlbumRemoved = { removed ->
-                            playerViewModel.removeAlbumFromQueue(removed.albumId, removed.mediaIds)
-                        },
-                        onEditRj = { currentRj ->
-                            manualRjInput = currentRj
-                            showManualRjDialog = true
-                        }
-                    ) { albumDetailViewModel, heroBlurLayerCache ->
-                        AlbumDetailScreen(
-                            windowSizeClass = windowSizeClass,
-                            albumId = albumId,
-                            rjCode = rjCode,
-                            initialTab = backStackEntry.arguments
-                                ?.getString("initialTab")
-                                .toAlbumDetailInitialTab(),
-                            onPlayTracks = { album, tracks, startTrack ->
-                                scope.launch {
-                                    if (playerViewModel.playTracksPrepared(album, tracks, startTrack)) {
-                                        requestMiniPlayerPlayFeedback()
-                                    }
-                                }
-                            },
-                            onPlayMediaItems = { items, startIndex ->
-                                playerViewModel.playMediaItems(items, startIndex)
-                                val startItem = items.getOrNull(startIndex)
-                                if (startItem.isVideoPlaybackItem()) {
-                                    openNowPlaying()
-                                } else if (startItem != null) {
-                                    requestMiniPlayerPlayFeedback()
-                                }
-                            },
-                            onAddToQueue = { album, track ->
-                                playerViewModel.addTrackToQueue(album, track)
-                            },
-                            onAddMediaItemsToQueue = { items ->
-                                playerViewModel.addMediaItemsToQueue(items)
-                            },
-                            onAddMediaItemsToFavorites = { items ->
-                                playlistsViewModel.addItemsToFavoritesInBackground(items)
-                            },
-                            onOpenPlaylistPicker = { item ->
-                                albumBatchPlaylistPickerRequest = BatchPlaylistPickerRequest(listOf(item))
-                            },
-                            onOpenDlsiteLogin = { navController.navigateSingleTop("dlsite_login") },
-                            onOpenAlbumByRj = { targetRj, work ->
-                                AlbumCoverHintStore.record(
-                                    albumId = null,
-                                    rjCode = targetRj,
-                                    title = work?.title,
-                                    circle = null,
-                                    coverUrl = resolveRecommendedWorkHeroCoverUrl(targetRj, work?.coverUrl)
-                                )
-                                navigator.openAlbumDetailByRjStacked(targetRj)
-                            },
-                            onSearchKeyword = ::submitMetaSearchKeyword,
-                            playlistsViewModel = playlistsViewModel,
-                            albumGroupsViewModel = albumGroupsViewModel,
-                            settingsViewModel = settingsViewModel,
-                            libraryViewModel = libraryViewModel,
-                            heroBlurLayerCache = heroBlurLayerCache,
-                            viewModel = albumDetailViewModel
-                        )
-                    }
-                }
-                composable("playlists") {
-                    Box(modifier = Modifier.fillMaxSize())
-                }
-                composable("groups") {
-                    Box(modifier = Modifier.fillMaxSize())
-                }
-                composable(
-                    route = "group/{groupId}/{groupName}",
-                    arguments = listOf(
-                        navArgument("groupId") { type = NavType.LongType; defaultValue = 0L },
-                        navArgument("groupName") { defaultValue = "" }
-                    )
-                ) { backStackEntry ->
-                    val groupId = backStackEntry.arguments?.getLong("groupId") ?: 0L
-                    val groupName = decodeRouteArg(backStackEntry.arguments?.getString("groupName").orEmpty())
-                    SecondaryPageBackground(topPadding = secondaryPageTopPadding) {
-                        com.asmr.player.ui.groups.AlbumGroupDetailScreen(
-                            windowSizeClass = windowSizeClass,
-                            groupId = groupId,
-                            title = groupName,
-                            onPlayMediaItems = { items, startIndex ->
-                                playerViewModel.playMediaItems(items, startIndex)
-                                val startItem = items.getOrNull(startIndex)
-                                if (startItem.isVideoPlaybackItem()) {
-                                    openNowPlaying()
-                                } else if (startItem != null) {
-                                    requestMiniPlayerPlayFeedback()
-                                }
-                            }
-                        )
-                    }
-                }
-                composable(
-                    route = "playlist/{playlistId}/{playlistName}",
-                    arguments = listOf(
-                        navArgument("playlistId") { type = NavType.LongType; defaultValue = 0L },
-                        navArgument("playlistName") { defaultValue = "" }
-                    )
-                ) { backStackEntry ->
-                    val playlistId = backStackEntry.arguments?.getLong("playlistId") ?: 0L
-                    val playlistName = decodeRouteArg(backStackEntry.arguments?.getString("playlistName").orEmpty())
-                    SecondaryPageBackground(topPadding = secondaryPageTopPadding) {
-                        PlaylistDetailScreen(
-                            windowSizeClass = windowSizeClass,
-                            playlistId = playlistId,
-                            title = playlistName,
-                            onPlayAll = { items, startItem ->
-                                playerViewModel.playPlaylistItems(items, startItem)
-                                if (startItem.isVideoPlaybackItem()) {
-                                    openNowPlaying()
-                                } else {
-                                    requestMiniPlayerPlayFeedback()
-                                }
-                            }
-                        )
-                    }
-                }
-                composable("playlist_system/{type}") { backStackEntry ->
-                    val type = backStackEntry.arguments?.getString("type").orEmpty()
-                    if (type == "favorites") {
-                        Box(modifier = Modifier.fillMaxSize())
-                    } else {
-                        val playlistsViewModel: PlaylistsViewModel = hiltViewModel(activityViewModelStoreOwner)
-                        SecondaryPageBackground(topPadding = secondaryPageTopPadding) {
-                            SystemPlaylistScreen(
-                                windowSizeClass = windowSizeClass,
-                                onPlayAll = { items, startItem ->
-                                    playerViewModel.playPlaylistItems(items, startItem)
-                                    if (startItem.isVideoPlaybackItem()) {
-                                        openNowPlaying()
-                                    } else {
-                                        requestMiniPlayerPlayFeedback()
-                                    }
-                                },
-                                viewModel = playlistsViewModel
-                            )
-                        }
-                    }
-                }
-                composable("settings") {
-                    Box(modifier = Modifier.fillMaxSize())
-                }
-                composable("downloads") {
-                    SecondaryPageBackground(topPadding = secondaryPageTopPadding) {
-                        DownloadsScreen(
-                            windowSizeClass = windowSizeClass,
-                            scrollToTopSignal = downloadsScrollToTopSignal,
-                            viewModel = downloadsViewModel
-                        )
-                    }
-                }
-                composable("dlsite_login") {
-                    val dlsiteLoginViewModel: DlsiteLoginViewModel = hiltViewModel(activityViewModelStoreOwner)
-                    SecondaryPageBackground(topPadding = secondaryPageTopPadding) {
-                        DlsiteLoginScreen(
-                            windowSizeClass = windowSizeClass,
-                            onDone = { navController.popBackStack() },
-                            viewModel = dlsiteLoginViewModel
-                        )
-                    }
-                }
-                composable("listening_calendar") {
-                    Box(modifier = Modifier.fillMaxSize())
-                }
-            }
+                )
 
                     if (blockNavTouches || albumDetailExitInProgress) {
                         if (isAlbumDetailRoute) {
