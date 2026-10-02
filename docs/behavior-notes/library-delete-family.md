@@ -80,6 +80,15 @@
 - `rescanDocumentAlbum(albumId, coverPath, treePrefix, ...)`：单事务。专辑缺失早退（persistedPaths 保持空表）→ coverPath 非空更新 → persistedPaths 计算 → treePrefix 旧轨清理（**只删字幕+轨，不删远程源/轨标签**——原样）→ 插入 specs + 字幕。
 - 平台接缝（fileSizeQuery/stampProvider/uriOrFileExists/fileExists/resolveLegacyDir）由 VM 注入。
 
+## 六、附录（R2-B4c 读族）
+- `data/repository/LibraryReadRepository.kt`（@Singleton，构造注入 AppDatabase）：全部为**透传**，编排（availableCvs 拆分去重排序、userTagsBy* associate、Pager/flatMapLatest/cachedIn、expandedTrackAlbumTracks combine）留在 VM，行为逐字不变。
+- 流直出：observeTagsWithCounts / observeAlbumTagsBySource / observeTrackTagsBySource / observeDistinctCircles / observeDistinctCvs / observeLibraryTracks（SupportSQLiteQuery 参数）。
+- PagingSource factory 参数化：albumsPaged / libraryTrackAlbumHeadersPaged（原 VM Pager pagingSourceFactory 内直调 DAO → 改经 read repo，Pager 生命周期/flatMapLatest 语义不变）。
+- 一次性查询：getAlbumById / getAllAlbumsOnce / getTracksForAlbumOnce / getTracksByIdsOnce / getTrackByIdOnce / getExistingTagIds / countTags / getOnlineSavedResourcesForAlbum / getDownloadTaskByRootDir。
+- write repo 补透传：insertAlbum（REPLACE 策略）/ deleteDownloadTaskWithItems（先条目后任务、各自 runCatching，原 deleteAlbum 收尾逐字）。
+- VM 的 upsertLocalTreeCache（file-album 路径）改调 write repo internal 版，CacheLeafEntry→ScanCacheLeaf 经 `TreeFileType.valueOf(name)` 映射（枚举名一致，**Gson 载荷 JSON 不变**）；stampProvider 仍为 VM 的 computePathsStamp。
+- VM 构造已无 database/albumDao/trackDao；DAO import 残余仅流式出口 Row 类型 3 条（LibraryTrackRow/LibraryTrackAlbumHeaderRow/TagWithCount）+ okhttp 2 条（阶段 C 范围），均在 ci_guard baseline。
+
 ## 验证
 - seam 测试：`app/src/test/java/com/asmr/player/data/repository/LibraryWriteRepositoryTest.kt`（Robolectric + 内存 Room，逐条对应上文契约）。
 - 全量测试基线只增不减（895/0/4 起，B4a 后）。

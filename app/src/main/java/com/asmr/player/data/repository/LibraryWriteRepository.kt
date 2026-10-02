@@ -385,6 +385,15 @@ class LibraryWriteRepository @Inject constructor(
         database.localTreeCacheDao().deleteByAlbum(albumId)
     }
 
+    /** 插入专辑行（REPLACE 冲突策略，原 VM 直调 albumDao.insertAlbum 透传）。 */
+    suspend fun insertAlbum(entity: AlbumEntity): Long = database.albumDao().insertAlbum(entity)
+
+    /** 删下载任务及其条目：先条目后任务，各自 runCatching 吞错（与原 VM deleteAlbum 收尾逐字一致）。 */
+    suspend fun deleteDownloadTaskWithItems(taskId: Long) {
+        runCatching { database.downloadDao().deleteItemsForTask(taskId) }
+        runCatching { database.downloadDao().deleteTaskById(taskId) }
+    }
+
     /** 下载目录缺失清理事务（原 pruneMissingDownloadedAlbums 事务体逐字下沉；missing 筛选含 File.exists 在调用方）。 */
     suspend fun pruneMissingDownloadedAlbums(missing: List<AlbumEntity>) {
         database.withTransaction {
