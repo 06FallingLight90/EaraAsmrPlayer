@@ -6,4 +6,3 @@ app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt: 2641
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailDirectorySupport.kt: 2705
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailDlsiteTabs.kt: 1935
 app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt: 2186
-app/src/main/java/com/asmr/player/ui/settings/SettingsScreen.kt: 2675
