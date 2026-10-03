@@ -639,7 +639,7 @@ internal fun NowPlayingScreen(
                 else -> NowPlayingMotionLayout.PORTRAIT
             }
 
-            if (split) {
+            if (split || phoneLandscape) {
             NowPlayingLandscapeLayout(
                 split = split,
                 phoneLandscape = phoneLandscape,
