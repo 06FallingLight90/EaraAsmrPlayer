@@ -20,6 +20,10 @@ import com.asmr.player.data.download.DownloadDestinationStore
 import com.asmr.player.data.download.DownloadStorageGateway
 import com.asmr.player.data.download.DownloadStorageEntry
 import com.asmr.player.data.download.DownloadDirectoryCoordinator
+import com.asmr.player.data.download.downloadMimeType
+import com.asmr.player.data.download.parseDownloadedSubtitles
+import com.asmr.player.data.download.replaceMatchedOnlineTracksWithLocalTracks
+import com.asmr.player.data.download.resolveDownloadedAlbumCoverPath
 
 @RunWith(RobolectricTestRunner::class)
 class DownloadLibraryMergeTest {

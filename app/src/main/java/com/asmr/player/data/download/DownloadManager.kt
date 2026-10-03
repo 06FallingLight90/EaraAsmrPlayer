@@ -1,4 +1,4 @@
-package com.asmr.player.data.remote.download
+package com.asmr.player.data.download
 
 import android.content.Context
 import android.util.Log
@@ -6,6 +6,8 @@ import androidx.room.withTransaction
 import androidx.work.*
 import com.asmr.player.data.remote.auth.DlsiteAuthStore
 import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.data.remote.download.DOWNLOAD_STATE_QUEUED
+import com.asmr.player.data.remote.download.DownloadQueueCoordinator
 import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.data.local.db.entities.AlbumFtsEntity
 import com.asmr.player.data.local.db.dao.DownloadDao
@@ -40,11 +42,6 @@ import java.util.zip.ZipFile
 import kotlin.math.max
 import javax.inject.Inject
 import javax.inject.Singleton
-import com.asmr.player.data.download.DownloadStorageEntry
-import com.asmr.player.data.download.DownloadStorageGateway
-import com.asmr.player.data.download.DownloadDestinationStore
-import com.asmr.player.data.download.DownloadDestination
-import com.asmr.player.data.download.DownloadDirectoryCoordinator
 
 private const val DLSITE_PLAY_SCRAMBLED_PART_SUFFIX = ".dlsite-scrambled.part"
 

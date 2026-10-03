@@ -16,6 +16,12 @@ import java.io.File
 import java.util.UUID
 import kotlin.math.max
 import com.asmr.player.data.download.DownloadStorageGateway
+import com.asmr.player.data.download.downloadStagingFile
+import com.asmr.player.data.download.dlsitePlayImagePartFile
+import com.asmr.player.data.download.hasDlsitePlayImageTransform
+import com.asmr.player.data.download.downloadMimeType
+import com.asmr.player.data.download.finalizeDlsiteLosslessArchiveInStorageIfNeeded
+import com.asmr.player.data.download.finalizeDlsiteLosslessArchiveIfNeeded
 
 object DownloadQueueCoordinator {
     private const val ACTIVE_WORK_RECONCILE_GRACE_MS = 30_000L

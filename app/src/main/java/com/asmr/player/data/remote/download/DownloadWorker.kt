@@ -33,6 +33,13 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import com.asmr.player.data.download.DownloadStorageGateway
+import com.asmr.player.data.download.downloadStagingFile
+import com.asmr.player.data.download.dlsitePlayImagePartFile
+import com.asmr.player.data.download.hasDlsitePlayImageTransform
+import com.asmr.player.data.download.downloadMimeType
+import com.asmr.player.data.download.finalizeDlsiteLosslessArchiveInStorageIfNeeded
+import com.asmr.player.data.download.finalizeDlsiteLosslessArchiveIfNeeded
+import com.asmr.player.data.download.upsertDownloadedAlbumToLibrary
 
 class DownloadWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
     @EntryPoint

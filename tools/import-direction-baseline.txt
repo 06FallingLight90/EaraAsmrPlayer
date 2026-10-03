@@ -63,10 +63,6 @@ app/src/main/java/com/asmr/player/ui/common/status/SiteStatusComponents.kt com.a
 app/src/main/java/com/asmr/player/ui/common/status/SiteStatusComponents.kt com.asmr.player.ui.drawer.SiteStatusType
 app/src/main/java/com/asmr/player/ui/dlsite/DlsiteLoginViewModel.kt com.asmr.player.data.remote.auth.DlsiteAuthStore
 app/src/main/java/com/asmr/player/ui/dlsite/DlsiteLoginViewModel.kt com.asmr.player.data.remote.auth.DlsiteLoginClient
-app/src/main/java/com/asmr/player/ui/dlsite/DlsitePlayViewModel.kt com.asmr.player.data.remote.download.DownloadBatchRequest
-app/src/main/java/com/asmr/player/ui/dlsite/DlsitePlayViewModel.kt com.asmr.player.data.remote.download.DownloadManager
-app/src/main/java/com/asmr/player/ui/dlsite/DlsitePlayViewModel.kt com.asmr.player.data.remote.download.EnqueueDownloadBatchResult
-app/src/main/java/com/asmr/player/ui/dlsite/DlsitePlayViewModel.kt com.asmr.player.data.remote.download.RelativeDownloadItem
 app/src/main/java/com/asmr/player/ui/downloads/DownloadsViewModel.kt com.asmr.player.data.local.db.AppDatabaseProvider
 app/src/main/java/com/asmr/player/ui/drawer/DrawerStatusViewModel.kt com.asmr.player.data.remote.NetworkHeaders
 app/src/main/java/com/asmr/player/ui/drawer/DrawerStatusViewModel.kt com.asmr.player.data.remote.api.AsmrOneEndpoint
@@ -118,10 +114,6 @@ app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.pl
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.remote.dlsite.resolveCloudSyncWorkId
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.remote.dlsite.resolveDlsiteCloudSync
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.remote.dlsite.resolveSelectedDlsiteCloudSync
-app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.remote.download.DownloadBatchRequest
-app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.remote.download.DownloadManager
-app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.remote.download.EnqueueDownloadBatchResult
-app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.remote.download.RelativeDownloadItem
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.remote.scraper.DLSiteScraper
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.remote.scraper.DlsiteRecommendations
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.remote.scraper.DlsiteRecommendedWork

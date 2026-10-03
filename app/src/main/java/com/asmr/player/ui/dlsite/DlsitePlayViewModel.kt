@@ -2,10 +2,10 @@ package com.asmr.player.ui.dlsite
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.asmr.player.data.remote.download.DownloadBatchRequest
-import com.asmr.player.data.remote.download.EnqueueDownloadBatchResult
-import com.asmr.player.data.remote.download.DownloadManager
-import com.asmr.player.data.remote.download.RelativeDownloadItem
+import com.asmr.player.data.download.DownloadBatchRequest
+import com.asmr.player.data.download.EnqueueDownloadBatchResult
+import com.asmr.player.data.download.DownloadManager
+import com.asmr.player.data.download.RelativeDownloadItem
 import com.asmr.player.util.MessageManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject

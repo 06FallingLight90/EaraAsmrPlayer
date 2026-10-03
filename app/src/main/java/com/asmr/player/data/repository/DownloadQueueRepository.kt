@@ -10,8 +10,8 @@ import com.asmr.player.data.local.db.entities.DownloadTaskEntity
 import com.asmr.player.data.remote.download.DOWNLOAD_STATE_QUEUED
 import com.asmr.player.data.remote.download.DownloadQueueCoordinator
 import com.asmr.player.data.remote.download.FinalizeDownloadTaskWorker
-import com.asmr.player.data.remote.download.downloadStagingFile
-import com.asmr.player.data.remote.download.dlsitePlayImagePartFile
+import com.asmr.player.data.download.downloadStagingFile
+import com.asmr.player.data.download.dlsitePlayImagePartFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject

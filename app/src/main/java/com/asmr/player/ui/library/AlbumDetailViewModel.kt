@@ -49,10 +49,10 @@ import com.asmr.player.data.remote.dlsite.parseDlsitePlayImageSeed
 import com.asmr.player.data.remote.dlsite.resolveCloudSyncWorkId
 import com.asmr.player.data.remote.dlsite.resolveDlsiteCloudSync
 import com.asmr.player.data.remote.dlsite.resolveSelectedDlsiteCloudSync
-import com.asmr.player.data.remote.download.DownloadManager
-import com.asmr.player.data.remote.download.DownloadBatchRequest
-import com.asmr.player.data.remote.download.EnqueueDownloadBatchResult
-import com.asmr.player.data.remote.download.RelativeDownloadItem
+import com.asmr.player.data.download.DownloadManager
+import com.asmr.player.data.download.DownloadBatchRequest
+import com.asmr.player.data.download.EnqueueDownloadBatchResult
+import com.asmr.player.data.download.RelativeDownloadItem
 import com.asmr.player.data.remote.scraper.DLSiteScraper
 import com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 import com.asmr.player.data.remote.scraper.DlsiteRecommendations
