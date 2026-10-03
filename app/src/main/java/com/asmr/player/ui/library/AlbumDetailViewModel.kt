@@ -45,8 +45,6 @@ import com.asmr.player.data.remote.dlsite.DlsiteProductInfoClient
 import com.asmr.player.data.remote.dlsite.descrambleDlsitePlayBitmap
 import com.asmr.player.data.remote.dlsite.parseDlsitePlayImageSeed
 import com.asmr.player.data.remote.dlsite.resolveCloudSyncWorkId
-import com.asmr.player.data.remote.dlsite.resolveDlsiteCloudSync
-import com.asmr.player.data.remote.dlsite.resolveSelectedDlsiteCloudSync
 import com.asmr.player.data.download.DownloadManager
 import com.asmr.player.data.download.DownloadBatchRequest
 import com.asmr.player.data.download.EnqueueDownloadBatchResult
@@ -125,7 +123,6 @@ import com.asmr.player.ui.library.albumdetail.withUpdatedLocalCover
 import com.asmr.player.ui.library.albumdetail.withResolvedWorkIdentity
 import com.asmr.player.ui.library.albumdetail.buildAlbumDetailSimilarWorks
 import com.asmr.player.ui.library.albumdetail.buildDlsiteTrialDownloadTree
-import com.asmr.player.ui.library.albumdetail.centerCropSquare
 import com.asmr.player.ui.library.albumdetail.collectLocalSelectionFiles
 import com.asmr.player.ui.library.albumdetail.defaultDlsiteEditions
 import com.asmr.player.ui.library.albumdetail.flattenAsmrOneLeafDownloads
@@ -643,74 +640,6 @@ class AlbumDetailViewModel @Inject constructor(
         }
     }
 
-    private suspend fun resolveManualCloudSync(
-        entity: AlbumEntity,
-        baseWorkno: String
-    ): DlsiteCloudSyncResolveResult {
-        return resolveDlsiteCloudSync(
-            keyword = entity.title.trim(),
-            baseWorkno = baseWorkno,
-            search = { searchKeyword, locale ->
-                dlsiteScraper.search(searchKeyword, page = 1, order = "trend", locale = locale).items
-            },
-            fetchLanguageEditions = { productId ->
-                dlsiteProductInfoClient.fetchLanguageEditions(productId)
-            },
-            fetchDetails = { workno, locale ->
-                dlsiteScraper.getDetails(workno, locale = locale)
-            }
-        )
-    }
-
-    private suspend fun resolveSelectedManualCloudSync(workno: String): DlsiteCloudSyncResolveResult {
-        return resolveSelectedDlsiteCloudSync(
-            workno = workno,
-            fetchLanguageEditions = { productId ->
-                dlsiteProductInfoClient.fetchLanguageEditions(productId)
-            },
-            fetchDetails = { selectedWorkno, locale ->
-                dlsiteScraper.getDetails(selectedWorkno, locale = locale)
-            }
-        )
-    }
-
-    private suspend fun applyManualCloudSyncSuccess(
-        entity: AlbumEntity,
-        updatedWorkId: String,
-        result: DlsiteCloudSyncResolveResult.Success
-    ): String {
-        val resolvedWorkno = result.workno
-        val details = result.details
-        val oldTitle = entity.title.trim()
-        val newTitle = details.title.trim()
-        val finalTitle = when {
-            oldTitle.isNotBlank() && newTitle.isBlank() -> oldTitle
-            oldTitle.isNotBlank() && newTitle.isNotBlank() && oldTitle.contains(newTitle) && oldTitle.length > newTitle.length -> oldTitle
-            else -> newTitle.ifBlank { oldTitle }
-        }
-        val updated = entity.copy(
-            title = finalTitle,
-            circle = details.circle.ifBlank { entity.circle },
-            cv = details.cv.ifBlank { entity.cv },
-            tags = if (details.tags.isNotEmpty()) details.tags.joinToString(",") else entity.tags,
-            coverUrl = details.coverUrl.ifBlank { entity.coverUrl },
-            description = details.description.ifBlank { entity.description },
-            workId = resolveCloudSyncWorkId(updatedWorkId, resolvedWorkno),
-            rjCode = resolvedWorkno
-        )
-        withContext(Dispatchers.IO) {
-            libraryWriteRepository.updateAlbum(updated)
-            upsertAlbumFtsIndex(updated.id, updated)
-            upsertAlbumTagsFromCsv(updated.id, updated.tags, TagSource.AUTO)
-            if (updated.coverPath.trim().isBlank() && updated.coverThumbPath.trim().isBlank()) {
-                runCatching {
-                    ensureAlbumCoverSaved(updated.id, updated.coverPath, updated.coverUrl)
-                }
-            }
-        }
-        return resolvedWorkno
-    }
-
     suspend fun loadAlbumAndAwait(albumId: Long?, rjCode: String?, force: Boolean = false) {
         loadAlbum(albumId, rjCode, force)
         albumLoadJob?.join()
@@ -884,12 +813,12 @@ class AlbumDetailViewModel @Inject constructor(
 
                 when (
                     val result = withContext(Dispatchers.IO) {
-                        resolveManualCloudSync(entity, normalized)
+                        onlineContentRepository.resolveManualCloudSync(entity, normalized)
                     }
                 ) {
                     is DlsiteCloudSyncResolveResult.Success -> {
                         val resolvedWorkno = withContext(Dispatchers.IO) {
-                            applyManualCloudSyncSuccess(entity, updatedWorkId, result)
+                            onlineContentRepository.applyManualCloudSyncSuccess(entity, updatedWorkId, result)
                         }
                         messageManager.showSuccess("已绑定 $resolvedWorkno 并完成云同步")
                         loadAlbum(local.id, resolvedWorkno, force = true)
@@ -905,11 +834,11 @@ class AlbumDetailViewModel @Inject constructor(
                             return@launch
                         }
                         when (val selectedResult = withContext(Dispatchers.IO) {
-                            resolveSelectedManualCloudSync(selectedWorkno)
+                            onlineContentRepository.resolveSelectedManualCloudSync(selectedWorkno)
                         }) {
                             is DlsiteCloudSyncResolveResult.Success -> {
                                 val resolvedWorkno = withContext(Dispatchers.IO) {
-                                    applyManualCloudSyncSuccess(entity, updatedWorkId, selectedResult)
+                                    onlineContentRepository.applyManualCloudSyncSuccess(entity, updatedWorkId, selectedResult)
                                 }
                                 messageManager.showSuccess("已绑定 $resolvedWorkno 并完成云同步")
                                 loadAlbum(local.id, resolvedWorkno, force = true)
@@ -2211,162 +2140,6 @@ class AlbumDetailViewModel @Inject constructor(
         val insertedCount: Int,
         val resourceSavedCount: Int
     )
-
-    private suspend fun ensureAlbumCoverSaved(
-        albumId: Long,
-        coverPath: String,
-        coverUrl: String
-    ): Boolean {
-        fun debugLog(msg: String) {
-            if (BuildConfig.DEBUG) Log.d("AlbumDetailViewModel", msg)
-        }
-        fun fail(reason: String): Boolean {
-            debugLog("ensureAlbumCoverSaved fail albumId=$albumId reason=$reason coverPath=${coverPath.take(160)} coverUrl=${coverUrl.take(160)}")
-            return false
-        }
-
-        val existingPathRaw = coverPath.trim().takeIf { it.isNotBlank() && it != "null" }
-        if (existingPathRaw != null && !existingPathRaw.startsWith("content://", ignoreCase = true)) {
-            val f = if (existingPathRaw.startsWith("file://", ignoreCase = true)) {
-                runCatching { File(android.net.Uri.parse(existingPathRaw).path.orEmpty()) }.getOrNull()
-            } else {
-                File(existingPathRaw)
-            }
-            if (f != null && f.exists() && f.length() > 0L) return true
-        }
-
-        val url = coverUrl.trim().takeIf { it.isNotBlank() && it != "null" }?.let { u ->
-            if (u.startsWith("//")) "https:$u" else u
-        }.orEmpty()
-        val canUseNetwork = url.isNotBlank() && !isLikelyPlaceholderCover(url)
-
-        val localCandidate = existingPathRaw
-            ?: url.takeIf { it.startsWith("content://", ignoreCase = true) || it.startsWith("file://", ignoreCase = true) }
-        val sourceKey = (if (canUseNetwork) url else localCandidate).orEmpty()
-        if (sourceKey.isBlank()) return fail("empty_source")
-        val sourceHash = sourceKey.hashCode().toString()
-        val coverDir = File(context.filesDir, "album_covers").apply { if (!exists()) mkdirs() }
-        val thumbDir = File(context.filesDir, "album_thumbs").apply { if (!exists()) mkdirs() }
-        val coverFile = File(coverDir, "a_${albumId}_$sourceHash.jpg")
-        val thumbFile = File(thumbDir, "a_${albumId}_${sourceHash}_v2.jpg")
-
-        if (coverFile.exists() && coverFile.length() > 0L && thumbFile.exists() && thumbFile.length() > 0L) {
-            val entity = try {
-                libraryReadRepository.getAlbumById(albumId)
-            } catch (_: Exception) {
-                null
-            }
-            if (entity != null && (entity.coverPath != coverFile.absolutePath || entity.coverThumbPath != thumbFile.absolutePath)) {
-                try {
-                    libraryWriteRepository.updateAlbum(entity.copy(coverPath = coverFile.absolutePath, coverThumbPath = thumbFile.absolutePath))
-                } catch (_: Exception) {
-                }
-            }
-            return true
-        }
-
-        val bitmap = if (canUseNetwork) {
-            val tmpFile = File(coverDir, "a_${albumId}_$sourceHash.tmp")
-            try {
-                val req = Request.Builder()
-                    .url(url)
-                    .header("Accept", "image/*")
-                    .get()
-                    .build()
-                imageOkHttpClient.newCall(req).execute().use { resp ->
-                    val contentType = resp.header("Content-Type").orEmpty()
-                    debugLog("ensureAlbumCoverSaved http albumId=$albumId code=${resp.code} type=$contentType url=${url.take(160)}")
-                    if (!resp.isSuccessful) return fail("http_${resp.code}")
-                    if (contentType.isNotBlank() && !contentType.startsWith("image/", ignoreCase = true)) return fail("not_image_$contentType")
-                    val body = resp.body ?: return fail("empty_body")
-                    body.byteStream().use { input ->
-                        FileOutputStream(tmpFile).use { out ->
-                            val buf = ByteArray(256 * 1024)
-                            while (true) {
-                                val read = input.read(buf)
-                                if (read <= 0) break
-                                out.write(buf, 0, read)
-                            }
-                            out.flush()
-                        }
-                    }
-                }
-                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                BitmapFactory.decodeFile(tmpFile.absolutePath, bounds)
-                val w = bounds.outWidth
-                val h = bounds.outHeight
-                if (w <= 0 || h <= 0) return fail("decode_bounds_invalid")
-                val maxDim = maxOf(w, h)
-                var sample = 1
-                while (maxDim / sample > 1280) sample *= 2 // 减小最大尺寸从 2048 到 1280
-                val opts = BitmapFactory.Options().apply {
-                    inSampleSize = sample
-                    inPreferredConfig = Bitmap.Config.RGB_565 // 使用 RGB_565 减少一半内存占用
-                }
-                BitmapFactory.decodeFile(tmpFile.absolutePath, opts) ?: return fail("decode_failed_sample_$sample")
-            } finally {
-                runCatching { if (tmpFile.exists()) tmpFile.delete() }
-            }
-        } else {
-            val p = localCandidate ?: return fail("empty_local_source")
-            if (p.startsWith("file://", ignoreCase = true)) {
-                val filePath = runCatching { android.net.Uri.parse(p).path.orEmpty() }.getOrNull().orEmpty()
-                if (filePath.isBlank()) return fail("file_uri_no_path")
-                val f = File(filePath)
-                if (!f.exists() || f.length() <= 0L) return fail("file_not_found")
-                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                BitmapFactory.decodeFile(f.absolutePath, bounds)
-                val w = bounds.outWidth
-                val h = bounds.outHeight
-                if (w <= 0 || h <= 0) return fail("file_decode_bounds_invalid")
-                val maxDim = maxOf(w, h)
-                var sample = 1
-                while (maxDim / sample > 1280) sample *= 2
-                val opts = BitmapFactory.Options().apply {
-                    inSampleSize = sample
-                    inPreferredConfig = Bitmap.Config.RGB_565
-                }
-                BitmapFactory.decodeFile(f.absolutePath, opts) ?: return fail("file_decode_failed_sample_$sample")
-            } else {
-                if (!p.startsWith("content://", ignoreCase = true)) return fail("unsupported_local_scheme")
-                val uri = runCatching { android.net.Uri.parse(p) }.getOrNull() ?: return fail("content_uri_parse_failed")
-                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    BitmapFactory.decodeStream(input, null, bounds)
-                } ?: return fail("content_open_failed")
-                val w = bounds.outWidth
-                val h = bounds.outHeight
-                if (w <= 0 || h <= 0) return fail("content_decode_bounds_invalid")
-                val maxDim = maxOf(w, h)
-                var sample = 1
-                while (maxDim / sample > 1280) sample *= 2
-                val opts = BitmapFactory.Options().apply {
-                    inSampleSize = sample
-                    inPreferredConfig = Bitmap.Config.RGB_565
-                }
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    BitmapFactory.decodeStream(input, null, opts)
-                } ?: return fail("content_decode_failed_sample_$sample")
-            }
-        }
-
-        FileOutputStream(coverFile).use { out ->
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-        }
-        val thumb = centerCropSquare(bitmap, 640)
-        FileOutputStream(thumbFile).use { out ->
-            thumb.compress(Bitmap.CompressFormat.JPEG, 95, out)
-        }
-
-        return try {
-            val entity = libraryReadRepository.getAlbumById(albumId) ?: return true
-            libraryWriteRepository.updateAlbum(entity.copy(coverPath = coverFile.absolutePath, coverThumbPath = thumbFile.absolutePath))
-            debugLog("ensureAlbumCoverSaved ok albumId=$albumId cover=${coverFile.length()} thumb=${thumbFile.length()}")
-            true
-        } catch (e: Exception) {
-            fail("db_update_${e.javaClass.simpleName}")
-        }
-    }
 
     private data class OnlineSaveLeaf(
         val relativePath: String,

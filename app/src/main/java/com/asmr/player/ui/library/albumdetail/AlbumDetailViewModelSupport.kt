@@ -71,25 +71,6 @@ import javax.inject.Named
 import com.asmr.player.BuildConfig
 import com.asmr.player.work.AlbumCoverThumbWorker
 
-internal fun centerCropSquare(src: Bitmap, size: Int): Bitmap {
-    val w = src.width
-    val h = src.height
-    if (w <= 0 || h <= 0) return Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-    val side = minOf(w, h)
-    val left = (w - side) / 2
-    val top = (h - side) / 2
-    val out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(out)
-    val paint = Paint(Paint.FILTER_BITMAP_FLAG)
-    canvas.drawBitmap(
-        src,
-        Rect(left, top, left + side, top + side),
-        Rect(0, 0, size, size),
-        paint
-    )
-    return out
-}
-
 @Immutable
 sealed class AlbumDetailUiState {
     object Loading : AlbumDetailUiState()

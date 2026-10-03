@@ -1411,7 +1411,7 @@ class LibraryViewModel @Inject constructor(
         val url = coverUrl.trim().takeIf { it.isNotBlank() && it != "null" }?.let { u ->
             if (u.startsWith("//")) "https:$u" else u
         }.orEmpty()
-        val canUseNetwork = url.isNotBlank() && !isLikelyPlaceholderCover(url)
+        val canUseNetwork = url.isNotBlank() && !com.asmr.player.util.isLikelyPlaceholderCover(url)
         if (!canUseNetwork) return fail("no_network_cover")
 
         val sourceHash = url.hashCode().toString()

@@ -1,8 +1,8 @@
-package com.asmr.player.ui.library
+package com.asmr.player.util
 
 /**
- * LibraryViewModel 与 AlbumDetailViewModel 共享的专辑元数据纯函数。
- * 行为与两 VM 原有私有实现逐字一致，锁定测试见 AlbumMetadataSupportTest。
+ * R2-C4b-3b：从 ui/library/AlbumMetadataSupport.kt 迁入 util（LibraryViewModel 与
+ * data/repository 双方共用，放 neutral 包避免 ui→data.remote 方向违规）。纯搬迁。
  */
 
 /** 封面 URL 是否大概率是占位图（非 http、无图占位、/0.jpg 等默认帧）。 */
