@@ -83,10 +83,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.asmr.player.data.local.db.AppDatabaseProvider
 import com.asmr.player.data.local.db.entities.LocalTreeCacheEntity
-import com.asmr.player.data.remote.auth.DlsiteAuthStore
-import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
-import com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
-import com.asmr.player.data.remote.scraper.DlsiteRecommendations
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
 import com.asmr.player.playback.MediaItemFactory
@@ -96,9 +92,7 @@ import com.asmr.player.subtitle.SubtitleGenerationTarget
 import com.asmr.player.subtitle.SubtitleTaskRepository
 import com.asmr.player.subtitle.SubtitleModelRepository
 import com.asmr.player.subtitle.SubtitleModelInstallationState
-import com.asmr.player.data.remote.NetworkHeaders
 import com.asmr.player.cache.CacheImageModel
-import com.asmr.player.data.remote.dlsite.DlsiteLanguageEdition
 import com.asmr.player.ui.dlsite.DlsitePlayViewModel
 import com.asmr.player.util.DlsiteAntiHotlink
 import com.asmr.player.util.SmartSortKey

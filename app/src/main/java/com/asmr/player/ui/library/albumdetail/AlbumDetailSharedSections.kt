@@ -77,8 +77,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.asmr.player.data.local.db.AppDatabaseProvider
 import com.asmr.player.data.local.db.entities.LocalTreeCacheEntity
-import com.asmr.player.data.remote.auth.DlsiteAuthStore
-import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
 import com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 import com.asmr.player.data.remote.scraper.DlsiteRecommendations
 import com.asmr.player.data.remote.scraper.resolveRecommendedWorkCoverUrl
@@ -88,7 +86,6 @@ import com.asmr.player.util.DlsiteWorkNo
 import com.asmr.player.playback.MediaItemFactory
 import com.asmr.player.data.remote.NetworkHeaders
 import com.asmr.player.cache.CacheImageModel
-import com.asmr.player.data.remote.dlsite.DlsiteLanguageEdition
 import com.asmr.player.ui.dlsite.DlsitePlayViewModel
 import com.asmr.player.ui.common.list.rememberCalmScrollableFlingBehavior
 import com.asmr.player.util.DlsiteAntiHotlink
