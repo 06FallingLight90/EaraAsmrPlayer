@@ -42,7 +42,7 @@ app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt com.asmr.player
 app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt com.asmr.player.data.local.db.dao.TagWithCount
 app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt okhttp3.OkHttpClient
 app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt okhttp3.Request
-app/src/main/java/com/asmr/player/ui/library/TagAssignDialog.kt com.asmr.player.data.local.db.dao.TagWithCount
+app/src/main/java/com/asmr/player/ui/common/dialog/TagAssignDialog.kt com.asmr.player.data.local.db.dao.TagWithCount
 app/src/main/java/com/asmr/player/ui/library/TagManagerSheet.kt com.asmr.player.data.local.db.dao.TagWithCount
 app/src/main/java/com/asmr/player/ui/player/LyricsScreen.kt com.asmr.player.service.PlaybackState
 app/src/main/java/com/asmr/player/ui/player/nowplaying/NowPlayingControls.kt com.asmr.player.service.AudioOutputRouteKind
@@ -252,7 +252,7 @@ app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailViewModelSup
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailViewModelSupport.kt com.asmr.player.ui.nav.AlbumCoverHint
 app/src/main/java/com/asmr/player/ui/nav/BottomChrome.kt com.asmr.player.ui.player.MiniPlayer
 app/src/main/java/com/asmr/player/ui/nav/BottomChrome.kt com.asmr.player.ui.player.MiniPlayerDisplayMode
-app/src/main/java/com/asmr/player/ui/player/NowPlayingScreen.kt com.asmr.player.ui.library.TagAssignDialog
+app/src/main/java/com/asmr/player/ui/player/NowPlayingScreen.kt com.asmr.player.ui.common.dialog.TagAssignDialog
 app/src/main/java/com/asmr/player/ui/search/SearchAssistViewModel.kt com.asmr.player.data.remote.api.AsmrOneAvailabilityApi
 app/src/main/java/com/asmr/player/ui/search/SearchAssistViewModel.kt com.asmr.player.data.remote.api.AsmrOneRecommendationCursorExpiredException
 app/src/main/java/com/asmr/player/ui/search/SearchAssistViewModel.kt com.asmr.player.data.remote.api.AsmrOneRecommendationItem

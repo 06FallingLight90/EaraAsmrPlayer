@@ -38312,7 +38312,7 @@ Lcom/asmr/player/ui/library/SyncStatus$Error;
 Lcom/asmr/player/ui/library/SyncStatus$Idle;
 Lcom/asmr/player/ui/library/SyncStatus$Syncing;
 Lcom/asmr/player/ui/library/SyncStatus;
-Lcom/asmr/player/ui/library/TagAssignDialogKt;
+Lcom/asmr/player/ui/common/dialog/TagAssignDialogKt;
 Lcom/asmr/player/ui/library/TagAssignTarget$Album;
 Lcom/asmr/player/ui/library/TagAssignTarget$Track;
 Lcom/asmr/player/ui/library/TagAssignTarget;

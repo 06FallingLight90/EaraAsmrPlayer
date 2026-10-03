@@ -48448,7 +48448,7 @@ SPLcom/asmr/player/ui/library/albumdetail/ResolvedDlsiteLoadTarget;-><init>(Ljav
 SPLcom/asmr/player/ui/library/albumdetail/ResolvedDlsiteLoadTarget;->getEditions()Ljava/util/List;
 SPLcom/asmr/player/ui/library/albumdetail/ResolvedDlsiteLoadTarget;->getSelectedLang()Ljava/lang/String;
 SPLcom/asmr/player/ui/library/albumdetail/ResolvedDlsiteLoadTarget;->getWorkno()Ljava/lang/String;
-Lcom/asmr/player/ui/library/TagAssignDialogKt;
+Lcom/asmr/player/ui/common/dialog/TagAssignDialogKt;
 Lcom/asmr/player/ui/library/TagAssignTarget;
 Lcom/asmr/player/ui/library/albumdetail/TreeFileType;
 SPLcom/asmr/player/ui/library/albumdetail/TreeFileType;->$values()[Lcom/asmr/player/ui/library/albumdetail/TreeFileType;

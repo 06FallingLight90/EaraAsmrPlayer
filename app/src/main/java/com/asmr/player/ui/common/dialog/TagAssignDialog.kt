@@ -1,4 +1,4 @@
-package com.asmr.player.ui.library
+package com.asmr.player.ui.common.dialog
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
