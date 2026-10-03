@@ -19,7 +19,7 @@ import com.asmr.player.ui.library.albumdetail.withPreservedListenTogetherListene
 import com.asmr.player.ui.library.albumdetail.withUpdatedLocalCover
 import com.asmr.player.ui.library.albumdetail.albumDetailRequestKey
 import com.asmr.player.ui.library.albumdetail.asmrOneTrackRjCandidates
-import com.asmr.player.ui.library.albumdetail.asmrOneTracksCacheKey
+import com.asmr.player.data.remote.crawler.asmrOneTracksCacheKey
 import com.asmr.player.ui.library.albumdetail.buildDisplayAlbum
 import com.asmr.player.ui.library.albumdetail.isMissingLocalDocumentFailure
 import com.asmr.player.ui.library.albumdetail.LocalSourceAvailability

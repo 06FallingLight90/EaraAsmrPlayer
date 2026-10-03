@@ -184,41 +184,6 @@ internal fun buildAlbumDetailSimilarWorks(
         .toList()
 }
 
-internal fun requestRemoteFileSize(url: String, client: OkHttpClient? = null): Long? {
-    if (client == null) return null
-    fun execute(request: Request): Long? {
-        return runCatching {
-            client.newCall(request).execute().use(::extractRemoteFileSize)
-        }.getOrNull()
-    }
-
-    val headRequest = Request.Builder()
-        .url(url)
-        .head()
-        .header(NetworkHeaders.HEADER_SILENT_IO_ERROR, NetworkHeaders.SILENT_IO_ERROR_ON)
-        .build()
-    execute(headRequest)?.let { return it }
-
-    val rangeRequest = Request.Builder()
-        .url(url)
-        .get()
-        .header("Range", "bytes=0-0")
-        .header(NetworkHeaders.HEADER_SILENT_IO_ERROR, NetworkHeaders.SILENT_IO_ERROR_ON)
-        .build()
-    return execute(rangeRequest)
-}
-
-internal fun extractRemoteFileSize(response: Response): Long? {
-    if (!response.isSuccessful) return null
-    val contentRange = response.header("Content-Range").orEmpty()
-    val totalFromRange = contentRange.substringAfterLast('/', "").toLongOrNull()
-    if (totalFromRange != null && totalFromRange > 0L) return totalFromRange
-    val contentLength = response.header("Content-Length")?.toLongOrNull()
-    if (contentLength != null && contentLength > 0L) return contentLength
-    val bodyLength = response.body?.contentLength()
-    return bodyLength?.takeIf { it > 0L }
-}
-
 @Immutable
 data class AlbumDetailModel(
     val baseRjCode: String,
@@ -270,10 +235,6 @@ internal fun albumDetailRequestKey(albumId: Long?, rjCode: String?): String {
     } else {
         "id:${albumId ?: 0L}"
     }
-}
-
-internal fun asmrOneTracksCacheKey(site: Int?, workId: String): String {
-    return "${site ?: "unknown"}:${workId.trim()}"
 }
 
 internal fun shouldReuseAlbumDetailModel(
@@ -702,38 +663,6 @@ internal fun buildDlsiteTrialDownloadTree(trialTracks: List<Track>): List<AsmrOn
             mediaDownloadUrl = url
         )
     }
-}
-
-internal suspend fun fetchAsmrOneTracksFromBackup(
-    candidateRjs: List<String>,
-    throwWhenAllRequestsFail: Boolean = false,
-    fetchBackup: suspend (String) -> Pair<String, List<AsmrOneTrackNodeResponse>>?
-): Pair<String?, List<AsmrOneTrackNodeResponse>> {
-    var successfulRequestCount = 0
-    var lastFailure: Exception? = null
-    candidateRjs
-        .asSequence()
-        .map { it.trim().uppercase() }
-        .filter { it.isNotBlank() }
-        .distinct()
-        .forEach { rj ->
-            val backupResult = try {
-                fetchBackup(rj).also { successfulRequestCount += 1 }
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Exception) {
-                lastFailure = error
-                null
-            }
-            val tree = backupResult?.second.orEmpty()
-            if (backupResult != null && tree.isNotEmpty()) {
-                return backupResult.first.takeIf { it.isNotBlank() } to tree
-            }
-        }
-    if (throwWhenAllRequestsFail && successfulRequestCount == 0) {
-        lastFailure?.let { throw it }
-    }
-    return null to emptyList()
 }
 
 private fun inferDlsiteTrialMediaType(title: String, url: String): TreeFileType? {
