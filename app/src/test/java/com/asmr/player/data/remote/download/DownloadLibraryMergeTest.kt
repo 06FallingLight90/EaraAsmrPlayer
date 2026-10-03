@@ -16,6 +16,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import com.asmr.player.data.download.DownloadDestinationStore
+import com.asmr.player.data.download.DownloadStorageGateway
+import com.asmr.player.data.download.DownloadStorageEntry
+import com.asmr.player.data.download.DownloadDirectoryCoordinator
 
 @RunWith(RobolectricTestRunner::class)
 class DownloadLibraryMergeTest {

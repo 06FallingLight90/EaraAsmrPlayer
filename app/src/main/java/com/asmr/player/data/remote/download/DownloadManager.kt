@@ -40,6 +40,11 @@ import java.util.zip.ZipFile
 import kotlin.math.max
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.asmr.player.data.download.DownloadStorageEntry
+import com.asmr.player.data.download.DownloadStorageGateway
+import com.asmr.player.data.download.DownloadDestinationStore
+import com.asmr.player.data.download.DownloadDestination
+import com.asmr.player.data.download.DownloadDirectoryCoordinator
 
 private const val DLSITE_PLAY_SCRAMBLED_PART_SUFFIX = ".dlsite-scrambled.part"
 

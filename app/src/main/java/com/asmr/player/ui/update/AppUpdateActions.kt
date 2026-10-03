@@ -7,7 +7,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import com.asmr.player.BuildConfig
-import com.asmr.player.data.remote.update.UpdateRelease
+import com.asmr.player.data.repository.UpdateReleaseInfo
 import java.io.File
 
 sealed interface AppUpdateInstallResult {
@@ -54,7 +54,7 @@ fun launchDownloadedApkInstall(context: Context, apkPath: String): AppUpdateInst
     }
 }
 
-fun openUpdateReleasePage(context: Context, release: UpdateRelease): Boolean {
+fun openUpdateReleasePage(context: Context, release: UpdateReleaseInfo): Boolean {
     val releaseUrl = release.htmlUrl.trim().ifBlank {
         "https://github.com/${BuildConfig.UPDATE_REPO_OWNER}/${BuildConfig.UPDATE_REPO_NAME}/releases/latest"
     }

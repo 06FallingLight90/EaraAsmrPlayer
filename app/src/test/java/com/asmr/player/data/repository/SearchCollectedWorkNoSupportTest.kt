@@ -1,4 +1,4 @@
-package com.asmr.player.ui.search
+package com.asmr.player.data.repository
 
 import com.asmr.player.data.remote.api.AsmrOneCollectedSearchItem
 import com.asmr.player.data.remote.api.Circle

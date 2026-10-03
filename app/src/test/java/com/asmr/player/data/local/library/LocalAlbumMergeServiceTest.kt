@@ -6,7 +6,7 @@ import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.data.local.db.entities.SubtitleEntity
 import com.asmr.player.data.local.db.entities.TrackEntity
-import com.asmr.player.data.remote.download.DownloadStorageGateway
+import com.asmr.player.data.download.DownloadStorageGateway
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

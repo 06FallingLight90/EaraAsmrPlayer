@@ -1,4 +1,4 @@
-package com.asmr.player.data.remote.download
+package com.asmr.player.data.download
 
 import android.content.ContentResolver
 import android.content.Context

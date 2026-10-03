@@ -39,8 +39,8 @@ import com.asmr.player.data.remote.dlsite.resolveCloudSyncWorkId
 import com.asmr.player.data.remote.dlsite.resolveDlsiteCloudSync
 import com.asmr.player.data.remote.dlsite.resolveSelectedDlsiteCloudSync
 import com.asmr.player.data.remote.scraper.DLSiteScraper
-import com.asmr.player.data.remote.download.DownloadDestination
-import com.asmr.player.data.remote.download.DownloadDestinationStore
+import com.asmr.player.data.download.DownloadDestination
+import com.asmr.player.data.download.DownloadDestinationStore
 import com.asmr.player.data.remote.download.DownloadQueueCoordinator
 import com.asmr.player.data.repository.LibraryReadRepository
 import com.asmr.player.data.repository.LibraryWriteRepository

@@ -5,12 +5,7 @@ import android.util.Log
 import com.asmr.player.BuildConfig
 import com.asmr.player.data.local.datastore.LastSearchStateV1
 import com.asmr.player.data.local.datastore.SearchCacheStore
-import com.asmr.player.data.remote.api.AsmrOneAvailabilityApi
-import com.asmr.player.data.remote.api.AsmrOneCollectedSearchItem
-import com.asmr.player.data.remote.api.WorkDetailsResponse
-import com.asmr.player.data.remote.crawler.AsmrOneCrawler
-import com.asmr.player.data.remote.dlsite.DlsitePlayLibraryClient
-import com.asmr.player.data.remote.scraper.DLSiteScraper
+import com.asmr.player.data.repository.SearchRepository
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.domain.model.Album
 import com.asmr.player.hotlistening.HotListeningApi
@@ -23,10 +18,6 @@ import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -64,10 +55,7 @@ private const val DLSITE_CANONICAL_SEARCH_LOCALE = "ja_JP"
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
-    private val dlsiteScraper: DLSiteScraper,
-    private val dlsitePlayLibraryClient: DlsitePlayLibraryClient,
-    private val asmrOneAvailabilityApi: AsmrOneAvailabilityApi,
-    private val asmrOneCrawler: AsmrOneCrawler,
+    private val searchRepository: SearchRepository,
     private val settingsRepository: SettingsRepository,
     private val searchCacheStore: SearchCacheStore,
     private val hotListeningApi: HotListeningApi,
@@ -219,7 +207,7 @@ class SearchViewModel @Inject constructor(
             chineseTranslatedOnly = chineseTranslatedOnly,
             collectedOnly = collectedOnly
         )
-        if (nextFilters.purchasedOnly && !dlsitePlayLibraryClient.hasStoredCredentials()) {
+        if (nextFilters.purchasedOnly && !searchRepository.hasDlsiteStoredCredentials()) {
             messageManager.showWarning("请先登录 DLsite 后再使用\"已购\"搜索")
             return false
         }
@@ -274,7 +262,7 @@ class SearchViewModel @Inject constructor(
         )
         val current = _uiState.value as? SearchUiState.Success ?: return false
         if (current.isBusy) return false
-        if (nextFilters.purchasedOnly && !dlsitePlayLibraryClient.hasStoredCredentials()) {
+        if (nextFilters.purchasedOnly && !searchRepository.hasDlsiteStoredCredentials()) {
             messageManager.showWarning("请先登录 DLsite 后再使用\"已购\"搜索")
             return false
         }
@@ -546,7 +534,7 @@ class SearchViewModel @Inject constructor(
         val appliedHasSubtitle = hasSubtitle && selectedFilter.supportsWorkFilters
         val appliedAllAges = allAges && selectedFilter.supportsWorkFilters
         if (purchasedOnly) {
-            val resp = dlsitePlayLibraryClient.searchPurchased(keyword, page, pageSize)
+            val resp = searchRepository.searchPurchased(keyword, page, pageSize)
             return SearchPageResult(items = resp.items, canGoNext = resp.canGoNext)
         }
         val keywordWithBlockedTerms = appendBlockedKeywordsForOnlineSearch(
@@ -555,7 +543,7 @@ class SearchViewModel @Inject constructor(
         )
         if (collectedOnly) {
             val offset = (page.coerceAtLeast(1) - 1) * pageSize
-            val resp = asmrOneAvailabilityApi.search(
+            val resp = searchRepository.searchCollected(
                 keyword = keywordWithBlockedTerms,
                 limit = pageSize,
                 offset = offset,
@@ -563,10 +551,7 @@ class SearchViewModel @Inject constructor(
                 hasSubtitle = appliedHasSubtitle,
                 allAges = appliedAllAges
             )
-            val collectedItems = resp.items.orEmpty()
-            val mappedItems = withContext(Dispatchers.Default) {
-                collectedItems.map { it.toCollectedAlbum() }
-            }
+            val mappedItems = resp.items
             val directWorkNo = DlsiteWorkNo.normalizeWorkNo(keyword, minimumDigits = 6)
             val items = mappedItems.ifEmpty {
                 directWorkNo.takeIf { it.isNotBlank() }?.let { workNo ->
@@ -603,22 +588,9 @@ class SearchViewModel @Inject constructor(
             normalizedWorkNo.isNotBlank()
         ) {
             val preferred = currentLocale
-            val info = when {
-                !preferred.isNullOrBlank() -> {
-                    runCatching { dlsiteScraper.getWorkInfo(normalizedWorkNo, locale = preferred) }.getOrNull()
-                        ?: runCatching { dlsiteScraper.getWorkInfo(normalizedWorkNo, locale = "zh_CN") }.getOrNull()
-                        ?: runCatching { dlsiteScraper.getWorkInfo(normalizedWorkNo, locale = "ja_JP") }.getOrNull()
-                        ?: runCatching { dlsiteScraper.getWorkInfo(normalizedWorkNo) }.getOrNull()
-                }
-
-                else -> {
-                    runCatching { dlsiteScraper.getWorkInfo(normalizedWorkNo, locale = "zh_CN") }.getOrNull()
-                        ?: runCatching { dlsiteScraper.getWorkInfo(normalizedWorkNo, locale = "ja_JP") }.getOrNull()
-                        ?: runCatching { dlsiteScraper.getWorkInfo(normalizedWorkNo) }.getOrNull()
-                }
-            }
+            val info = searchRepository.getWorkInfoWithLocaleFallback(normalizedWorkNo, preferred)
             if (info != null) {
-                val album = info.album.copy(workId = normalizedWorkNo, rjCode = normalizedWorkNo)
+                val album = info.copy(workId = normalizedWorkNo, rjCode = normalizedWorkNo)
                 return SearchPageResult(
                     items = listOf(album),
                     canGoNext = false,
@@ -626,7 +598,7 @@ class SearchViewModel @Inject constructor(
                 )
             }
         }
-        val result = dlsiteScraper.search(
+        val result = searchRepository.searchDlsite(
             keyword = keywordWithBlockedTerms,
             page = page,
             order = order.dlsiteOrder,
@@ -693,11 +665,11 @@ class SearchViewModel @Inject constructor(
                             val cacheKey = DlsiteDetailCacheKey(rjCode = rj, locale = detailLocale)
                             val cached = dlsiteDetailCache[cacheKey]
                             val detail = cached ?: try {
-                                dlsiteScraper.getWorkInfo(
+                                searchRepository.getWorkInfoAlbum(
                                     workId = rj,
                                     locale = detailLocale,
                                     allowJapaneseCvFallback = false
-                                )?.album
+                                )
                             } catch (error: CancellationException) {
                                 throw error
                             } catch (_: Throwable) {
@@ -934,9 +906,9 @@ class SearchViewModel @Inject constructor(
         asmrOneCollectedWorkNoCache[workId]
             ?.takeIf { it.isNotBlank() }
             ?.let { return it }
-        val resolved = resolveOptionalCollectedWorkNo(
-            timeoutMs = COLLECTED_WORK_NO_RESOLVE_TIMEOUT_MS,
-            fetchDetails = { asmrOneCrawler.getDetailsFromMain(workId.toString()) }
+        val resolved = searchRepository.resolveCollectedWorkNo(
+            workId = workId,
+            timeoutMs = COLLECTED_WORK_NO_RESOLVE_TIMEOUT_MS
         )
         if (resolved.isNotBlank()) {
             asmrOneCollectedWorkNoCache[workId] = resolved
@@ -1110,7 +1082,7 @@ class SearchViewModel @Inject constructor(
                     }
                     .keys
                     .toList()
-                val availability = asmrOneAvailabilityApi.check(unknown)
+                val availability = searchRepository.checkAvailability(unknown)
                 val checkedAt = SystemClock.elapsedRealtime()
                 availability.forEach { (rj, collected) ->
                     asmrOneAvailabilityCache[rj] = CachedAsmrOneAvailability(
@@ -1195,78 +1167,6 @@ class SearchViewModel @Inject constructor(
     private companion object {
         private const val ASMR_ONE_NEGATIVE_CACHE_TTL_MS = 5 * 60 * 1_000L
         private const val COLLECTED_WORK_NO_RESOLVE_TIMEOUT_MS = 3_000L
-    }
-}
-
-internal fun AsmrOneCollectedSearchItem.resolvedWorkNo(fallbackWorkNo: String = ""): String {
-    return buildList {
-        add(rj)
-        add(sourceId)
-        add(originalWorkno)
-        add(fallbackWorkNo)
-        addAll(matchedRjs.orEmpty())
-    }
-        .asSequence()
-        .map { DlsiteWorkNo.normalizeWorkNo(it, minimumDigits = 6) }
-        .firstOrNull { it.isNotBlank() }
-        .orEmpty()
-}
-
-internal fun WorkDetailsResponse.resolvedWorkNo(): String {
-    return buildList {
-        add(source_id)
-        add(original_workno.orEmpty())
-        language_editions.orEmpty().forEach { edition ->
-            add(edition.workno.orEmpty())
-        }
-    }
-        .asSequence()
-        .map { DlsiteWorkNo.normalizeWorkNo(it, minimumDigits = 6) }
-        .firstOrNull { it.isNotBlank() }
-        .orEmpty()
-}
-
-internal fun AsmrOneCollectedSearchItem.toCollectedAlbum(fallbackWorkNo: String = ""): Album {
-    val workNo = resolvedWorkNo(fallbackWorkNo)
-    return Album(
-        title = title.trim().ifBlank { workNo.ifBlank { "已收录作品" } },
-        path = "",
-        workId = workNo,
-        rjCode = workNo,
-        circle = circle.trim(),
-        cv = cvs.orEmpty()
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .joinToString(", "),
-        tags = tags.orEmpty()
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .distinct(),
-        coverUrl = mainCoverUrl.trim(),
-        releaseDate = releaseDate.trim(),
-        ratingValue = rateAverage2dp?.takeIf { it > 0.0 },
-        ratingCount = (rateCount ?: reviewCount ?: 0).coerceAtLeast(0),
-        dlCount = 0,
-        priceJpy = price ?: 0,
-        hasAsmrOne = true,
-        asmrOneWorkId = workId.takeIf { it > 0 }
-    )
-}
-
-internal suspend fun resolveOptionalCollectedWorkNo(
-    timeoutMs: Long,
-    fetchDetails: suspend () -> WorkDetailsResponse
-): String {
-    return try {
-        withTimeoutOrNull(timeoutMs.coerceAtLeast(1L)) {
-            fetchDetails().resolvedWorkNo()
-        }.orEmpty()
-    } catch (_: CancellationException) {
-        currentCoroutineContext().ensureActive()
-        ""
-    } catch (_: Throwable) {
-        ""
     }
 }
 

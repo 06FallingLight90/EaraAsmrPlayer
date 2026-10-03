@@ -19,6 +19,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import com.asmr.player.data.download.DownloadDestinationStore
+import com.asmr.player.data.download.DownloadStorageGateway
+import com.asmr.player.data.download.DownloadStorageEntry
+import com.asmr.player.data.download.DownloadDirectoryCoordinator
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [34])

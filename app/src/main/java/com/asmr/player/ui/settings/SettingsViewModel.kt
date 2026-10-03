@@ -9,13 +9,12 @@ import com.asmr.player.BuildConfig
 import com.asmr.player.cache.AppCacheManager
 import com.asmr.player.cache.AppCacheState
 import com.asmr.player.data.local.datastore.SettingsDataStore
-import com.asmr.player.data.remote.NetworkHeaders
-import com.asmr.player.data.remote.download.DownloadDestination
-import com.asmr.player.data.remote.download.DownloadDestinationStore
-import com.asmr.player.data.remote.download.DownloadDirectoryChangeResult
-import com.asmr.player.data.remote.download.DownloadDirectoryCoordinator
-import com.asmr.player.data.remote.update.GitHubUpdateClient
-import com.asmr.player.data.remote.update.UpdateRelease
+import com.asmr.player.data.download.DownloadDestination
+import com.asmr.player.data.download.DownloadDestinationStore
+import com.asmr.player.data.download.DownloadDirectoryChangeResult
+import com.asmr.player.data.download.DownloadDirectoryCoordinator
+import com.asmr.player.data.repository.UpdateReleaseInfo
+import com.asmr.player.data.repository.UpdateRepository
 import com.asmr.player.data.settings.CoverPreviewMode
 import com.asmr.player.data.settings.DeepSeekReasoningEffort
 import com.asmr.player.data.settings.DeepSeekTranslationSettings
@@ -33,8 +32,6 @@ import com.asmr.player.subtitle.DeepSeekAccountRepository
 import com.asmr.player.util.MessageManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.File
-import java.io.FileOutputStream
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -46,16 +43,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 
 enum class UpdateCheckSource {
     Manual,
     Automatic
 }
-
-private const val UPDATE_APK_PREFIX = "eara-"
-private const val UPDATE_APK_SUFFIX = ".apk"
 
 internal data class DeepSeekApiKeyUiState(
     val configured: Boolean = false,
@@ -72,17 +64,17 @@ sealed interface AppUpdateState {
         val source: UpdateCheckSource = UpdateCheckSource.Manual
     ) : AppUpdateState
     data class UpdateAvailable(
-        val release: UpdateRelease,
+        val release: UpdateReleaseInfo,
         val source: UpdateCheckSource = UpdateCheckSource.Manual
     ) : AppUpdateState
     data class Downloading(
-        val release: UpdateRelease,
+        val release: UpdateReleaseInfo,
         val downloadedBytes: Long,
         val totalBytes: Long,
         val source: UpdateCheckSource = UpdateCheckSource.Manual
     ) : AppUpdateState
     data class ReadyToInstall(
-        val release: UpdateRelease,
+        val release: UpdateReleaseInfo,
         val apkPath: String,
         val source: UpdateCheckSource = UpdateCheckSource.Manual
     ) : AppUpdateState
@@ -97,7 +89,7 @@ class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val settingsDataStore: SettingsDataStore,
     private val appCacheManager: AppCacheManager,
-    private val okHttpClient: OkHttpClient,
+    private val updateRepository: UpdateRepository,
     private val deepSeekAccountRepository: DeepSeekAccountRepository,
     private val downloadDestinationStore: DownloadDestinationStore,
     private val downloadDirectoryCoordinator: DownloadDirectoryCoordinator,
@@ -223,7 +215,6 @@ class SettingsViewModel @Inject constructor(
     internal val deepSeekApiKeyState = _deepSeekApiKeyState.asStateFlow()
     internal val deepSeekAccountState = deepSeekAccountRepository.state
 
-    private val updateClient = GitHubUpdateClient(okHttpClient)
     private val _updateState = MutableStateFlow<AppUpdateState>(AppUpdateState.Idle)
     val updateState = _updateState.asStateFlow()
     private var updateJob: Job? = null
@@ -471,13 +462,9 @@ class SettingsViewModel @Inject constructor(
     private suspend fun performUpdateCheck(source: UpdateCheckSource) {
         _updateState.value = AppUpdateState.Checking(source)
         try {
-            val release =
-                updateClient.fetchLatestRelease(
-                    owner = BuildConfig.UPDATE_REPO_OWNER,
-                    repo = BuildConfig.UPDATE_REPO_NAME
-            )
+            val release = updateRepository.fetchLatestRelease()
             val currentVersion = BuildConfig.VERSION_NAME
-            val newer = updateClient.isNewerThanCurrent(release.versionName, currentVersion)
+            val newer = updateRepository.isNewerThanCurrent(release.versionName, currentVersion)
             _updateState.value = if (newer) {
                 AppUpdateState.UpdateAvailable(release, source)
             } else {
@@ -497,81 +484,20 @@ class SettingsViewModel @Inject constructor(
         updateJob?.cancel()
         updateJob = viewModelScope.launch(Dispatchers.IO) {
             _updateState.value = AppUpdateState.Downloading(release, 0L, 0L, source)
-            var targetFile: File? = null
-            var touchedTargetFile = false
             try {
-                val dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir
-                val safeTag = release.tagName.replace(Regex("""[\\/:*?"<>|]"""), "_").ifBlank { "latest" }
-                val file = File(dir, "$UPDATE_APK_PREFIX$safeTag$UPDATE_APK_SUFFIX")
-                targetFile = file
-                cleanupStaleUpdateApks(dir, file)
-                val req = Request.Builder()
-                    .url(release.apkUrl)
-                    .header("User-Agent", "Eara-Android")
-                    .header(NetworkHeaders.HEADER_SILENT_IO_ERROR, NetworkHeaders.SILENT_IO_ERROR_ON)
-                    .get()
-                    .build()
-
-                okHttpClient.newCall(req).execute().use { resp ->
-                    if (!resp.isSuccessful) {
-                        throw IllegalStateException("下载失败：${resp.code} ${resp.message}")
-                    }
-                    val body = resp.body ?: throw IllegalStateException("下载失败：空响应体")
-                    val total = body.contentLength().coerceAtLeast(0L)
-                    val input = body.byteStream()
-                    touchedTargetFile = true
-                    FileOutputStream(file).use { out ->
-                        val buf = ByteArray(256 * 1024)
-                        var read: Int
-                        var downloaded = 0L
-                        var lastEmit = 0L
-                        while (true) {
-                            read = input.read(buf)
-                            if (read <= 0) break
-                            out.write(buf, 0, read)
-                            downloaded += read.toLong()
-                            val now = SystemClock.elapsedRealtime()
-                            if (now - lastEmit >= 200L) {
-                                _updateState.value = AppUpdateState.Downloading(
-                                    release = release,
-                                    downloadedBytes = downloaded,
-                                    totalBytes = total,
-                                    source = source
-                                )
-                                lastEmit = now
-                            }
-                        }
-                        out.flush()
-                        _updateState.value = AppUpdateState.Downloading(
-                            release = release,
-                            downloadedBytes = downloaded,
-                            totalBytes = total,
-                            source = source
-                        )
-                    }
+                val apkPath = updateRepository.downloadApk(release) { downloaded, total ->
+                    _updateState.value = AppUpdateState.Downloading(
+                        release = release,
+                        downloadedBytes = downloaded,
+                        totalBytes = total,
+                        source = source
+                    )
                 }
-
-                val ok = withContext(Dispatchers.IO) { file.exists() && file.length() > 0L }
-                if (!ok) throw IllegalStateException("下载文件无效")
-                _updateState.value = AppUpdateState.ReadyToInstall(release, apkPath = file.absolutePath, source = source)
+                _updateState.value = AppUpdateState.ReadyToInstall(release, apkPath = apkPath, source = source)
             } catch (e: Exception) {
-                if (touchedTargetFile) {
-                    runCatching { targetFile?.takeIf { it.exists() }?.delete() }
-                }
                 val msg = e.message?.trim().orEmpty().ifBlank { "下载失败" }
                 _updateState.value = AppUpdateState.Failed(msg, source)
             }
-        }
-    }
-
-    private fun cleanupStaleUpdateApks(dir: File, keepFile: File) {
-        dir.listFiles { file ->
-            file.isFile &&
-                file.name.startsWith(UPDATE_APK_PREFIX) &&
-                file.name.endsWith(UPDATE_APK_SUFFIX) &&
-                file.absolutePath != keepFile.absolutePath
-        }?.forEach { staleFile ->
-            runCatching { staleFile.delete() }
         }
     }
 

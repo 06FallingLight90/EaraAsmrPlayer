@@ -15,6 +15,7 @@ import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.util.UUID
 import kotlin.math.max
+import com.asmr.player.data.download.DownloadStorageGateway
 
 object DownloadQueueCoordinator {
     private const val ACTIVE_WORK_RECONCILE_GRACE_MS = 30_000L

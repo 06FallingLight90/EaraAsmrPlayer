@@ -6,7 +6,7 @@ import android.provider.DocumentsContract
 import androidx.datastore.preferences.core.edit
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.entities.SubtitleEntity
-import com.asmr.player.data.remote.download.DownloadStorageGateway
+import com.asmr.player.data.download.DownloadStorageGateway
 import com.asmr.player.data.settings.SettingsKeys
 import com.asmr.player.data.settings.settingsDataStore
 import java.io.File

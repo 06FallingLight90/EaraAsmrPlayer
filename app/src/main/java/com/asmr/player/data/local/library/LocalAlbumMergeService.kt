@@ -4,7 +4,7 @@ import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.data.local.db.entities.AlbumFtsEntity
 import com.asmr.player.data.local.db.entities.TrackEntity
-import com.asmr.player.data.remote.download.DownloadStorageGateway
+import com.asmr.player.data.download.DownloadStorageGateway
 import com.asmr.player.util.DlsiteWorkNo
 import javax.inject.Inject
 import javax.inject.Singleton
