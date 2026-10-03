@@ -104,6 +104,7 @@ import com.asmr.player.subtitle.DEEPSEEK_SUBTITLE_MODEL
 import com.asmr.player.subtitle.DeepSeekAccountState
 import com.asmr.player.subtitle.formatDeepSeekBalances
 import com.asmr.player.subtitle.formatDeepSeekTokenTotal
+import com.asmr.player.ui.common.core.SearchBlockedKeywordsViewModel
 import com.asmr.player.ui.library.BulkPhase
 import com.asmr.player.ui.library.LibraryViewModel
 import com.asmr.player.util.documentTreeDisplayPath
@@ -169,6 +170,7 @@ fun SettingsScreen(
     isActive: Boolean = true,
     isDataActive: Boolean = isActive,
     viewModel: SettingsViewModel = hiltViewModel(),
+    blockedKeywordsViewModel: SearchBlockedKeywordsViewModel = hiltViewModel(),
     libraryViewModel: LibraryViewModel = hiltViewModel(),
     scrollToTopSignal: Long = 0L,
     onHorizontalControlInteractionChanged: (Boolean) -> Unit = {},
@@ -214,7 +216,7 @@ fun SettingsScreen(
     val pauseFadeOutMs by viewModel.pauseFadeOutMs.collectAsStateWhileActive(playbackDataActive)
     val sfwHideSystemControls by viewModel.sfwHideSystemControls.collectAsStateWhileActive(playbackDataActive)
     val showMiniPlayerBar by viewModel.showMiniPlayerBar.collectAsStateWhileActive(playbackDataActive)
-    val searchBlockedKeywords by viewModel.searchBlockedKeywords.collectAsStateWhileActive(blockedKeywordsDataActive)
+    val searchBlockedKeywords by blockedKeywordsViewModel.searchBlockedKeywords.collectAsStateWhileActive(blockedKeywordsDataActive)
     val networkRouteSettings by viewModel.networkRouteSettings.collectAsStateWhileActive(supportStatusDataActive)
     val appCacheState by viewModel.appCacheState.collectAsStateWhileActive(appCacheDataActive)
     val subtitleModelState by viewModel.subtitleModelState.collectAsStateWhileActive(translationDataActive)
@@ -599,11 +601,11 @@ fun SettingsScreen(
                             onAddKeyword = {
                                 val keyword = searchBlockedKeywordInput.trim()
                                 if (keyword.isNotBlank()) {
-                                    viewModel.addSearchBlockedKeyword(keyword)
+                                    blockedKeywordsViewModel.addSearchBlockedKeyword(keyword)
                                     searchBlockedKeywordInput = ""
                                 }
                             },
-                            onRemoveKeyword = viewModel::removeSearchBlockedKeyword
+                            onRemoveKeyword = blockedKeywordsViewModel::removeSearchBlockedKeyword
                         )
                     }
                 }

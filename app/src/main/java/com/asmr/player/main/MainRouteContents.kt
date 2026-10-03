@@ -26,7 +26,7 @@ import com.asmr.player.ui.playlists.PlaylistsViewModel
 import com.asmr.player.ui.playlists.SystemPlaylistScreen
 import com.asmr.player.ui.search.SearchAssistScreen
 import com.asmr.player.ui.search.SearchAssistSearchRequest
-import com.asmr.player.ui.settings.SettingsViewModel
+import com.asmr.player.ui.common.core.SearchBlockedKeywordsViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -42,7 +42,7 @@ internal class MainRouteHost(
     val activityViewModelStoreOwner: androidx.lifecycle.ViewModelStoreOwner,
     val playerViewModel: PlayerViewModel,
     val libraryViewModel: LibraryViewModel,
-    val settingsViewModel: SettingsViewModel,
+    val blockedKeywordsViewModel: SearchBlockedKeywordsViewModel,
     val downloadsViewModel: DownloadsViewModel,
     val scope: CoroutineScope,
     val secondaryPageTopPadding: Dp,
@@ -163,7 +163,7 @@ internal fun buildMainRouteContents(
                     onSearchKeyword = host.submitMetaSearchKeyword,
                     playlistsViewModel = playlistsViewModel,
                     albumGroupsViewModel = albumGroupsViewModel,
-                    settingsViewModel = host.settingsViewModel,
+                    blockedKeywordsViewModel = host.blockedKeywordsViewModel,
                     libraryViewModel = host.libraryViewModel,
                     heroBlurLayerCache = heroBlurLayerCache,
                     viewModel = albumDetailViewModel
@@ -242,7 +242,7 @@ internal fun buildMainRouteContents(
                     onSearchKeyword = host.submitMetaSearchKeyword,
                     playlistsViewModel = playlistsViewModel,
                     albumGroupsViewModel = albumGroupsViewModel,
-                    settingsViewModel = host.settingsViewModel,
+                    blockedKeywordsViewModel = host.blockedKeywordsViewModel,
                     libraryViewModel = host.libraryViewModel,
                     heroBlurLayerCache = heroBlurLayerCache,
                     viewModel = albumDetailViewModel

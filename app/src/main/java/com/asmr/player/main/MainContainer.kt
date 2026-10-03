@@ -53,6 +53,7 @@ import com.asmr.player.ui.search.SEARCH_ASSIST_RESULT_PRESALE_ONLY_KEY
 import com.asmr.player.ui.search.SEARCH_ASSIST_RESULT_PURCHASED_ONLY_KEY
 import com.asmr.player.ui.search.SEARCH_ASSIST_RESULT_SIGNAL_KEY
 import com.asmr.player.ui.search.SearchAssistSearchRequest
+import com.asmr.player.ui.common.core.SearchBlockedKeywordsViewModel
 import com.asmr.player.ui.settings.SettingsViewModel
 import com.asmr.player.ui.drawer.DrawerStatusViewModel
 import com.asmr.player.ui.nav.AppNavigator
@@ -223,6 +224,7 @@ fun MainContainer(
     val touchBlock = rememberNavTouchBlockState(currentPrimaryRoute ?: currentRoute)
     val downloadsViewModel: DownloadsViewModel = hiltViewModel(activityViewModelStoreOwner)
     val settingsViewModel: SettingsViewModel = hiltViewModel(activityViewModelStoreOwner)
+    val blockedKeywordsViewModel: SearchBlockedKeywordsViewModel = hiltViewModel(activityViewModelStoreOwner)
     val drawerStatusViewModel: DrawerStatusViewModel = hiltViewModel(activityViewModelStoreOwner)
     val bulkProgress by libraryViewModel.bulkProgress.collectAsStateWithLifecycle()
     val cloudSyncSelectionDialogState by libraryViewModel.cloudSyncSelectionDialogState.collectAsStateWithLifecycle()
@@ -613,7 +615,7 @@ fun MainContainer(
                             activityViewModelStoreOwner = activityViewModelStoreOwner,
                             playerViewModel = playerViewModel,
                             libraryViewModel = libraryViewModel,
-                            settingsViewModel = settingsViewModel,
+                            blockedKeywordsViewModel = blockedKeywordsViewModel,
                             downloadsViewModel = downloadsViewModel,
                             scope = scope,
                             secondaryPageTopPadding = secondaryPageTopPadding,

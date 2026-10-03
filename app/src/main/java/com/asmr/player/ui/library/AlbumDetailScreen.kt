@@ -179,7 +179,7 @@ import com.asmr.player.ui.groups.AlbumGroupPickerScreen
 import com.asmr.player.ui.playlists.PlaylistPickerScreen
 import com.asmr.player.ui.playlists.PlaylistsViewModel
 import com.asmr.player.ui.player.PlayerViewModel
-import com.asmr.player.ui.settings.SettingsViewModel
+import com.asmr.player.ui.common.core.SearchBlockedKeywordsViewModel
 import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.ui.theme.AsmrPlayerTheme
 import com.asmr.player.ui.theme.dynamicPageContainerColor
@@ -265,7 +265,7 @@ fun AlbumDetailScreen(
     initialTab: Int? = null,
     playlistsViewModel: PlaylistsViewModel = hiltViewModel(),
     albumGroupsViewModel: AlbumGroupsViewModel = hiltViewModel(),
-    settingsViewModel: SettingsViewModel = hiltViewModel(),
+    blockedKeywordsViewModel: SearchBlockedKeywordsViewModel = hiltViewModel(),
     libraryViewModel: LibraryViewModel = hiltViewModel(),
     heroBlurLayerCache: AlbumHeroBlurLayerCache,
     viewModel: AlbumDetailViewModel = hiltViewModel()
@@ -1441,7 +1441,7 @@ fun AlbumDetailScreen(
                 }
 
                 metaActionKeyword?.let { keyword ->
-                    val searchBlockedKeywords by settingsViewModel.searchBlockedKeywords.collectAsStateWithLifecycle()
+                    val searchBlockedKeywords by blockedKeywordsViewModel.searchBlockedKeywords.collectAsStateWithLifecycle()
                     AlbumMetaActionDialog(
                         keyword = keyword,
                         onDismissRequest = { metaActionKeyword = null },
@@ -1454,7 +1454,7 @@ fun AlbumDetailScreen(
                                 val exists = searchBlockedKeywords.any {
                                     it.equals(normalized, ignoreCase = true)
                                 }
-                                settingsViewModel.addSearchBlockedKeyword(normalized)
+                                blockedKeywordsViewModel.addSearchBlockedKeyword(normalized)
                                 if (exists) {
                                     viewModel.messageManager.showInfo("屏蔽词已存在：$normalized")
                                 } else {

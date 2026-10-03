@@ -207,9 +207,6 @@ class SettingsViewModel @Inject constructor(
     val showMiniPlayerBar: StateFlow<Boolean> = settingsRepository.showMiniPlayerBar
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
-    val searchBlockedKeywords: StateFlow<List<String>> = settingsRepository.searchBlockedKeywords
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
     val networkRouteSettings: StateFlow<NetworkRouteSettings> = settingsRepository.networkRouteSettings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NetworkRouteSettings())
 
@@ -319,14 +316,6 @@ class SettingsViewModel @Inject constructor(
 
     fun setShowMiniPlayerBar(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setShowMiniPlayerBar(enabled) }
-    }
-
-    fun addSearchBlockedKeyword(keyword: String) {
-        viewModelScope.launch { settingsRepository.addSearchBlockedKeyword(keyword) }
-    }
-
-    fun removeSearchBlockedKeyword(keyword: String) {
-        viewModelScope.launch { settingsRepository.removeSearchBlockedKeyword(keyword) }
     }
 
     fun useSystemProxy() {

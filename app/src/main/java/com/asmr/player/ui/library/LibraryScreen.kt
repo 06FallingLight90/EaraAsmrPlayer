@@ -140,7 +140,7 @@ import com.asmr.player.cache.LazyListPreloader
 import com.asmr.player.cache.LazyStaggeredGridPreloader
 import com.asmr.player.ui.groups.AlbumGroupsViewModel
 import com.asmr.player.ui.playlists.PlaylistsViewModel
-import com.asmr.player.ui.settings.SettingsViewModel
+import com.asmr.player.ui.common.core.SearchBlockedKeywordsViewModel
 import dagger.hilt.android.EntryPointAccessors
 
 import androidx.compose.foundation.layout.PaddingValues
@@ -307,8 +307,8 @@ private fun LibraryScreenContent(
     val copyMeta = rememberAlbumMetaCopyAction(viewModel.messageManager)
     val playlistsViewModel: PlaylistsViewModel = hiltViewModel()
     val albumGroupsViewModel: AlbumGroupsViewModel = hiltViewModel()
-    val settingsViewModel: SettingsViewModel = hiltViewModel()
-    val searchBlockedKeywords by settingsViewModel.searchBlockedKeywords.collectAsStateWhileActive(isDataActive)
+    val blockedKeywordsViewModel: SearchBlockedKeywordsViewModel = hiltViewModel()
+    val searchBlockedKeywords by blockedKeywordsViewModel.searchBlockedKeywords.collectAsStateWhileActive(isDataActive)
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val scope = rememberCoroutineScope()
     var searchText by rememberSaveable { mutableStateOf(querySpec.textQuery.orEmpty()) }
@@ -326,7 +326,7 @@ private fun LibraryScreenContent(
         val keyword = value.trim()
         if (keyword.isBlank()) return
         val exists = searchBlockedKeywords.any { it.equals(keyword, ignoreCase = true) }
-        settingsViewModel.addSearchBlockedKeyword(keyword)
+        blockedKeywordsViewModel.addSearchBlockedKeyword(keyword)
         if (exists) {
             viewModel.messageManager.showInfo("屏蔽词已存在：$keyword")
         } else {

@@ -91,7 +91,7 @@ import com.asmr.player.ui.library.AlbumMetaActionDialog
 import com.asmr.player.ui.library.rememberAlbumMetaCopyAction
 import com.asmr.player.ui.groups.AlbumGroupsViewModel
 import com.asmr.player.ui.playlists.PlaylistsViewModel
-import com.asmr.player.ui.settings.SettingsViewModel
+import com.asmr.player.ui.common.core.SearchBlockedKeywordsViewModel
 import com.asmr.player.ui.theme.AsmrTheme
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CoroutineStart
@@ -183,8 +183,8 @@ private fun HotListeningScreenContent(
     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWhileActive(isDataActive)
     val colorScheme = AsmrTheme.colorScheme
     val copyMeta = rememberAlbumMetaCopyAction(viewModel.messageManager)
-    val settingsViewModel: SettingsViewModel = hiltViewModel()
-    val searchBlockedKeywords by settingsViewModel.searchBlockedKeywords.collectAsStateWhileActive(isDataActive)
+    val blockedKeywordsViewModel: SearchBlockedKeywordsViewModel = hiltViewModel()
+    val searchBlockedKeywords by blockedKeywordsViewModel.searchBlockedKeywords.collectAsStateWhileActive(isDataActive)
     val scope = rememberCoroutineScope()
     val isCompactWidth = windowSizeClass.widthSizeClass.isCompactWidth
     var showBlockedEntries by rememberSaveable { mutableStateOf(false) }
@@ -229,7 +229,7 @@ private fun HotListeningScreenContent(
         val normalized = value.trim()
         if (normalized.isBlank()) return
         val exists = searchBlockedKeywords.any { it.equals(normalized, ignoreCase = true) }
-        settingsViewModel.addSearchBlockedKeyword(normalized)
+        blockedKeywordsViewModel.addSearchBlockedKeyword(normalized)
         if (exists) {
             viewModel.messageManager.showInfo("屏蔽词已存在：$normalized")
         } else {

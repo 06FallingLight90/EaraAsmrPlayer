@@ -144,7 +144,7 @@ import com.asmr.player.ui.library.AlbumMetaActionDialog
 import com.asmr.player.ui.library.rememberAlbumMetaCopyAction
 import com.asmr.player.ui.groups.AlbumGroupsViewModel
 import com.asmr.player.ui.playlists.PlaylistsViewModel
-import com.asmr.player.ui.settings.SettingsViewModel
+import com.asmr.player.ui.common.core.SearchBlockedKeywordsViewModel
 import com.asmr.player.ui.sidepanel.LandscapeRightPanelHost
 import com.asmr.player.ui.sidepanel.RecentAlbumsPanel
 import com.asmr.player.ui.theme.AsmrTheme
@@ -1424,8 +1424,8 @@ private fun SearchScreenContent(
     metaActionKeyword?.let { targetKeyword ->
         val playlistsViewModel: PlaylistsViewModel = hiltViewModel()
         val albumGroupsViewModel: AlbumGroupsViewModel = hiltViewModel()
-        val settingsViewModel: SettingsViewModel = hiltViewModel()
-        val searchBlockedKeywords by settingsViewModel.searchBlockedKeywords.collectAsStateWhileActive(isDataActive)
+        val blockedKeywordsViewModel: SearchBlockedKeywordsViewModel = hiltViewModel()
+        val searchBlockedKeywords by blockedKeywordsViewModel.searchBlockedKeywords.collectAsStateWhileActive(isDataActive)
         AlbumMetaActionDialog(
             keyword = targetKeyword,
             onDismissRequest = { metaActionKeyword = null },
@@ -1436,7 +1436,7 @@ private fun SearchScreenContent(
                 val normalized = value.trim()
                 if (normalized.isNotBlank()) {
                     val exists = searchBlockedKeywords.any { it.equals(normalized, ignoreCase = true) }
-                    settingsViewModel.addSearchBlockedKeyword(normalized)
+                    blockedKeywordsViewModel.addSearchBlockedKeyword(normalized)
                     if (exists) {
                         viewModel.messageManager.showInfo("屏蔽词已存在：$normalized")
                     } else {
