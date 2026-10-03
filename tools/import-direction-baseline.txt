@@ -47,6 +47,8 @@ app/src/main/java/com/asmr/player/ui/library/TagManagerSheet.kt com.asmr.player.
 app/src/main/java/com/asmr/player/ui/player/LyricsScreen.kt com.asmr.player.service.PlaybackState
 app/src/main/java/com/asmr/player/ui/player/nowplaying/NowPlayingControls.kt com.asmr.player.service.AudioOutputRouteKind
 app/src/main/java/com/asmr/player/ui/player/NowPlayingScreen.kt com.asmr.player.service.AudioOutputRouteKind
+app/src/main/java/com/asmr/player/ui/player/NowPlayingPortraitLayout.kt com.asmr.player.service.AudioOutputRouteKind
+app/src/main/java/com/asmr/player/ui/player/NowPlayingOverlays.kt com.asmr.player.service.AudioOutputRouteKind
 app/src/main/java/com/asmr/player/ui/player/NowPlayingTagViewModel.kt com.asmr.player.data.local.db.dao.TagWithCount
 app/src/main/java/com/asmr/player/ui/player/PlayerViewModel.kt com.asmr.player.data.local.db.dao.TrackDao
 app/src/main/java/com/asmr/player/ui/playlists/PlaylistsScreen.kt com.asmr.player.data.local.db.dao.PlaylistStatsRow

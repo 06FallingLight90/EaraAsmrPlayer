@@ -228,10 +228,10 @@ internal fun NowPlayingScreen(
 
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
-    var homeLayoutHintDismissedInSession by rememberSaveable { mutableStateOf(false) }
-    var homeLayoutHintShownInSession by rememberSaveable { mutableStateOf(false) }
-    var homeLayoutHintMediaId by remember { mutableStateOf<String?>(null) }
-    var homeLayoutLyricsVisible by remember { mutableStateOf(true) }
+    val homeLayoutHintDismissedInSession = rememberSaveable { mutableStateOf(false) }
+    val homeLayoutHintShownInSession = rememberSaveable { mutableStateOf(false) }
+    val homeLayoutHintMediaId = remember { mutableStateOf<String?>(null) }
+    val homeLayoutLyricsVisible = remember { mutableStateOf(true) }
     var homeLayoutChangeJob by remember { mutableStateOf<Job?>(null) }
     val homeLayoutHintScope = rememberCoroutineScope()
     DisposableEffect(Unit) {
@@ -250,20 +250,20 @@ internal fun NowPlayingScreen(
         { mode: NowPlayingHomeLayoutMode ->
             if (mode != nowPlayingHomeLayoutMode) {
                 homeLayoutChangeJob?.cancel()
-                if (homeLayoutHintMediaId != null && !homeLayoutHintDismissedInSession) {
+                if (homeLayoutHintMediaId.value != null && !homeLayoutHintDismissedInSession.value) {
                     homeLayoutHintScope.launch {
                         delay(NowPlayingHomeLayoutAnimationDurationMillis.toLong())
-                        homeLayoutHintDismissedInSession = true
-                        homeLayoutHintMediaId = null
+                        homeLayoutHintDismissedInSession.value = true
+                        homeLayoutHintMediaId.value = null
                     }
                 }
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 homeLayoutChangeJob = homeLayoutHintScope.launch {
-                    homeLayoutLyricsVisible = false
+                    homeLayoutLyricsVisible.value = false
                     delay(NowPlayingHomeLyricsFadeOutDurationMillis.toLong())
                     onNowPlayingHomeLayoutModeChange(mode)
                     delay(NowPlayingHomeLayoutAnimationDurationMillis.toLong())
-                    homeLayoutLyricsVisible = true
+                    homeLayoutLyricsVisible.value = true
                 }
             }
         }
@@ -640,866 +640,121 @@ internal fun NowPlayingScreen(
             }
 
             if (split) {
-                val coverMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.COVER)
-                val queueMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.QUEUE)
-                val progressMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.PROGRESS)
-                val infoMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.INFO_PANEL)
-                val controlsMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.CONTROLS)
-            // 平板横屏沿用与手机一致的封面优先结构，仅放大留白与歌词容量。
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = landscapeLayoutMetrics.horizontalPadding,
-                        top = landscapeLayoutMetrics.topPadding,
-                        end = landscapeLayoutMetrics.horizontalPadding,
-                        bottom = landscapeLayoutMetrics.bottomPadding
-                    )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(landscapeLayoutMetrics.contentSpacing),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .weight(landscapeLayoutMetrics.artworkWeight)
-                            .fillMaxHeight(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(
-                            landscapeLayoutMetrics.sectionSpacing,
-                            Alignment.CenterVertically
-                        )
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                                .then(coverMotion),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                modifier = if (isVideo) {
-                                    Modifier.fitVideoPreviewAspectRatio(
-                                        aspectRatio = videoAspectRatio,
-                                        maxWidth = landscapeLayoutMetrics.artworkMaxSize
-                                    )
-                                } else {
-                                    Modifier
-                                        .widthIn(max = landscapeLayoutMetrics.artworkMaxSize)
-                                        .aspectRatio(1f)
-                                }
-                            ) {
-                                ArtworkBox(
-                                    isVideo = isVideo,
-                                    metadata = metadata,
-                                    viewModel = viewModel,
-                                    videoPlayerCoordinator = videoPlayerCoordinator,
-                                    renderVideoSurface = renderVideoSurface,
-                                    videoFullscreen = videoFullscreen,
-                                    onOpenVideoFullscreen = { videoFullscreen = true },
-                                    onOpenLyrics = showLyricsSurface,
-                                    edgeBlendEnabled = false,
-                                    edgeBlendColor = if (playerArtworkBackdropEnabled) playerThemeColors.backdropTintColor else colorScheme.background,
-                                    videoBackdropColor = videoBackdropColor,
-                                    artworkAlignment = coverPreviewAlignment,
-                                    artworkCornerRadius = landscapeLayoutMetrics.artworkCornerRadius,
-                                    dragPreviewEnabled = useDragPreview,
-                                    dragPreviewState = coverDragPreviewState
-                                )
-                            }
-                        }
-
-                        if (!isVideo) {
-                            TabletLandscapeQueuePanel(
-                                viewModel = viewModel,
-                                currentMediaId = item?.mediaId.orEmpty(),
-                                isPlaying = playback.isPlaying,
-                                activeColor = playerPageAccentColor,
-                                expanded = tabletQueueExpanded,
-                                onExpandedChange = { tabletQueueExpanded = it },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .widthIn(max = landscapeLayoutMetrics.progressMaxWidth)
-                                    .then(queueMotion)
-                            )
-                        }
-                        
-                        key(item?.mediaId) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .widthIn(max = landscapeLayoutMetrics.progressMaxWidth)
-                                    .height(landscapeLayoutMetrics.progressHeight)
-                                    .then(progressMotion),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                PlaybackProgressContent(viewModel, isVideo) { progress ->
-                                    PlayerProgress(
-                                        positionMs = progress.positionMs,
-                                        durationMs = progressDurationMs,
-                                        sliceUiState = sliceUiState,
-                                        onSeekTo = { viewModel.seekTo(it) },
-                                        onScrubbingChanged = { viewModel.setUserScrubbing(it) },
-                                        onSelectSlice = { viewModel.selectSlice(it) },
-                                        onLongPressSlice = {
-                                            viewModel.selectSlice(it)
-                                            showSliceSheet = true
-                                        },
-                                        onUpdateSliceRange = { sliceId, startMs, endMs ->
-                                            viewModel.updateSliceRange(sliceId, startMs, endMs, progressDurationMs)
-                                        },
-                                        activeColor = accentColor,
-                                        inactiveColor = accentColor.copy(alpha = 0.2f)
-                                    )
-                                }
-                            }
-                        }
+            NowPlayingLandscapeLayout(
+                split = split,
+                phoneLandscape = phoneLandscape,
+                motionLayout = motionLayout,
+                renderVideoSurface = renderVideoSurface,
+                routeTransition = routeTransition,
+                landscapeLayoutMetrics = landscapeLayoutMetrics,
+                playback = playback,
+                item = item,
+                metadata = metadata,
+                viewModel = viewModel,
+                videoPlayerCoordinator = videoPlayerCoordinator,
+                videoFullscreen = videoFullscreen,
+                onOpenVideoFullscreen = { videoFullscreen = true },
+                onOpenLyrics = showLyricsSurface,
+                playerArtworkBackdropEnabled = playerArtworkBackdropEnabled,
+                playerThemeColors = playerThemeColors,
+                colorScheme = colorScheme,
+                videoBackdropColor = videoBackdropColor,
+                coverPreviewAlignment = coverPreviewAlignment,
+                useDragPreview = useDragPreview,
+                coverDragPreviewState = coverDragPreviewState,
+                videoAspectRatio = videoAspectRatio,
+                tabletQueueExpanded = tabletQueueExpanded,
+                onTabletQueueExpandedChange = { tabletQueueExpanded = it },
+                sliceUiState = sliceUiState,
+                progressDurationMs = progressDurationMs,
+                accentColor = accentColor,
+                onAccentColor = onAccentColor,
+                setShowSliceSheet = { showSliceSheet = it },
+                playerHeaderTitle = playerHeaderTitle,
+                playerArtistMeta = playerArtistMeta,
+                listenTogetherUiState = listenTogetherUiState,
+                pageEntranceSettled = pageEntranceSettled,
+                landscapeArtistBottom = landscapeArtistBottom,
+                onLandscapeArtistBottomChanged = { bottom ->
+                    if (!landscapeArtistBottom.isFinite() || abs(landscapeArtistBottom - bottom) > 0.5f) {
+                        landscapeArtistBottom = bottom
                     }
-
-                    Column(
-                        modifier = Modifier
-                            .weight(landscapeLayoutMetrics.contentWeight)
-                            .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(landscapeLayoutMetrics.sectionSpacing)
-                    ) {
-                        LandscapePlayerIdentity(
-                            title = playerHeaderTitle,
-                            artistMeta = playerArtistMeta,
-                            listenTogetherState = listenTogetherUiState,
-                            accentColor = accentColor,
-                            pageEntranceSettled = pageEntranceSettled,
-                            compactHeight = false,
-                            tabletLayout = true,
-                            onArtistBottomChanged = { bottom ->
-                                if (!landscapeArtistBottom.isFinite() || abs(landscapeArtistBottom - bottom) > 0.5f) {
-                                    landscapeArtistBottom = bottom
-                                }
-                            },
-                            modifier = Modifier
-                                // 两行标题会超过基准高度，让身份区按实际文本高度增长，避免裁掉社团/CV。
-                                .heightIn(min = landscapeLayoutMetrics.identityMinHeight)
-                                .then(infoMotion)
-                        )
-
-                        if (!isVideo) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth()
-                                    .then(infoMotion),
-                                contentAlignment = Alignment.CenterStart
-                            ) {
-                                PlaybackProgressContent(viewModel, isVideo) { progress ->
-                                    NowPlayingLyricsPreview(
-                                        lyrics = lyricsState.lyrics,
-                                        currentPosition = progress.positionMs,
-                                        onOpenLyrics = showLyricsSurface,
-                                        colors = lyricColors,
-                                        interactionEnabled = !lyricsState.isLoading,
-                                        highlightFontSizeSp = nowPlayingLyricsSettings.highlightFontSizeSp,
-                                        tabletLayout = true,
-                                        contentTopPadding = landscapeLayoutMetrics.lyricsTopPadding,
-                                        onCurrentLineAnchorChanged = { top ->
-                                            if (!landscapeCurrentLyricAnchorTop.isFinite() || abs(landscapeCurrentLyricAnchorTop - top) > 0.5f) {
-                                                landscapeCurrentLyricAnchorTop = top
-                                            }
-                                        },
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
-                            }
-                        } else {
-                            Spacer(modifier = Modifier.weight(1f).then(infoMotion))
-                        }
-
-                        PlaybackControls(
-                            playback = playback,
-                            isFavorite = isFavorite,
-                            viewModel = viewModel,
-                            onShowPlaylistPicker = {
-                                val current = playback.currentMediaItem ?: return@PlaybackControls
-                                onOpenPlaylistPicker(current)
-                            },
-                            onShowEqualizer = { showEqualizer = true },
-                            onManageTags = {
-                                val mediaId = item?.mediaId.orEmpty()
-                                val fallback = metadata?.title?.toString().orEmpty()
-                                tagViewModel.openForMediaId(mediaId, fallback)
-                            },
-                            sliceUiState = sliceUiState,
-                            modifier = Modifier.height(landscapeLayoutMetrics.controlsHeight),
-                            showActionRow = !isVideo,
-                            landscapeControls = true,
-                            actionRowModifier = controlsMotion,
-                            coreControlsModifier = controlsMotion,
-                            primaryColor = accentColor,
-                            onPrimaryColor = onAccentColor
-                        )
+                },
+                landscapeCurrentLyricAnchorTop = landscapeCurrentLyricAnchorTop,
+                onLandscapeCurrentLyricAnchorChanged = { top ->
+                    if (!landscapeCurrentLyricAnchorTop.isFinite() || abs(landscapeCurrentLyricAnchorTop - top) > 0.5f) {
+                        landscapeCurrentLyricAnchorTop = top
                     }
-                }
-            }
-        } else if (phoneLandscape) {
-            val coverMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.COVER)
-            val progressMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.PROGRESS)
-            val lyricsMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.LYRICS)
-            val controlsMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.CONTROLS)
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = landscapeLayoutMetrics.horizontalPadding,
-                        top = landscapeLayoutMetrics.topPadding,
-                        end = landscapeLayoutMetrics.horizontalPadding,
-                        bottom = landscapeLayoutMetrics.bottomPadding
-                    ),
-                horizontalArrangement = Arrangement.spacedBy(landscapeLayoutMetrics.contentSpacing),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(landscapeLayoutMetrics.artworkWeight)
-                        .fillMaxHeight(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(landscapeLayoutMetrics.sectionSpacing)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .then(coverMotion),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = if (isVideo) {
-                                Modifier.fitVideoPreviewAspectRatio(
-                                    aspectRatio = videoAspectRatio,
-                                    maxWidth = landscapeLayoutMetrics.artworkMaxSize
-                                )
-                            } else {
-                                Modifier
-                                    .widthIn(max = landscapeLayoutMetrics.artworkMaxSize)
-                                    .aspectRatio(1f)
-                            }
-                        ) {
-                            ArtworkBox(
-                                isVideo = isVideo,
-                                metadata = metadata,
-                                viewModel = viewModel,
-                                videoPlayerCoordinator = videoPlayerCoordinator,
-                                renderVideoSurface = renderVideoSurface,
-                                videoFullscreen = videoFullscreen,
-                                onOpenVideoFullscreen = { videoFullscreen = true },
-                                onOpenLyrics = showLyricsSurface,
-                                edgeBlendEnabled = false,
-                                edgeBlendColor = playerThemeColors.backdropTintColor,
-                                videoBackdropColor = videoBackdropColor,
-                                artworkAlignment = coverPreviewAlignment,
-                                artworkCornerRadius = landscapeLayoutMetrics.artworkCornerRadius,
-                                dragPreviewEnabled = useDragPreview,
-                                dragPreviewState = coverDragPreviewState
-                            )
-                        }
-                    }
-
-                    key(item?.mediaId) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .widthIn(max = landscapeLayoutMetrics.progressMaxWidth)
-                                .height(landscapeLayoutMetrics.progressHeight)
-                                .then(progressMotion),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            PlaybackProgressContent(viewModel, isVideo) { progress ->
-                                PlayerProgress(
-                                    positionMs = progress.positionMs,
-                                    durationMs = progressDurationMs,
-                                    sliceUiState = sliceUiState,
-                                    onSeekTo = { viewModel.seekTo(it) },
-                                    onScrubbingChanged = { viewModel.setUserScrubbing(it) },
-                                    onSelectSlice = { viewModel.selectSlice(it) },
-                                    onLongPressSlice = {
-                                        viewModel.selectSlice(it)
-                                        showSliceSheet = true
-                                    },
-                                    onUpdateSliceRange = { sliceId, startMs, endMs ->
-                                        viewModel.updateSliceRange(sliceId, startMs, endMs, progressDurationMs)
-                                    },
-                                    activeColor = accentColor,
-                                    inactiveColor = accentColor.copy(alpha = 0.2f),
-                                    compactLayout = true
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Column(
-                    modifier = Modifier
-                        .weight(landscapeLayoutMetrics.contentWeight)
-                        .fillMaxHeight(),
-                    verticalArrangement = Arrangement.spacedBy(landscapeLayoutMetrics.sectionSpacing)
-                ) {
-                    LandscapePlayerIdentity(
-                        title = playerHeaderTitle,
-                        artistMeta = playerArtistMeta,
-                        listenTogetherState = listenTogetherUiState,
-                        accentColor = accentColor,
-                        pageEntranceSettled = pageEntranceSettled,
-                        compactHeight = landscapeLayoutMetrics.compactHeight,
-                        tabletLayout = false,
-                        onArtistBottomChanged = { bottom ->
-                            if (!landscapeArtistBottom.isFinite() || abs(landscapeArtistBottom - bottom) > 0.5f) {
-                                landscapeArtistBottom = bottom
-                            }
-                        },
-                        modifier = Modifier
-                            // 两行标题会超过基准高度，让身份区按实际文本高度增长，避免裁掉社团/CV。
-                            .heightIn(min = landscapeLayoutMetrics.identityMinHeight)
-                            .then(lyricsMotion)
-                    )
-
-                    if (!isVideo) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                                .then(lyricsMotion),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            PlaybackProgressContent(viewModel, isVideo) { progress ->
-                                NowPlayingLyricsPreview(
-                                    lyrics = lyricsState.lyrics,
-                                    currentPosition = progress.positionMs,
-                                    onOpenLyrics = showLyricsSurface,
-                                    colors = lyricColors,
-                                    interactionEnabled = !lyricsState.isLoading,
-                                    highlightFontSizeSp = nowPlayingLyricsSettings.highlightFontSizeSp,
-                                    compactHeight = landscapeLayoutMetrics.compactHeight,
-                                    contentTopPadding = landscapeLayoutMetrics.lyricsTopPadding,
-                                    onCurrentLineAnchorChanged = { top ->
-                                        if (!landscapeCurrentLyricAnchorTop.isFinite() || abs(landscapeCurrentLyricAnchorTop - top) > 0.5f) {
-                                            landscapeCurrentLyricAnchorTop = top
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        }
-                    } else {
-                        Spacer(modifier = Modifier.weight(1f).then(lyricsMotion))
-                    }
-
-                    PlaybackControls(
-                        playback = playback,
-                        isFavorite = isFavorite,
-                        viewModel = viewModel,
-                        onShowPlaylistPicker = {
-                            val current = playback.currentMediaItem ?: return@PlaybackControls
-                            onOpenPlaylistPicker(current)
-                        },
-                        onShowEqualizer = { showEqualizer = true },
-                        onManageTags = {
-                            val mediaId = item?.mediaId.orEmpty()
-                            val fallback = metadata?.title?.toString().orEmpty()
-                            tagViewModel.openForMediaId(mediaId, fallback)
-                        },
-                        sliceUiState = sliceUiState,
-                        modifier = Modifier.height(landscapeLayoutMetrics.controlsHeight),
-                        showActionRow = !isVideo,
-                        landscapeControls = true,
-                        compactLayout = true,
-                        actionRowModifier = controlsMotion,
-                        coreControlsModifier = controlsMotion,
-                        primaryColor = accentColor,
-                        onPrimaryColor = onAccentColor
-                    )
-                }
-            }
+                },
+                lyricsState = lyricsState,
+                lyricColors = lyricColors,
+                nowPlayingLyricsSettings = nowPlayingLyricsSettings,
+                isFavorite = isFavorite,
+                onOpenPlaylistPicker = onOpenPlaylistPicker,
+                isVideo = isVideo,
+                playerPageAccentColor = playerPageAccentColor,
+                onShowEqualizer = { showEqualizer = true },
+                tagViewModel = tagViewModel
+            )
         } else {
-            val coverMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.COVER)
-            val lyricsMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.LYRICS)
-            val progressMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.PROGRESS)
-            val actionRowMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.ACTION_ROW)
-            val controlsMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.CONTROLS)
-            val volumeMotion = routeTransition.nowPlayingMotionModifier(motionLayout, NowPlayingMotionSlot.VOLUME)
-            val expandedHomeLayout = nowPlayingHomeLayoutMode == NowPlayingHomeLayoutMode.Expanded && !isVideo
-            val portraitScreenHeight = configuration.screenHeightDp.dp
-            val portraitLayoutMetrics = remember(portraitScreenHeight, widthClass) {
-                nowPlayingPortraitLayoutMetrics(
-                    screenHeight = portraitScreenHeight,
-                    widthClass = widthClass
-                )
-            }
-            val classicTrackInfoTargetHeight = nowPlayingClassicTrackInfoHeight(
-                metrics = portraitLayoutMetrics
+            NowPlayingPortraitLayout(
+                motionLayout = motionLayout,
+                routeTransition = routeTransition,
+                isVideo = isVideo,
+                widthClass = widthClass,
+                pendingRouteExit = pendingRouteExit,
+                nowPlayingHomeLayoutMode = nowPlayingHomeLayoutMode,
+                lyricsPageSettings = lyricsPageSettings,
+                nowPlayingHomeLayoutHintDismissed = nowPlayingHomeLayoutHintDismissed,
+                homeLayoutHintDismissedInSessionState = homeLayoutHintDismissedInSession,
+                homeLayoutHintShownInSessionState = homeLayoutHintShownInSession,
+                homeLayoutHintMediaIdState = homeLayoutHintMediaId,
+                homeLayoutLyricsVisibleState = homeLayoutLyricsVisible,
+                changeNowPlayingHomeLayoutMode = changeNowPlayingHomeLayoutMode,
+                onNowPlayingHomeLayoutHintShown = onNowPlayingHomeLayoutHintShown,
+                artworkModel = artworkModel,
+                renderVideoSurface = renderVideoSurface,
+                playback = playback,
+                item = item,
+                metadata = metadata,
+                viewModel = viewModel,
+                videoPlayerCoordinator = videoPlayerCoordinator,
+                videoFullscreen = videoFullscreen,
+                onOpenVideoFullscreen = { videoFullscreen = true },
+                onOpenLyrics = showLyricsSurface,
+                playerArtworkBackdropEnabled = playerArtworkBackdropEnabled,
+                playerThemeColors = playerThemeColors,
+                colorScheme = colorScheme,
+                videoBackdropColor = videoBackdropColor,
+                coverPreviewAlignment = coverPreviewAlignment,
+                useDragPreview = useDragPreview,
+                coverDragPreviewState = coverDragPreviewState,
+                videoAspectRatio = videoAspectRatio,
+                playerPageAccentColor = playerPageAccentColor,
+                playerHeaderTitle = playerHeaderTitle,
+                playerArtistMeta = playerArtistMeta,
+                listenTogetherUiState = listenTogetherUiState,
+                pageEntranceSettled = pageEntranceSettled,
+                nowPlayingLyricsSettings = nowPlayingLyricsSettings,
+                accentColor = accentColor,
+                onAccentColor = onAccentColor,
+                lyricsState = lyricsState,
+                lyricColors = lyricColors,
+                openManualLyricsAction = openManualLyricsAction,
+                sliceUiState = sliceUiState,
+                progressDurationMs = progressDurationMs,
+                setShowSliceSheet = { showSliceSheet = it },
+                isFavorite = isFavorite,
+                onShowEqualizer = { showEqualizer = true },
+                onOpenPlaylistPicker = onOpenPlaylistPicker,
+                tagViewModel = tagViewModel,
+                hardwareVolumeEventTick = hardwareVolumeEventTick,
+                audioOutputRouteKind = audioOutputRouteKind,
+                warningSessionState = warningSessionState,
+                volumeControlExpanded = volumeControlExpanded,
+                onVolumeControlExpandedChange = { volumeControlExpanded = it },
+                setVolumeControlBounds = { volumeControlBounds = it }
             )
-            val hintMediaId = item?.mediaId
-            val markHomeLayoutHintShown by rememberUpdatedState(onNowPlayingHomeLayoutHintShown)
-            LaunchedEffect(hintMediaId, nowPlayingHomeLayoutHintDismissed, expandedHomeLayout, isVideo) {
-                if (homeLayoutHintMediaId != null && homeLayoutHintMediaId != hintMediaId) {
-                    homeLayoutHintMediaId = null
-                }
-                if (hintMediaId != null && !isVideo && !expandedHomeLayout &&
-                    nowPlayingHomeLayoutHintDismissed == false &&
-                    !homeLayoutHintShownInSession && !homeLayoutHintDismissedInSession
-                ) {
-                    homeLayoutHintShownInSession = true
-                    homeLayoutHintMediaId = hintMediaId
-                    markHomeLayoutHintShown()
-                }
-            }
-            val homeLayoutSwipeHintAllowed = hintMediaId != null &&
-                homeLayoutHintMediaId == hintMediaId &&
-                !homeLayoutHintDismissedInSession && !isVideo
-            val portraitContentHorizontalPadding = portraitLayoutMetrics.contentHorizontalPadding
-            val homeBezier = remember { CubicBezierEasing(0.20f, 0f, 0f, 1f) }
-            val homeLayoutDurationMillis = NowPlayingHomeLayoutAnimationDurationMillis
-            val homeFadeInDurationMillis = NowPlayingHomeLyricsFadeInDurationMillis
-            val homeFadeOutDurationMillis = NowPlayingHomeLyricsFadeOutDurationMillis
-            val expandedHomeLyricsSettings = remember(lyricsPageSettings) {
-                lyricsPageSettings.copy(displayAreaMode = 0)
-            }
-            val portraitContentWidthModifier = if (widthClass.isCompactWidth) {
-                Modifier.fillMaxWidth()
-            } else {
-                Modifier
-                    .widthIn(max = NowPlayingPortraitMaxContentWidth)
-                    .fillMaxWidth()
-            }
-            val artworkAspectRatio = rememberArtworkAspectRatio(artworkModel)
-            val homeLayoutTransition = updateTransition(
-                targetState = expandedHomeLayout,
-                label = "nowPlayingHomeLayoutMode"
-            )
-            val showHomeLayoutSwipeHint = homeLayoutSwipeHintAllowed &&
-                !homeLayoutTransition.targetState
-            val classicAudienceHeight by homeLayoutTransition.animateDp(
-                transitionSpec = {
-                    tween(durationMillis = homeLayoutDurationMillis, easing = homeBezier)
-                },
-                label = "nowPlayingHomeClassicAudienceHeight"
-            ) { expanded ->
-                if (expanded) 0.dp else portraitLayoutMetrics.audienceHeight
-            }
-            val classicTrackInfoHeight by homeLayoutTransition.animateDp(
-                transitionSpec = {
-                    tween(durationMillis = homeLayoutDurationMillis, easing = homeBezier)
-                },
-                label = "nowPlayingHomeClassicTrackInfoHeight"
-            ) { expanded ->
-                if (expanded) 0.dp else classicTrackInfoTargetHeight
-            }
-            val classicIdentityAlpha by homeLayoutTransition.animateFloat(
-                transitionSpec = {
-                    tween(
-                        durationMillis = if (targetState) homeFadeOutDurationMillis else homeFadeInDurationMillis,
-                        easing = if (targetState) FastOutLinearInEasing else LinearOutSlowInEasing
-                    )
-                },
-                label = "nowPlayingHomeClassicIdentityAlpha"
-            ) { expanded ->
-                if (expanded) 0f else 1f
-            }
-            val expandedIdentityAlpha by homeLayoutTransition.animateFloat(
-                transitionSpec = {
-                    tween(
-                        durationMillis = if (targetState) homeFadeInDurationMillis else homeFadeOutDurationMillis,
-                        easing = if (targetState) LinearOutSlowInEasing else FastOutLinearInEasing
-                    )
-                },
-                label = "nowPlayingHomeExpandedIdentityAlpha"
-            ) { expanded ->
-                if (expanded) 1f else 0f
-            }
-            val portraitTopPadding by homeLayoutTransition.animateDp(
-                transitionSpec = {
-                    tween(durationMillis = homeLayoutDurationMillis, easing = homeBezier)
-                },
-                label = "nowPlayingHomeTopPadding"
-            ) { expanded ->
-                if (expanded) 0.dp else portraitLayoutMetrics.topPadding
-            }
-            val coverVerticalPadding by homeLayoutTransition.animateDp(
-                transitionSpec = {
-                    tween(durationMillis = homeLayoutDurationMillis, easing = homeBezier)
-                },
-                label = "nowPlayingHomeCoverVerticalPadding"
-            ) { expanded ->
-                if (expanded) 0.dp else portraitLayoutMetrics.coverVerticalPadding
-            }
-            val expandedLyricsTopPadding = portraitLayoutMetrics.expandedLyricsTopPadding
-            val homeCoverAspectRatio by homeLayoutTransition.animateFloat(
-                transitionSpec = {
-                    tween(durationMillis = homeLayoutDurationMillis, easing = homeBezier)
-                },
-                label = "nowPlayingHomeCoverAspectRatio"
-            ) { expanded ->
-                if (expanded) artworkAspectRatio else 1f
-            }
-            val homeCoverCornerRadius by homeLayoutTransition.animateDp(
-                transitionSpec = {
-                    tween(durationMillis = homeLayoutDurationMillis, easing = homeBezier)
-                },
-                label = "nowPlayingHomeCoverCornerRadius"
-            ) { expanded ->
-                if (expanded) 0.dp else NowPlayingPortraitArtworkCornerRadius
-            }
-            val homeLayoutSettled = homeLayoutTransition.currentState == homeLayoutTransition.targetState
-            LaunchedEffect(expandedHomeLayout) {
-                if (!homeLayoutSettled) {
-                    homeLayoutLyricsVisible = false
-                }
-            }
-            LaunchedEffect(homeLayoutSettled) {
-                if (homeLayoutSettled) {
-                    homeLayoutLyricsVisible = true
-                }
-            }
-            val expandedLyricsActive = expandedHomeLayout && homeLayoutSettled && homeLayoutLyricsVisible
-            val classicLyricsActive = !expandedHomeLayout && homeLayoutSettled && homeLayoutLyricsVisible
-            val expandedLyricsAlpha by animateFloatAsState(
-                targetValue = if (expandedLyricsActive) 1f else 0f,
-                animationSpec = tween(
-                    durationMillis = if (expandedLyricsActive) homeFadeInDurationMillis else homeFadeOutDurationMillis,
-                    easing = if (expandedLyricsActive) LinearOutSlowInEasing else FastOutLinearInEasing
-                ),
-                label = "nowPlayingHomeExpandedLyricsAlpha"
-            )
-            val classicLyricsAlpha by animateFloatAsState(
-                targetValue = if (classicLyricsActive) 1f else 0f,
-                animationSpec = tween(
-                    durationMillis = if (classicLyricsActive) homeFadeInDurationMillis else homeFadeOutDurationMillis,
-                    easing = if (classicLyricsActive) LinearOutSlowInEasing else FastOutLinearInEasing
-                ),
-                label = "nowPlayingHomeClassicLyricsAlpha"
-            )
-            val lyricsExpandedInteractionEnabled = expandedLyricsAlpha > 0.5f
-            val lyricsClassicInteractionEnabled = classicLyricsAlpha > 0.5f
-            // --- 垂直布局 (手机 或 平板竖屏) ---
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    BoxWithConstraints(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .clipToBounds()
-                    ) {
-                        val portraitTopContentMaxHeight = maxHeight
-                        val portraitDensity = LocalDensity.current
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(top = portraitTopPadding),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Box(
-                                modifier = portraitContentWidthModifier
-                                    .height(classicAudienceHeight)
-                                    .clipToBounds()
-                                    .graphicsLayer { alpha = classicIdentityAlpha }
-                                    .then(coverMotion),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                ListenTogetherAudienceLine(
-                                    state = listenTogetherUiState,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    accentColor = accentColor,
-                                    textColor = colorScheme.textTertiary,
-                                    pageEntranceSettled = pageEntranceSettled
-                                )
-                            }
-
-                            // 封面
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = coverVerticalPadding)
-                                    .then(coverMotion)
-                                    .nowPlayingHomeLayoutSwipeGesture(
-                                        enabled = !isVideo && !pendingRouteExit,
-                                        currentMode = nowPlayingHomeLayoutMode,
-                                        onModeChange = changeNowPlayingHomeLayoutMode
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                BoxWithConstraints(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    val homeCoverWidth by homeLayoutTransition.animateDp(
-                                        transitionSpec = {
-                                            tween(durationMillis = homeLayoutDurationMillis, easing = homeBezier)
-                                        },
-                                        label = "nowPlayingHomeCoverWidth"
-                                    ) { expanded ->
-                                        nowPlayingHomeCoverWidth(
-                                            expanded = expanded,
-                                            availableWidth = maxWidth,
-                                            availableHeight = portraitTopContentMaxHeight,
-                                            widthClass = widthClass,
-                                            contentHorizontalPadding = portraitContentHorizontalPadding,
-                                            coverAspectRatio = if (expanded) artworkAspectRatio else 1f,
-                                            topPadding = if (expanded) 0.dp else portraitLayoutMetrics.topPadding,
-                                            coverVerticalPadding = if (expanded) 0.dp else portraitLayoutMetrics.coverVerticalPadding,
-                                            identityHeight = if (expanded) {
-                                                0.dp
-                                            } else {
-                                                portraitLayoutMetrics.audienceHeight + classicTrackInfoTargetHeight
-                                            },
-                                            lyricsReserveHeight = if (expanded) {
-                                                portraitLayoutMetrics.expandedLyricsReserveHeight
-                                            } else {
-                                                if (nowPlayingLyricsSettings.multilineEnabled && !isVideo) {
-                                                    multilineLyricsReserveHeight(
-                                                        availableHeight = portraitTopContentMaxHeight,
-                                                        lineHeight = with(portraitDensity) {
-                                                            nowPlayingLyricTypographyMetrics(
-                                                                largeTypography = !widthClass.isCompactWidth,
-                                                                highlightFontSizeSp = nowPlayingLyricsSettings.highlightFontSizeSp
-                                                            ).currentLineHeightSp.sp.toDp()
-                                                        }
-                                                    )
-                                                } else portraitLayoutMetrics.classicLyricsReserveHeight
-                                            },
-                                            minimumCoverWidth = if (!expanded && nowPlayingLyricsSettings.multilineEnabled && !isVideo) {
-                                                1.dp
-                                            } else portraitLayoutMetrics.minimumCoverWidth
-                                        )
-                                    }
-                                    Box(
-                                        modifier = Modifier
-                                            .then(
-                                                if (isVideo) {
-                                                    Modifier
-                                                        .widthIn(max = if (widthClass.isCompactWidth) 1000.dp else 400.dp)
-                                                        .fitVideoPreviewAspectRatio(videoAspectRatio)
-                                                } else {
-                                                    Modifier
-                                                        .width(homeCoverWidth)
-                                                        .aspectRatio(homeCoverAspectRatio)
-                                                }
-                                            )
-                                            .clip(RoundedCornerShape(homeCoverCornerRadius))
-                                    ) {
-                                        ArtworkBox(
-                                            isVideo = isVideo,
-                                            metadata = metadata,
-                                            viewModel = viewModel,
-                                            videoPlayerCoordinator = videoPlayerCoordinator,
-                                            renderVideoSurface = renderVideoSurface,
-                                            videoFullscreen = videoFullscreen,
-                                            onOpenVideoFullscreen = { videoFullscreen = true },
-                                            onOpenLyrics = showLyricsSurface,
-                                            edgeBlendEnabled = false,
-                                            edgeBlendColor = if (playerArtworkBackdropEnabled) playerThemeColors.backdropTintColor else colorScheme.background,
-                                            videoBackdropColor = videoBackdropColor,
-                                            artworkAlignment = coverPreviewAlignment,
-                                            artworkContentScale = ContentScale.Crop,
-                                            artworkCornerRadius = homeCoverCornerRadius,
-                                            artworkLoadAtOriginalSize = true,
-                                            dragPreviewEnabled = useDragPreview,
-                                            dragPreviewState = coverDragPreviewState
-                                        )
-                                        if (showHomeLayoutSwipeHint) {
-                                            NowPlayingHomeLayoutSwipeHint(
-                                                modifier = Modifier
-                                                    .align(Alignment.BottomCenter)
-                                                    .padding(bottom = 16.dp)
-                                            )
-                                        }
-                                        ExpandedPlayerIdentityOverlay(
-                                            title = playerHeaderTitle,
-                                            artistMeta = playerArtistMeta,
-                                            listenTogetherState = listenTogetherUiState,
-                                            pageEntranceSettled = pageEntranceSettled,
-                                            modifier = Modifier
-                                                .align(Alignment.BottomCenter)
-                                                .graphicsLayer { alpha = expandedIdentityAlpha }
-                                        )
-                                    }
-                                }
-                            }
-
-                            ClassicPlayerIdentity(
-                                title = playerHeaderTitle,
-                                artistMeta = playerArtistMeta,
-                                compactLayout = portraitLayoutMetrics.compact,
-                                modifier = portraitContentWidthModifier
-                                    .height(classicTrackInfoHeight)
-                                    .graphicsLayer { alpha = classicIdentityAlpha }
-                                    .then(coverMotion)
-                            )
-
-                            if (!isVideo) {
-                                BoxWithConstraints(
-                                    modifier = portraitContentWidthModifier
-                                        .weight(1f)
-                                        .then(lyricsMotion),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (expandedLyricsActive || expandedLyricsAlpha > 0.001f) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(top = expandedLyricsTopPadding)
-                                                .graphicsLayer { alpha = expandedLyricsAlpha }
-                                        ) {
-                                            PlaybackProgressContent(viewModel, isVideo) { progress ->
-                                                NowPlayingLyricsSurface(
-                                                    isLandscape = false,
-                                                    playbackPositionMs = progress.positionMs,
-                                                    lyrics = lyricsState.lyrics,
-                                                    lyricColors = lyricColors,
-                                                    accentColor = accentColor,
-                                                    spectrumColor = playerPageAccentColor,
-                                                    onAccentColor = onAccentColor,
-                                                    lyricsPageSettings = expandedHomeLyricsSettings,
-                                                    onSeekTo = { viewModel.seekTo(it) },
-                                                    onTimelinePlay = { targetMs ->
-                                                        viewModel.seekTo(targetMs)
-                                                        viewModel.play()
-                                                    },
-                                                    onAddLyrics = openManualLyricsAction,
-                                                    interactionEnabled = lyricsExpandedInteractionEnabled,
-                                                    stableFocusAnchor = true,
-                                                    expandedHomeVisualEffects = true,
-                                                    lyricItemOuterHorizontalPadding = 6.dp,
-                                                    lyricItemInnerHorizontalPadding = 8.dp,
-                                                    contentKey = lyricsState.contentKey,
-                                                    contentVisible = !lyricsState.isLoading,
-                                                    modifier = Modifier.fillMaxSize()
-                                                )
-                                            }
-                                        }
-                                    }
-                                    if (classicLyricsActive || classicLyricsAlpha > 0.001f) {
-                                        val upcomingCount = portraitClassicLyricsUpcomingCount(maxHeight)
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(horizontal = portraitContentHorizontalPadding)
-                                                .graphicsLayer { alpha = classicLyricsAlpha },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            PlaybackProgressContent(viewModel, isVideo) { progress ->
-                                                NowPlayingLyricsPreview(
-                                                    lyrics = lyricsState.lyrics,
-                                                    currentPosition = progress.positionMs,
-                                                    onOpenLyrics = showLyricsSurface,
-                                                    colors = lyricColors,
-                                                    interactionEnabled = lyricsClassicInteractionEnabled,
-                                                    highlightFontSizeSp = nowPlayingLyricsSettings.highlightFontSizeSp,
-                                                    multilineEnabled = nowPlayingLyricsSettings.multilineEnabled,
-                                                    compactHeight = portraitLayoutMetrics.compact,
-                                                    largeTypography = !widthClass.isCompactWidth,
-                                                    upcomingCount = upcomingCount,
-                                                    centered = true,
-                                                    currentFontWeight = FontWeight.ExtraBold,
-                                                    currentMaxLinesOverride = 1,
-                                                    upcomingMaxLinesOverride = 1,
-                                                    marqueeCurrentLine = true,
-                                                    emptyText = "暂无歌词",
-                                                    modifier = Modifier.fillMaxWidth()
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            } else {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-
-                    Column(
-                        modifier = portraitContentWidthModifier
-                            .padding(bottom = portraitLayoutMetrics.bottomPadding),
-                        verticalArrangement = Arrangement.spacedBy(portraitLayoutMetrics.bottomSectionSpacing)
-                    ) {
-                        key(item?.mediaId) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = portraitContentHorizontalPadding)
-                                    .then(progressMotion)
-                            ) {
-                                PlaybackProgressContent(viewModel, isVideo) { progress ->
-                                    PlayerProgress(
-                                        positionMs = progress.positionMs,
-                                        durationMs = progressDurationMs,
-                                        sliceUiState = sliceUiState,
-                                        onSeekTo = { viewModel.seekTo(it) },
-                                        onCutPressed = { viewModel.onCutPressed(progressDurationMs) },
-                                        onScrubbingChanged = { viewModel.setUserScrubbing(it) },
-                                        onSelectSlice = { viewModel.selectSlice(it) },
-                                        onLongPressSlice = {
-                                            viewModel.selectSlice(it)
-                                            showSliceSheet = true
-                                        },
-                                        onUpdateSliceRange = { sliceId, startMs, endMs ->
-                                            viewModel.updateSliceRange(sliceId, startMs, endMs, progressDurationMs)
-                                        },
-                                        activeColor = accentColor,
-                                        inactiveColor = accentColor.copy(alpha = 0.2f),
-                                        compactLayout = portraitLayoutMetrics.compact
-                                    )
-                                }
-                            }
-                        }
-
-                        PlaybackControls(
-                            playback = playback,
-                            isFavorite = isFavorite,
-                            viewModel = viewModel,
-                            onShowPlaylistPicker = {
-                                val current = playback.currentMediaItem ?: return@PlaybackControls
-                                onOpenPlaylistPicker(current)
-                            },
-                            onShowEqualizer = { showEqualizer = true },
-                            onManageTags = {
-                                val mediaId = item?.mediaId.orEmpty()
-                                val fallback = metadata?.title?.toString().orEmpty()
-                                tagViewModel.openForMediaId(mediaId, fallback)
-                            },
-                            sliceUiState = sliceUiState,
-                            modifier = Modifier.padding(horizontal = portraitContentHorizontalPadding),
-                            actionRowModifier = actionRowMotion,
-                            coreControlsModifier = controlsMotion,
-                            primaryColor = accentColor,
-                            onPrimaryColor = onAccentColor,
-                            compactLayout = portraitLayoutMetrics.compact
-                        )
-
-                        VolumeControl(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = portraitContentHorizontalPadding)
-                                .then(volumeMotion)
-                                .onGloballyPositioned { coordinates ->
-                                    volumeControlBounds = coordinates.boundsInRoot()
-                                },
-                            accentColor = accentColor,
-                            viewModel = viewModel,
-                            hardwareVolumeEventTick = hardwareVolumeEventTick,
-                            audioOutputRouteKind = audioOutputRouteKind,
-                            warningSessionState = warningSessionState,
-                            expanded = volumeControlExpanded,
-                            onExpandedChange = { volumeControlExpanded = it },
-                            compactLayout = portraitLayoutMetrics.compact
-                        )
-                    }
-                }
-            }
             }
             }
             } else {
@@ -1541,309 +796,34 @@ internal fun NowPlayingScreen(
             )
         }
 
-        val dialog = tagDialog
-        if (dialog != null) {
-            TagAssignDialog(
-                title = dialog.title,
-                allTags = availableTags,
-                inheritedTags = dialog.inheritedTags,
-                userTags = dialog.userTags,
-                onDismiss = { tagViewModel.dismiss() },
-                onApplyUserTags = { tagViewModel.applyUserTags(it) }
-            )
-        }
 
-        if (showSliceSheet) {
-            PlayerModalSheet(onDismissRequest = dismissSliceSheet) { sheetMaxHeight ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = sheetMaxHeight)
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "切片管理",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        TextButton(onClick = { viewModel.clearSlicesForCurrentTrack() }) {
-                            Text("清空")
-                        }
-                    }
+        NowPlayingTagDialogHost(
+            dialog = tagDialog,
+            availableTags = availableTags,
+            tagViewModel = tagViewModel
+        )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+        NowPlayingSliceOverlaysHost(
+            viewModel = viewModel,
+            sliceUiState = sliceUiState,
+            progressDurationMs = progressDurationMs,
+            accentColor = accentColor,
+            isVideo = isVideo,
+            showSliceSheet = showSliceSheet,
+            dismissSliceSheet = dismissSliceSheet,
+            toggleSelectedSlice = toggleSelectedSlice,
+            timeEditTarget = timeEditTarget,
+            setTimeEditTarget = { timeEditTarget = it }
+        )
 
-                    PlaybackProgressContent(viewModel, isVideo) { progress ->
-                        val highlightedPlaybackSliceId = currentSliceIdForPosition(
-                            positionMs = progress.positionMs,
-                            slices = sliceUiState.slices,
-                            sliceModeEnabled = sliceUiState.sliceModeEnabled
-                        )
-                        SliceOverviewBar(
-                            positionMs = progress.positionMs,
-                            durationMs = progressDurationMs,
-                            slices = sliceUiState.slices,
-                            highlightedSliceId = highlightedPlaybackSliceId,
-                            selectedSliceId = sliceUiState.selectedSliceId,
-                            activeColor = accentColor,
-                            inactiveColor = accentColor.copy(alpha = 0.18f),
-                            onSeekTo = { viewModel.seekTo(it) },
-                            onSelectSlice = { id ->
-                                if (id == null) viewModel.selectSlice(null) else toggleSelectedSlice(id)
-                            },
-                            onLongPressSlice = { id ->
-                                toggleSelectedSlice(id)
-                            }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    if (sliceUiState.slices.isEmpty()) {
-                        Text(
-                            text = "暂无切片",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colorScheme.textTertiary,
-                            modifier = Modifier.padding(vertical = 18.dp)
-                        )
-                    } else {
-                        val sliceListState = rememberLazyListState()
-                        LazyColumn(
-                            state = sliceListState,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f, fill = true),
-                            flingBehavior = rememberCalmScrollableFlingBehavior(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            itemsIndexed(sliceUiState.slices, key = { _, s -> s.id }) { index, slice ->
-                                val selected = slice.id == sliceUiState.selectedSliceId
-                                val bg = if (selected) accentColor.copy(alpha = 0.12f) else colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                                Surface(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    color = bg,
-                                    shape = RoundedCornerShape(16.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { toggleSelectedSlice(slice.id) }
-                                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        Text(
-                                            text = (index + 1).toString(),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = colorScheme.textTertiary,
-                                            modifier = Modifier.widthIn(min = 18.dp)
-                                        )
-
-                                        TextButton(
-                                            onClick = { timeEditTarget = slice.id to true },
-                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
-                                        ) {
-                                            Text(Formatting.formatTrackTime(slice.startMs))
-                                        }
-
-                                        Text(
-                                            text = "→",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = colorScheme.textTertiary
-                                        )
-
-                                        TextButton(
-                                            onClick = { timeEditTarget = slice.id to false },
-                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
-                                        ) {
-                                            Text(Formatting.formatTrackTime(slice.endMs))
-                                        }
-
-                                        Spacer(modifier = Modifier.weight(1f))
-
-                                        IconButton(onClick = { viewModel.playSlicePreview(slice) }) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.PlayArrow,
-                                                contentDescription = "播放切片",
-                                                tint = colorScheme.onSurface
-                                            )
-                                        }
-
-                                        IconButton(onClick = { viewModel.deleteSlice(slice.id) }) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.DeleteOutline,
-                                                contentDescription = "删除切片",
-                                                tint = colorScheme.onSurface.copy(alpha = 0.8f)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                            item { Spacer(modifier = Modifier.height(18.dp)) }
-                        }
-                    }
-                }
-            }
-        }
-
-        val edit = timeEditTarget
-        if (edit != null) {
-            val slice = sliceUiState.slices.firstOrNull { it.id == edit.first }
-            if (slice != null) {
-                PlaybackProgressContent(viewModel, isVideo) { progress ->
-                    SliceTimeEditDialog(
-                        title = if (edit.second) "修改起点" else "修改终点",
-                        durationMs = progressDurationMs,
-                        currentMs = progress.positionMs,
-                        initialMs = if (edit.second) slice.startMs else slice.endMs,
-                        onDismiss = { timeEditTarget = null },
-                        onConfirm = { newMs ->
-                            if (edit.second) {
-                                viewModel.updateSliceRange(slice.id, newMs, slice.endMs, progressDurationMs)
-                            } else {
-                                viewModel.updateSliceRange(slice.id, slice.startMs, newMs, progressDurationMs)
-                            }
-                            timeEditTarget = null
-                        }
-                    )
-                }
-            } else {
-                timeEditTarget = null
-            }
-        }
-
-        if (showEqualizer) {
-            val eqSettings by viewModel.sessionEqualizer.collectAsStateWithLifecycle()
-            val customPresets by viewModel.customPresets.collectAsStateWithLifecycle()
-            val appVolumePercent by viewModel.appVolumePercent.collectAsStateWithLifecycle()
-            val equalizerFocusRequester = remember { FocusRequester() }
-            var showEqualizerVolumeOverlay by remember { mutableStateOf(false) }
-            var equalizerVolumeOverlayInteracting by remember { mutableStateOf(false) }
-            var equalizerVolumeOverlayHoldTick by remember { mutableLongStateOf(0L) }
-            var equalizerVolumeOverlayBounds by remember { mutableStateOf<Rect?>(null) }
-            var lastNonZeroEqualizerVolume by remember { mutableIntStateOf(AppVolume.DefaultPercent) }
-            LaunchedEffect(equalizerFocusRequester) {
-                equalizerFocusRequester.requestFocus()
-            }
-            LaunchedEffect(appVolumePercent) {
-                if (appVolumePercent > 0) {
-                    lastNonZeroEqualizerVolume = appVolumePercent
-                }
-            }
-            LaunchedEffect(showEqualizerVolumeOverlay, equalizerVolumeOverlayHoldTick, equalizerVolumeOverlayInteracting) {
-                if (!showEqualizerVolumeOverlay) return@LaunchedEffect
-                if (equalizerVolumeOverlayInteracting) return@LaunchedEffect
-                val snapshot = equalizerVolumeOverlayHoldTick
-                delay(2_000)
-                if (!equalizerVolumeOverlayInteracting && equalizerVolumeOverlayHoldTick == snapshot) {
-                    showEqualizerVolumeOverlay = false
-                    equalizerVolumeOverlayBounds = null
-                }
-            }
-            PlayerModalSheet(onDismissRequest = { showEqualizer = false }) { sheetMaxHeight ->
-                val scrollState = rememberScrollState()
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = sheetMaxHeight)
-                        .focusRequester(equalizerFocusRequester)
-                        .focusable()
-                        .onPreviewKeyEvent { event ->
-                            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                            when (event.nativeKeyEvent.keyCode) {
-                                AndroidKeyEvent.KEYCODE_VOLUME_UP -> {
-                                    viewModel.adjustAppVolumePercent(AppVolume.StepPercent)
-                                    showEqualizerVolumeOverlay = true
-                                    equalizerVolumeOverlayHoldTick += 1L
-                                    true
-                                }
-                                AndroidKeyEvent.KEYCODE_VOLUME_DOWN -> {
-                                    viewModel.adjustAppVolumePercent(-AppVolume.StepPercent)
-                                    showEqualizerVolumeOverlay = true
-                                    equalizerVolumeOverlayHoldTick += 1L
-                                    true
-                                }
-                                else -> false
-                            }
-                        }
-                ) {
-                    EqualizerPanel(
-                        settings = eqSettings,
-                        customPresets = customPresets,
-                        onSettingsChanged = { viewModel.updateSessionEqualizer(it) },
-                        onSavePreset = { name -> viewModel.saveCustomPreset(name, eqSettings) },
-                        onDeletePreset = { viewModel.deleteCustomPreset(it) },
-                        playbackSpeed = playback.playbackSpeed,
-                        playbackPitch = playback.playbackPitch,
-                        onPlaybackSpeedChanged = { viewModel.setPlaybackParameters(it, playback.playbackPitch) },
-                        onPlaybackPitchChanged = { viewModel.setPlaybackParameters(playback.playbackSpeed, it) },
-                        onPlaybackParametersChanged = { speed, pitch -> viewModel.setPlaybackParameters(speed, pitch) },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(
-                                state = scrollState,
-                                flingBehavior = rememberCalmScrollableFlingBehavior()
-                            )
-                            .padding(bottom = 32.dp)
-                    )
-                    if (showEqualizerVolumeOverlay) {
-                        DismissOutsideBoundsOverlay(
-                            targetBoundsInRoot = equalizerVolumeOverlayBounds,
-                            onDismiss = {
-                                showEqualizerVolumeOverlay = false
-                                equalizerVolumeOverlayBounds = null
-                            }
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(end = 18.dp),
-                        contentAlignment = Alignment.CenterEnd
-                    ) {
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = showEqualizerVolumeOverlay,
-                            enter = fadeIn(animationSpec = tween(140)) + slideInHorizontally(animationSpec = tween(180)) { it / 3 },
-                            exit = fadeOut(animationSpec = tween(160)) + slideOutHorizontally(animationSpec = tween(180)) { it / 3 }
-                        ) {
-                            HardwareVolumeOverlay(
-                                modifier = Modifier.onGloballyPositioned { coordinates ->
-                                    equalizerVolumeOverlayBounds = coordinates.boundsInRoot()
-                                },
-                                volumePercent = appVolumePercent,
-                                audioOutputRouteKind = audioOutputRouteKind,
-                                onVolumeChange = {
-                                    viewModel.setAppVolumePercent(it)
-                                    equalizerVolumeOverlayHoldTick += 1L
-                                },
-                                onToggleMute = {
-                                    if (appVolumePercent > 0) {
-                                        viewModel.setAppVolumePercent(0)
-                                    } else {
-                                        viewModel.setAppVolumePercent(
-                                            lastNonZeroEqualizerVolume.coerceAtLeast(AppVolume.StepPercent)
-                                        )
-                                    }
-                                    equalizerVolumeOverlayHoldTick += 1L
-                                },
-                                onInteractionActiveChanged = { active ->
-                                    equalizerVolumeOverlayInteracting = active
-                                    if (!active) {
-                                        equalizerVolumeOverlayHoldTick += 1L
-                                    }
-                                },
-                                warningSessionState = warningSessionState
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        NowPlayingEqualizerSheetHost(
+            viewModel = viewModel,
+            showEqualizer = showEqualizer,
+            onDismiss = { showEqualizer = false },
+            playback = playback,
+            audioOutputRouteKind = audioOutputRouteKind,
+            warningSessionState = warningSessionState
+        )
 
         if (volumeControlExpanded) {
             DismissOutsideBoundsOverlay(
