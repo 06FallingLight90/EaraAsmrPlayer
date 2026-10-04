@@ -6,7 +6,7 @@ import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheEvictor
 import androidx.media3.datasource.cache.CacheSpan
 import androidx.media3.datasource.cache.SimpleCache
-import com.asmr.player.cache.AppCacheLimits
+import com.asmr.player.util.AppCacheLimits
 import java.io.File
 import java.util.TreeSet
 

@@ -1,5 +1,6 @@
 package com.asmr.player.cache
 
+import com.asmr.player.util.AppCacheLimits
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -1,5 +1,6 @@
 package com.asmr.player.cache
 
+import com.asmr.player.util.CacheImageModel
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart

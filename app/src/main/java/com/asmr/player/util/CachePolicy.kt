@@ -1,4 +1,4 @@
-package com.asmr.player.cache
+package com.asmr.player.util
 
 data class CachePolicy(
     val readMemory: Boolean,

@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.asmr.player.cache.CacheImageModel
+import com.asmr.player.util.CacheImageModel
 import com.asmr.player.cache.ImageCacheEntryPoint
 import com.asmr.player.data.remote.NetworkHeaders
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncCandidate

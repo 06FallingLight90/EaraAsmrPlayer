@@ -20,7 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
-import com.asmr.player.cache.CachePolicy
+import com.asmr.player.util.CachePolicy
 import com.asmr.player.cache.ImageCacheEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CompletableDeferred

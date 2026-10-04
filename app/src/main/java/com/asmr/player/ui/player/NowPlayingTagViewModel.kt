@@ -6,7 +6,7 @@ import androidx.room.withTransaction
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.dao.TagWithCount
 import com.asmr.player.data.local.db.entities.TagEntity
-import com.asmr.player.data.local.db.entities.TagSource
+import com.asmr.player.domain.model.TagSource
 import com.asmr.player.data.local.db.entities.TrackTagEntity
 import com.asmr.player.data.local.db.entities.titleForDisplay
 import com.asmr.player.util.TagNormalizer

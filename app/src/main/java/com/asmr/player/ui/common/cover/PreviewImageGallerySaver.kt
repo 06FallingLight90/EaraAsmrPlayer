@@ -9,7 +9,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
-import com.asmr.player.cache.CacheImageModel
+import com.asmr.player.util.CacheImageModel
 import com.asmr.player.util.Formatting
 import java.io.File
 import java.io.FileInputStream

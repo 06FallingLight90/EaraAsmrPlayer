@@ -1,5 +1,7 @@
 package com.asmr.player.cache
 
+import com.asmr.player.util.AppCacheLimits
+
 data class CacheConfig(
     val cacheVersion: String,
     val memoryMaxSizePercent: Double = 0.20,

@@ -1,4 +1,4 @@
-package com.asmr.player.cache
+package com.asmr.player.util
 
 object AppCacheLimits {
     const val MinSizeMb = 50

@@ -13,7 +13,7 @@ import androidx.work.workDataOf
 import com.asmr.player.cache.AppCacheManager
 import com.asmr.player.data.local.db.dao.TagWithCount
 import com.asmr.player.data.local.db.entities.AlbumEntity
-import com.asmr.player.data.local.db.entities.TagSource
+import com.asmr.player.domain.model.TagSource
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.db.entities.titleForDisplay
 import com.asmr.player.data.lyrics.LyricsLoader

@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.unit.IntSize
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.asmr.player.cache.CacheImageModel
+import com.asmr.player.util.CacheImageModel
 import com.asmr.player.cache.ImageCacheEntryPoint
 import com.asmr.player.data.local.db.AppDatabaseProvider
 import com.asmr.player.util.DlsiteAntiHotlink

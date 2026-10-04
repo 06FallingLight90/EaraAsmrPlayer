@@ -3,7 +3,7 @@ package com.asmr.player.ui.common.cover
 import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
-import com.asmr.player.cache.CacheImageModel
+import com.asmr.player.util.CacheImageModel
 import java.util.Base64
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient

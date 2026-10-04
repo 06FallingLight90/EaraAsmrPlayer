@@ -19,7 +19,7 @@ import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaStyleNotificationHelper
 import com.asmr.player.R
-import com.asmr.player.cache.CachePolicy
+import com.asmr.player.util.CachePolicy
 import com.asmr.player.cache.ImageCacheEntryPoint
 import com.google.common.collect.ImmutableList
 import dagger.hilt.android.EntryPointAccessors

@@ -34,7 +34,7 @@ import com.asmr.player.data.remote.scraper.DLSiteScraper
 import com.asmr.player.data.remote.scraper.DlsiteRecommendations
 import com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 import com.asmr.player.data.local.db.entities.AlbumEntity
-import com.asmr.player.data.local.db.entities.TagSource
+import com.asmr.player.domain.model.TagSource
 import com.asmr.player.data.remote.requestRemoteFileSize
 import com.asmr.player.util.DlsiteWorkNo
 import dagger.hilt.android.qualifiers.ApplicationContext

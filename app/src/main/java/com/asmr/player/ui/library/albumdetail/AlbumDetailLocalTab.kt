@@ -92,7 +92,7 @@ import com.asmr.player.subtitle.SubtitleGenerationTarget
 import com.asmr.player.subtitle.SubtitleTaskRepository
 import com.asmr.player.subtitle.SubtitleModelRepository
 import com.asmr.player.subtitle.SubtitleModelInstallationState
-import com.asmr.player.cache.CacheImageModel
+import com.asmr.player.util.CacheImageModel
 import com.asmr.player.ui.dlsite.DlsitePlayViewModel
 import com.asmr.player.util.DlsiteAntiHotlink
 import com.asmr.player.util.SmartSortKey

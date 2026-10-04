@@ -1,4 +1,4 @@
-package com.asmr.player.data.local.db.entities
+package com.asmr.player.domain.model
 
 object TagSource {
     const val SCAN: Int = 1

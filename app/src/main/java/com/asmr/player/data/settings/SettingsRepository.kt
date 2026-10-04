@@ -3,7 +3,7 @@ package com.asmr.player.data.settings
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import com.asmr.player.cache.AppCacheLimits
+import com.asmr.player.util.AppCacheLimits
 import com.asmr.player.domain.model.AppVolume
 import com.asmr.player.hotlistening.HotListeningSortMode
 import dagger.hilt.android.qualifiers.ApplicationContext

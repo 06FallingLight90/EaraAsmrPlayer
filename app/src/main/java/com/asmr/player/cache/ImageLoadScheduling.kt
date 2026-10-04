@@ -1,5 +1,6 @@
 package com.asmr.player.cache
 
+import com.asmr.player.util.CacheImageModel
 import kotlinx.coroutines.sync.Semaphore
 
 internal class ImageLoadGate(

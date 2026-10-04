@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.Configuration
 import androidx.compose.ui.unit.IntSize
 import coil.request.ImageRequest
+import com.asmr.player.util.CacheImageModel
 import java.io.File
 import java.security.MessageDigest
 import java.util.LinkedHashMap

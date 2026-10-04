@@ -102,7 +102,7 @@ import com.asmr.player.data.local.tree.LocalTreeNode
 import com.asmr.player.data.local.tree.sanitizeFolderName
 import com.asmr.player.playback.MediaItemFactory
 import com.asmr.player.subtitle.SubtitleGenerationPolicy
-import com.asmr.player.cache.CacheImageModel
+import com.asmr.player.util.CacheImageModel
 import com.asmr.player.ui.dlsite.DlsitePlayViewModel
 import com.asmr.player.util.DlsiteAntiHotlink
 import com.asmr.player.util.SubtitleMatchSupport

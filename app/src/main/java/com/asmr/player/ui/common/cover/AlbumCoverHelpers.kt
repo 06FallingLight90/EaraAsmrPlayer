@@ -1,6 +1,6 @@
 package com.asmr.player.ui.common.cover
 
-import com.asmr.player.cache.CacheImageModel
+import com.asmr.player.util.CacheImageModel
 import com.asmr.player.domain.model.Album
 import com.asmr.player.util.DlsiteAntiHotlink
 import java.util.LinkedHashMap

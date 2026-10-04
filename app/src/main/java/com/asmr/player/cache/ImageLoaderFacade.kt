@@ -10,6 +10,7 @@ import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.ErrorResult
 import coil.request.SuccessResult
+import com.asmr.player.util.CacheImageModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
