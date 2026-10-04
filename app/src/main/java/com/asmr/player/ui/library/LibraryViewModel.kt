@@ -44,7 +44,6 @@ import com.asmr.player.data.repository.LibraryWriteRepository.ScanTrackSpec
 import com.asmr.player.data.repository.OnlineContentRepository
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.domain.model.Album
-import com.asmr.player.domain.model.Track
 import com.asmr.player.playback.PlayerConnection
 import com.asmr.player.ui.common.audio.queryTrackFileSize
 import com.asmr.player.util.GlobalSyncState
@@ -79,7 +78,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -561,19 +559,6 @@ class LibraryViewModel @Inject constructor(
         _bulkProgress.value = null
     }
 
-    private suspend fun cancelBulkTaskAndJoinLocked(timeoutMs: Long = 1_500L) {
-        val job = bulkJob ?: run {
-            _bulkProgress.value = null
-            return
-        }
-        job.cancel()
-        withTimeoutOrNull(timeoutMs) { job.join() }
-        if (bulkJob == job) {
-            bulkJob = null
-        }
-        _bulkProgress.value = null
-    }
-
     private fun isBulkTaskRunning(): Boolean {
         return bulkJob?.isActive == true
     }
@@ -743,10 +728,6 @@ class LibraryViewModel @Inject constructor(
             TreeFileType.AppPackage -> CacheTreeFileType.AppPackage
             TreeFileType.Other -> CacheTreeFileType.Other
         }
-    }
-
-    private fun computePathsCacheKey(paths: List<String>): String {
-        return paths.map { it.trim() }.filter { it.isNotBlank() }.sorted().joinToString("|")
     }
 
     private fun computePathsStamp(paths: List<String>): Long {
@@ -2530,83 +2511,6 @@ class LibraryViewModel @Inject constructor(
         } finally {
             runCatching { tempFile.delete() }
         }
-    }
-
-    private data class SubtitleCandidate(val fileName: String, val language: String)
-    private class SubtitleCandidateIndex(private val byBase: Map<String, List<SubtitleCandidate>>) {
-        fun match(baseName: String): List<SubtitleCandidate> = byBase[baseName.trim().lowercase()].orEmpty()
-    }
-    private fun buildSubtitleCandidateIndex(subtitles: List<String>, isSubtitle: (String) -> Boolean): SubtitleCandidateIndex {
-        val audioExts = setOf("mp3", "flac", "wav", "m4a", "ogg", "aac", "opus")
-        val out = linkedMapOf<String, MutableList<SubtitleCandidate>>()
-        subtitles.forEach { fileName ->
-            val name = fileName.trim()
-            if (name.isBlank() || !isSubtitle(name)) return@forEach
-
-            val extRemovedBase = name.substringBeforeLast('.').trim()
-            if (extRemovedBase.isBlank()) return@forEach
-
-            val parts = extRemovedBase.split('.').map { it.trim() }.filter { it.isNotBlank() }
-            val lastPart = parts.lastOrNull().orEmpty().lowercase()
-            val langPart = lastPart.takeIf { p ->
-                p.length in 2..4 && p.all { it in 'a'..'z' } && !audioExts.contains(p)
-            }
-            val lang = langPart ?: "default"
-
-            val keys = linkedSetOf<String>()
-            fun addKey(key: String) {
-                val k = key.trim()
-                if (k.isNotBlank()) keys.add(k)
-            }
-            addKey(extRemovedBase)
-
-            if (langPart != null && extRemovedBase.contains('.')) {
-                val withoutLang = extRemovedBase.substringBeforeLast('.').trim()
-                if (withoutLang.isNotBlank()) {
-                    addKey(withoutLang)
-                    val audioPart = withoutLang.substringAfterLast('.', "").lowercase()
-                    if (audioExts.contains(audioPart) && withoutLang.contains('.')) {
-                        addKey(withoutLang.substringBeforeLast('.').trim())
-                    }
-                }
-            }
-
-            val audioPart = extRemovedBase.substringAfterLast('.', "").lowercase()
-            if (audioExts.contains(audioPart) && extRemovedBase.contains('.')) {
-                addKey(extRemovedBase.substringBeforeLast('.').trim())
-            }
-
-            val candidate = SubtitleCandidate(fileName = name, language = lang)
-            keys.forEach { k ->
-                out.getOrPut(k.lowercase()) { mutableListOf() }.add(candidate)
-            }
-        }
-        return SubtitleCandidateIndex(out)
-    }
-
-    private data class ParsedSubtitleCandidate(
-        val fileName: String,
-        val language: String,
-        val entries: List<com.asmr.player.util.SubtitleEntry>
-    )
-
-    private fun mergeSubtitleCandidates(parsed: List<ParsedSubtitleCandidate>): List<com.asmr.player.util.SubtitleEntry> {
-        val nonEmpty = parsed.filter { it.entries.isNotEmpty() }
-        if (nonEmpty.isEmpty()) return emptyList()
-        if (nonEmpty.size == 1) return nonEmpty[0].entries
-
-        val langPriority = listOf("default", "zh", "cn", "chs", "ja", "jp", "jpn", "en")
-        fun langScore(lang: String): Int {
-            val l = lang.trim().lowercase()
-            val idx = langPriority.indexOf(l)
-            return if (idx >= 0) idx else Int.MAX_VALUE
-        }
-
-        val sorted = nonEmpty.sortedWith(
-            compareBy<ParsedSubtitleCandidate> { langScore(it.language) }
-                .thenBy { it.fileName.lowercase() }
-        )
-        return sorted.first().entries
     }
 
     override fun onCleared() {
