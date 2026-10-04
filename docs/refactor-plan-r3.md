@@ -2,7 +2,7 @@
 
 > 依据：`docs/project-quality-review-20261004.md`（总评 C）+ 本计划制定前的逐条回源码复核。
 > 与上轮关系：R2（`docs/refactor-plan-r2.md`，tag `refactor-r2/phase-A/B/C`）完成数据访问层下沉与全局守卫；R3 清 R2 明确遗留的三笔账——**剩余依赖环**、**两个 God VM 无法收紧到 800 行**、**ui 层穿透收口未完成**，并治理主要 P1。
-> 状态：阶段 A 已完成（tag `refactor-r3/phase-A`，测试 945/0/4）；阶段 B 开工前评估见 [dependency-forecast](refactor-plan-r3-dependency-forecast.md)。**B0（基线/检测前置）已完成**（SCC ratchet + 失效条目检测 + 机械重写脚本；import baseline **344 → 339**）。基线：`refactor/architecture-cleanup`，测试 **945/0/4**，size pin 8 条，import baseline **339 条**。
+> 状态：阶段 A 已完成（tag `refactor-r3/phase-A`，测试 945/0/4）；阶段 B 开工前评估见 [dependency-forecast](refactor-plan-r3-dependency-forecast.md)。**B0–B3 已提交；B4 代码在工作树挂起（RemoteFileSize.kt 缺 1 行 import 致编译红，见 [进度留档](iteration/r3-phase-b-progress.md)）**。实测：import baseline **344 → 256**，SCC **50 → 41**，2-环 18 → 13；全量测试未复跑（B6 门禁项）。基线：`refactor/architecture-cleanup`，size pin 8 条（LibraryViewModel 2500→2494）。
 
 ## 0. 已确认决策（用户 2026-10-04 拍板）
 
@@ -96,10 +96,10 @@
 - 扩 `ui-to-service` 源包含 `main`：复查发现 **main 侧 10 条 `service.*` 盲区**（`AudioOutputRouteKind`×6、`PlaybackService`×4，如 `MainContainer.kt:70`）未入 baseline 也不被拦截；存量入 baseline（**净 +10，须与 B6 目标合账**：目标相应上调为 ≤110，或记为"补检测费"）。
 - 评估新增 `cache`/`data` 内部方向规则（会把现存单向边判为违规，需连带倒置或入 baseline）——单独立项决策，不在本轮强上。
 
-### B4 中风险消环（接口倒置）
-- 环7：`util` 定义 `NetworkTrafficSink`，`StatisticsRepository` 实现，`TrafficStatsInterceptor` 注入接口（纯倒置）；
-- 环8：抽 `DownloadStorage` 端口接口，`DownloadStorageGateway` 实现；
-- 环9、环3：**缓**（改动大、baseline 不变），记入 backlog。
+### B4 中风险消环（接口倒置）—— ✅ 代码完成，工作树挂起（见进度留档）
+- 环7：✅ `util` 定义 `NetworkTrafficSink`，`StatisticsRepository` 实现并经 `di/StatisticsModule` 绑定，`TrafficStatsInterceptor` 注入接口（纯倒置）；
+- 环8：✅ 抽 `DownloadStorage` 端口（定义于消费方 `data/local/library/DownloadStoragePort.kt`），`DownloadStorageGateway` 实现（手动构造点无需 Hilt 绑定）；
+- **计划外**：NetworkHeaders → `util`（环7 倒置后新 2-环 data.remote↔util 的常量下沉修复；引发 SCC 48 → 41 级联塌缩）；环9、环3：**缓**（记 backlog）。
 
 ### B5 ui 穿透收口（承接 B1 后的剩余）
 - **DTO/repository 出口**：实体类（`AlbumEntity`/`TrackEntity` 等）经 repository 出领域模型（需新映射，中风险）；B1 后各 VM 仅余约 2–4 条实体引用。
