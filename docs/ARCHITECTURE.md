@@ -158,7 +158,8 @@ UI（ui/player/PlayerViewModel.kt 等）
 ### 7.4 backlog
 
 - 2026-10-02 体检新增（阶段 C 已偿部分见 7.2）：~~特征环 3 组~~（C1/C4b-4 已消）；剩余：编排层 state holder 重构（两 God VM 1500 收紧前提）、`LibraryWriteRepository` 1050 行拆族、根文档三缺（LICENSE/CHANGELOG/CONTRIBUTING）。
-- 决策待定：`ensureAlbumCoverSaved` 双实现统一（LibraryViewModel 旧版仅网络/2048/ARGB_8888，repo 版支持本地来源/1280/RGB_565——统一属行为变更，见 r2-phase-C-review.md）。
-- 沿用：`LibraryViewModel.walkTree` / `scanFromDocumentTree` 拆函数、Chrome 概念归包（main 与 ui/nav）、dao 包投影 DTO 归位（`LibraryTrackRow` 等）。
+- 已定（R3 用户决策）：`ensureAlbumCoverSaved` 双实现**保留现状、仅记录**（LibraryViewModel 旧版仅网络/2048/ARGB_8888，repo 版支持本地来源/1280/RGB_565——统一属行为变更，见 r2-phase-C-review.md）。
+- R3-B 开工前评估结论（详见 R3 计划 §3.0）：`ui.player↔ui.player.nowplaying` 为**同 feature 合法子包、非违规**，不做；环 `ui.library↔albumdetail`（同 feature 账面环）与 `data.download↔data.remote.download`（需抽共享下载内核）**缓做**，留 backlog。
+- 沿用：`LibraryViewModel.walkTree` / `scanFromDocumentTree` 拆函数、Chrome 概念归包（main 与 ui/nav）、dao 包投影 DTO 归位（`LibraryTrackRow` 等，R3-B B1 批处理）。
 
 快速读懂本工程的建议顺序：`MainActivity` → `main/MainContainer`（导航骨架）→ `ui/library`（库页与详情家族）→ `playback/PlayerConnection` → `service/PlaybackService`（播放落地）。
