@@ -167,6 +167,10 @@ android {
         }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     val media3_version = "1.8.0"
     val room_version = "2.6.1"

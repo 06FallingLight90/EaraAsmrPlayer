@@ -90,7 +90,7 @@ import com.asmr.player.data.local.db.entities.TrackPlaybackProgressEntity
         SubtitleTitleOwnerEntity::class
     ],
     version = 31,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun albumDao(): AlbumDao
