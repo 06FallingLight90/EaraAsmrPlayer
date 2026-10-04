@@ -86,7 +86,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -114,7 +113,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.asmr.player.data.local.db.AppDatabaseProvider
 import com.asmr.player.data.local.db.entities.LocalTreeCacheEntity
-import com.asmr.player.data.remote.auth.DlsiteAuthStore
 import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
 import com.asmr.player.data.remote.scraper.DLSITE_DOMAIN
 import com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
@@ -269,9 +267,8 @@ fun AlbumDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val cloudSyncSelectionDialogState by viewModel.cloudSyncSelectionDialogState.collectAsStateWithLifecycle()
     val colorScheme = AsmrTheme.colorScheme
-    val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val authStore = remember(context) { DlsiteAuthStore(context) }
+    val authStore = viewModel.dlsiteAuthStore
     var dlsitePlayAuthSnapshot by remember(authStore) {
         mutableStateOf(readDlsitePlayAuthSnapshot(authStore))
     }
@@ -1183,6 +1180,7 @@ fun AlbumDetailScreen(
                                     )
                                     else -> AlbumDlsitePlayBreadcrumbTabV2(
                                         header = { listHeaderContent(2) },
+                                        authStore = authStore,
                                         album = album,
                                         rjCode = model.rjCode,
                                         tree = model.dlsitePlayTree,

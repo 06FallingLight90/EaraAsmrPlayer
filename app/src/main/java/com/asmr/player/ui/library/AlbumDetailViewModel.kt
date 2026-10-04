@@ -3,7 +3,6 @@ package com.asmr.player.ui.library
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -73,7 +72,6 @@ import javax.inject.Named
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
@@ -94,8 +92,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
 import com.asmr.player.ui.library.albumdetail.AlbumDetailModel
 import com.asmr.player.ui.library.albumdetail.albumDetailRequestKey
 import com.asmr.player.ui.library.albumdetail.AlbumDetailSimilarWorksState
@@ -162,6 +158,7 @@ class AlbumDetailViewModel @Inject constructor(
     private val listenTogetherRepository: ListenTogetherRepository,
     private val appCacheManager: AppCacheManager,
     private val onlineContentRepository: OnlineContentRepository,
+    val dlsiteAuthStore: DlsiteAuthStore,
     @Named("image") private val imageOkHttpClient: OkHttpClient,
     val messageManager: MessageManager,
     @ApplicationContext private val context: Context
@@ -1547,7 +1544,7 @@ class AlbumDetailViewModel @Inject constructor(
                 baseRj
             )
         )
-        val playCookieFingerprint = DlsiteAuthStore(context).getPlayCookie().trim().hashCode()
+        val playCookieFingerprint = dlsiteAuthStore.getPlayCookie().trim().hashCode()
         val attemptKey = candidates0.joinToString("|") + "#" + playCookieFingerprint
 
         if (

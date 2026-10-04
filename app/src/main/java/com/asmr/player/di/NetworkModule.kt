@@ -4,9 +4,11 @@ import com.asmr.player.BuildConfig
 import com.asmr.player.data.local.DeviceIdentityStore
 import com.asmr.player.data.remote.api.AsmrMirrorApi
 import com.asmr.player.data.remote.api.AsmrOneApi
+import com.asmr.player.data.remote.auth.DlsiteAuthStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
@@ -51,6 +53,12 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideGson(): Gson = Gson()
+
+    @Provides
+    @Singleton
+    fun provideDlsiteAuthStore(
+        @ApplicationContext context: android.content.Context
+    ): DlsiteAuthStore = DlsiteAuthStore(context)
 
     @Provides
     @Singleton

@@ -1646,11 +1646,10 @@ internal fun AlbumDlsitePlayBreadcrumbTabV2(
     onPersistScroll: (Int, Int) -> Unit,
     loadRemoteFileSize: suspend (String) -> Long?,
     prepareImagePreview: suspend (String, String?, Boolean, Int?, Int?) -> String?,
-    onListStateAvailable: (LazyListState?) -> Unit = {}
+    onListStateAvailable: (LazyListState?) -> Unit = {},
+    authStore: DlsiteAuthStore
 ) {
-    val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val authStore = remember { DlsiteAuthStore(context) }
     val scope = rememberCoroutineScope()
     var loggedIn by remember { mutableStateOf(authStore.isPlayLoggedIn()) }
 
