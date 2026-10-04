@@ -5,9 +5,9 @@ import androidx.lifecycle.viewModelScope
 import android.net.Uri
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.entities.AlbumEntity
-import com.asmr.player.ui.library.LibraryQueryBuilder
-import com.asmr.player.ui.library.LibraryQuerySpec
-import com.asmr.player.ui.library.LibrarySort
+import com.asmr.player.data.local.db.query.LibraryQueryBuilder
+import com.asmr.player.data.local.db.query.LibraryQuerySpec
+import com.asmr.player.data.local.db.query.LibrarySort
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.distinctUntilChanged

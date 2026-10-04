@@ -7,8 +7,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.data.local.db.entities.TrackEntity
-import com.asmr.player.ui.library.LibraryQueryBuilder
-import com.asmr.player.ui.library.LibraryQuerySpec
+import com.asmr.player.data.local.db.query.LibraryQueryBuilder
+import com.asmr.player.data.local.db.query.LibraryQuerySpec
 import com.asmr.player.ui.library.LibraryTrackQueryBuilder
 import kotlinx.coroutines.runBlocking
 import org.junit.After

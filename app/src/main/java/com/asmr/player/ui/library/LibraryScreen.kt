@@ -38,7 +38,6 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CreateNewFolder
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.FilterList
-import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SwapVert
@@ -51,6 +50,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.foundation.layout.fillMaxHeight
+import com.asmr.player.data.local.db.query.LibrarySort
 import com.asmr.player.util.Formatting
 import com.asmr.player.util.isOnlineTrackPath
 import com.asmr.player.data.local.db.entities.titleForDisplay

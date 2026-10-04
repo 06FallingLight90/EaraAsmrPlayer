@@ -21,7 +21,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.asmr.player.data.local.db.dao.LibraryTrackRow
-import com.asmr.player.data.local.db.dao.LibraryTrackAlbumHeaderRow
+import com.asmr.player.data.local.db.query.*
 import com.asmr.player.data.local.db.dao.TagWithCount
 import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.data.local.db.entities.TagSource
@@ -59,8 +59,6 @@ import com.asmr.player.util.SubtitleMatchSupport
 import com.asmr.player.util.SubtitleParser
 import com.asmr.player.util.MessageManager
 import com.asmr.player.util.SyncCoordinator
-import com.asmr.player.util.TagNormalizer
-import com.asmr.player.util.TrackKeyNormalizer
 import com.asmr.player.util.isOnlineTrackPath
 import com.asmr.player.util.isScannableLocalDirectoryName
 import com.asmr.player.util.isVirtualAlbumPath

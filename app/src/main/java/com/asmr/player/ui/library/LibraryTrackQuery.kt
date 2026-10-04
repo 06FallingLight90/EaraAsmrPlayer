@@ -2,6 +2,9 @@ package com.asmr.player.ui.library
 
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteQuery
+import com.asmr.player.data.local.db.query.LibraryQuerySpec
+import com.asmr.player.data.local.db.query.LibrarySort
+import com.asmr.player.data.local.db.query.LibrarySourceFilter
 
 object LibraryTrackQueryBuilder {
     fun build(spec: LibraryQuerySpec): SupportSQLiteQuery {

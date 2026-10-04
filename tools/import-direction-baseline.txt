@@ -208,6 +208,3 @@ app/src/main/java/com/asmr/player/ui/settings/SettingsScreen.kt com.asmr.player.
 app/src/main/java/com/asmr/player/ui/settings/SettingsScreen.kt com.asmr.player.ui.library.LibraryViewModel
 app/src/main/java/com/asmr/player/ui/settings/SettingsScreen.kt com.asmr.player.ui.update.launchDownloadedApkInstall
 app/src/main/java/com/asmr/player/ui/sidepanel/RecentAlbumsPanel.kt com.asmr.player.ui.player.PlayerViewModel
-app/src/main/java/com/asmr/player/ui/sidepanel/RecentAlbumsPanelViewModel.kt com.asmr.player.ui.library.LibraryQueryBuilder
-app/src/main/java/com/asmr/player/ui/sidepanel/RecentAlbumsPanelViewModel.kt com.asmr.player.ui.library.LibraryQuerySpec
-app/src/main/java/com/asmr/player/ui/sidepanel/RecentAlbumsPanelViewModel.kt com.asmr.player.ui.library.LibrarySort
