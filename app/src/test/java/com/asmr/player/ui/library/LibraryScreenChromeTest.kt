@@ -1,7 +1,7 @@
 package com.asmr.player.ui.library
 
 import androidx.compose.foundation.clickable
-import com.asmr.player.data.local.db.query.LibrarySort
+import com.asmr.player.domain.model.LibrarySort
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height

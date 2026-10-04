@@ -13,9 +13,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import com.asmr.player.data.local.db.query.LibrarySort
-import com.asmr.player.data.local.db.query.LibraryQuerySpec
-import com.asmr.player.data.local.db.query.LibrarySourceFilter
+import com.asmr.player.domain.model.LibrarySort
+import com.asmr.player.domain.model.LibraryQuerySpec
+import com.asmr.player.domain.model.LibrarySourceFilter
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner

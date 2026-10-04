@@ -9,7 +9,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.asmr.player.data.local.db.query.LibrarySort
+import com.asmr.player.domain.model.LibrarySort
 import com.asmr.player.ui.common.list.CollapsibleHeaderState
 import com.asmr.player.ui.theme.AsmrPlayerTheme
 import org.junit.Rule

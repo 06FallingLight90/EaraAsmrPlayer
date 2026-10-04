@@ -5,9 +5,7 @@ import androidx.lifecycle.viewModelScope
 import android.net.Uri
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.entities.AlbumEntity
-import com.asmr.player.data.local.db.query.LibraryQueryBuilder
-import com.asmr.player.data.local.db.query.LibraryQuerySpec
-import com.asmr.player.data.local.db.query.LibrarySort
+import com.asmr.player.data.repository.LibraryReadRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -34,13 +32,13 @@ data class RecentAlbumUiItem(
 
 @HiltViewModel
 class RecentAlbumsPanelViewModel @Inject constructor(
-    private val db: AppDatabase
+    private val db: AppDatabase,
+    private val libraryReadRepository: LibraryReadRepository
 ) : ViewModel() {
-    private val query = LibraryQueryBuilder.build(LibraryQuerySpec(sort = LibrarySort.LastPlayedDesc))
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val items: StateFlow<List<RecentAlbumUiItem>> = db.albumDao()
-        .queryAlbums(query)
+    val items: StateFlow<List<RecentAlbumUiItem>> = libraryReadRepository
+        .observeAlbumsByLastPlayed()
         .map { albums -> albums.filter { it.id > 0L }.take(5) }
         .distinctUntilChanged()
         .flatMapLatest { recent ->

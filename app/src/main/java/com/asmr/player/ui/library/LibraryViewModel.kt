@@ -18,10 +18,9 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.asmr.player.data.local.db.dao.LibraryTrackRow
-import com.asmr.player.data.local.db.query.*
 import com.asmr.player.data.local.db.dao.TagWithCount
 import com.asmr.player.data.local.db.entities.AlbumEntity
-import com.asmr.player.domain.model.TagSource
+import com.asmr.player.domain.model.*
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.db.entities.titleForDisplay
 import com.asmr.player.data.local.library.LocalAlbumMergeService
@@ -40,7 +39,6 @@ import com.asmr.player.data.repository.LibraryWriteRepository.ScanCacheLeaf
 import com.asmr.player.data.repository.LibraryWriteRepository.ScanTrackSpec
 import com.asmr.player.data.repository.OnlineContentRepository
 import com.asmr.player.data.settings.SettingsRepository
-import com.asmr.player.domain.model.Album
 import com.asmr.player.playback.PlayerConnection
 import com.asmr.player.ui.common.audio.queryTrackFileSize
 import com.asmr.player.util.GlobalSyncState
@@ -87,8 +85,6 @@ import okhttp3.Request
 import com.asmr.player.ui.library.albumdetail.LocalTreeDeletionTarget
 import com.asmr.player.ui.library.albumdetail.localTreePathMatchesTarget
 import com.asmr.player.ui.library.albumdetail.normalizeLocalTreeRelativePath
-import com.asmr.player.domain.model.TreeFileType
-import com.asmr.player.domain.model.treeFileTypeForName
 
 sealed class LibraryUiState {
     object Loading : LibraryUiState()
@@ -117,7 +113,6 @@ data class BulkProgress(
 ) {
     val fraction: Float = if (total <= 0) 0f else (current.toFloat() / total.toFloat()).coerceIn(0f, 1f)
 }
-
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
@@ -280,7 +275,7 @@ class LibraryViewModel @Inject constructor(
         .flatMapLatest { spec ->
             Pager(
                 config = PagingConfig(pageSize = 40, prefetchDistance = 10, enablePlaceholders = false),
-                pagingSourceFactory = { libraryReadRepository.albumsPaged(LibraryQueryBuilder.build(spec)) }
+                pagingSourceFactory = { libraryReadRepository.albumsPaged(spec) }
             ).flow
         }
         .map { paging -> paging.map { entity -> entity.toAlbum() } }
@@ -2497,4 +2492,3 @@ class LibraryViewModel @Inject constructor(
         super.onCleared()
     }
 }
-

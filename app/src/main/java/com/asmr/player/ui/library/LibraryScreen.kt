@@ -50,7 +50,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.foundation.layout.fillMaxHeight
-import com.asmr.player.data.local.db.query.LibrarySort
+import com.asmr.player.domain.model.LibrarySort
 import com.asmr.player.util.Formatting
 import com.asmr.player.util.isOnlineTrackPath
 import com.asmr.player.data.local.db.entities.titleForDisplay

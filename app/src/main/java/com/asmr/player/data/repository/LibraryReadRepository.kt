@@ -12,6 +12,8 @@ import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.data.local.db.entities.DownloadTaskEntity
 import com.asmr.player.data.local.db.entities.OnlineSavedResourceEntity
 import com.asmr.player.data.local.db.entities.TrackEntity
+import com.asmr.player.domain.model.LibraryQuerySpec
+import com.asmr.player.domain.model.LibrarySort
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -44,6 +46,13 @@ class LibraryReadRepository @Inject constructor(
     // ---------- PagingSource factory（原 VM Pager pagingSourceFactory 参数化） ----------
 
     fun albumsPaged(query: SupportSQLiteQuery): PagingSource<Int, AlbumEntity> = database.albumDao().queryAlbumsPaged(query)
+
+    /** R3-B1d：spec 出口——ui 侧不再直接构建 Room SQL（消 ui→db.query 边，防 SCC 回潮）。 */
+    fun albumsPaged(spec: LibraryQuerySpec): PagingSource<Int, AlbumEntity> = albumsPaged(LibraryQueryBuilder.build(spec))
+
+    /** R3-B1d：最近收听（LastPlayedDesc 固定排序）出口——RecentAlbumsPanel 不再自建 SQL。 */
+    fun observeAlbumsByLastPlayed(): Flow<List<AlbumEntity>> =
+        database.albumDao().queryAlbums(LibraryQueryBuilder.build(LibraryQuerySpec(sort = LibrarySort.LastPlayedDesc)))
 
     fun libraryTrackAlbumHeadersPaged(query: SupportSQLiteQuery): PagingSource<Int, LibraryTrackAlbumHeaderRow> =
         database.trackDao().queryLibraryTrackAlbumHeadersPaged(query)
