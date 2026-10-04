@@ -1,6 +1,6 @@
 package com.asmr.player.ui.search
 
-import com.asmr.player.translation.PageTranslationHost
+import com.asmr.player.ui.translation.PageTranslationHost
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState

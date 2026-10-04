@@ -82,7 +82,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import com.asmr.player.R
-import com.asmr.player.main.HardwareVolumeOverlay
+import com.asmr.player.ui.common.audio.HardwareVolumeOverlay
 import com.asmr.player.util.CachePolicy
 import com.asmr.player.cache.ImageCacheEntryPoint
 import com.asmr.player.data.lyrics.lyricsTargetContextFromMediaItem
@@ -111,6 +111,7 @@ import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.util.Formatting
 import com.asmr.player.util.SubtitleEntry
 import com.asmr.player.util.SubtitleIndexFinder
+import com.asmr.player.util.isOnlineMedia
 import com.asmr.player.listentogether.ListenTogetherStatus
 import com.asmr.player.listentogether.ListenTogetherUiState
 import dagger.hilt.android.EntryPointAccessors

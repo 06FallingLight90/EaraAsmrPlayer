@@ -50,7 +50,7 @@ import com.asmr.player.util.SubtitleEntry
 import com.asmr.player.util.SubtitleIndexFinder
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
-import com.asmr.player.ui.player.isOnlineMedia
+import com.asmr.player.util.isOnlineMedia
 import com.asmr.player.ui.player.LyricReadableColors
 import com.asmr.player.ui.player.PlayerViewModel
 import com.asmr.player.ui.player.SliceUiState

@@ -1,6 +1,6 @@
 package com.asmr.player.di
 
-import com.asmr.player.subtitle.DEEPSEEK_TRANSLATION_CONCURRENCY
+import com.asmr.player.util.DEEPSEEK_TRANSLATION_CONCURRENCY
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

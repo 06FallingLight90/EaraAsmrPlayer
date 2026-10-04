@@ -1,7 +1,7 @@
 package com.asmr.player.main
 
-import com.asmr.player.translation.LocalPageTranslationHeader
-import com.asmr.player.translation.PageTranslationHeaderState
+import com.asmr.player.ui.translation.LocalPageTranslationHeader
+import com.asmr.player.ui.translation.PageTranslationHeaderState
 import android.view.Choreographer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi

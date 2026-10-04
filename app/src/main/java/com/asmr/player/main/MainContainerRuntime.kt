@@ -50,6 +50,7 @@ import com.asmr.player.ui.search.SearchAssistSearchRequest
 import com.asmr.player.ui.common.dialog.FlatTextFieldDialog
 import com.asmr.player.data.settings.CoverPreviewMode
 import com.asmr.player.util.MessageManager
+import com.asmr.player.util.isVideoPlaybackItem
 import com.asmr.player.ui.nav.isPrimaryRoute
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay

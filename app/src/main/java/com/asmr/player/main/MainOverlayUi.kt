@@ -2,11 +2,11 @@ package com.asmr.player.main
 
 import com.asmr.player.BuildConfig
 import com.asmr.player.R
-import com.asmr.player.translation.LocalPageTranslationHeader
-import com.asmr.player.translation.PageTranslationAction
-import com.asmr.player.translation.PageTranslationHeaderAction
-import com.asmr.player.translation.PageTranslationHeaderState
-import com.asmr.player.translation.PageTranslationHost
+import com.asmr.player.ui.translation.LocalPageTranslationHeader
+import com.asmr.player.ui.translation.PageTranslationAction
+import com.asmr.player.ui.translation.PageTranslationHeaderAction
+import com.asmr.player.ui.translation.PageTranslationHeaderState
+import com.asmr.player.ui.translation.PageTranslationHost
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.Choreographer
@@ -234,6 +234,7 @@ import com.asmr.player.ui.common.audio.rememberProtectedAppVolumeChangeState
 import com.asmr.player.ui.common.audio.AudioOutputRouteIcon
 import com.asmr.player.ui.common.dialog.DismissOutsideBoundsOverlay
 import com.asmr.player.util.AudioOutputRouteKind
+import com.asmr.player.ui.common.audio.HardwareVolumeOverlay
 import com.asmr.player.service.PlaybackService
 import javax.inject.Inject
 import kotlinx.coroutines.Job

@@ -27,6 +27,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.test.core.app.ApplicationProvider
 import com.asmr.player.ui.theme.AsmrPlayerTheme
 import com.asmr.player.ui.settings.PageTranslationLanguageSelector
+import com.asmr.player.ui.translation.LocalPageTranslationHeader
+import com.asmr.player.ui.translation.PageTranslationAction
+import com.asmr.player.ui.translation.PageTranslationHeaderAction
+import com.asmr.player.ui.translation.PageTranslationHeaderState
+import com.asmr.player.ui.translation.PageTranslationScope
+import com.asmr.player.ui.translation.translatedPageText
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse

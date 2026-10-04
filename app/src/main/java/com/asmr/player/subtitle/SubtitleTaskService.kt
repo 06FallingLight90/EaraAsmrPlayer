@@ -32,7 +32,8 @@ import com.asmr.player.data.local.db.entities.SubtitleTranslationSourceEntity
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.db.entities.titleForDisplay
 import com.asmr.player.data.settings.SettingsRepository
-import com.asmr.player.di.DEEPSEEK_HTTP_CLIENT
+import com.asmr.player.util.DEEPSEEK_HTTP_CLIENT
+import com.asmr.player.util.DEEPSEEK_TRANSLATION_CONCURRENCY
 import com.asmr.player.domain.model.Track
 import com.asmr.player.data.local.tree.LocalTreeNode
 import com.asmr.player.domain.model.TreeFileType

@@ -2,11 +2,11 @@ package com.asmr.player.main
 
 import com.asmr.player.BuildConfig
 import com.asmr.player.R
-import com.asmr.player.translation.LocalPageTranslationHeader
-import com.asmr.player.translation.PageTranslationAction
-import com.asmr.player.translation.PageTranslationHeaderAction
-import com.asmr.player.translation.PageTranslationHeaderState
-import com.asmr.player.translation.PageTranslationHost
+import com.asmr.player.ui.translation.LocalPageTranslationHeader
+import com.asmr.player.ui.translation.PageTranslationAction
+import com.asmr.player.ui.translation.PageTranslationHeaderAction
+import com.asmr.player.ui.translation.PageTranslationHeaderState
+import com.asmr.player.ui.translation.PageTranslationHost
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.Choreographer
@@ -211,6 +211,7 @@ import com.asmr.player.data.settings.LyricsPageSettings
 import com.asmr.player.data.settings.NowPlayingHomeLayoutMode
 import com.asmr.player.data.settings.NowPlayingLyricsSettings
 import com.asmr.player.util.MessageManager
+import com.asmr.player.util.isVideoPlaybackItem
 import com.asmr.player.ui.common.list.StableWindowInsets
 import com.asmr.player.ui.theme.HuePalette
 import com.asmr.player.ui.theme.PlayerTheme

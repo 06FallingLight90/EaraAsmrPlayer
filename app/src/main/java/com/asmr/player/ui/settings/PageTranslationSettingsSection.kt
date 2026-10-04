@@ -43,7 +43,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.asmr.player.translation.PageTranslationLanguages
 import com.asmr.player.translation.PageTranslationSettings
-import com.asmr.player.translation.rememberPageTranslationServices
+import com.asmr.player.ui.translation.rememberPageTranslationServices
 import com.asmr.player.ui.theme.AsmrTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch

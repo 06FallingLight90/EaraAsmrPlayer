@@ -58,7 +58,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.asmr.player.domain.model.AppVolume
-import com.asmr.player.main.HardwareVolumeOverlay
+import com.asmr.player.ui.common.audio.HardwareVolumeOverlay
 import com.asmr.player.playback.PlaybackSnapshot
 import com.asmr.player.util.AudioOutputRouteKind
 import com.asmr.player.ui.common.audio.AppVolumeWarningSessionState

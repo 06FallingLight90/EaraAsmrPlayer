@@ -1,7 +1,7 @@
 package com.asmr.player.ui.library
 
-import com.asmr.player.translation.PageTranslationHost
-import com.asmr.player.translation.translatedPageText
+import com.asmr.player.ui.translation.PageTranslationHost
+import com.asmr.player.ui.translation.translatedPageText
 
 import android.content.Intent
 import androidx.activity.compose.BackHandler

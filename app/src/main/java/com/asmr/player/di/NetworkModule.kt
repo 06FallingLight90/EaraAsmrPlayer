@@ -23,15 +23,15 @@ import javax.inject.Named
 import com.asmr.player.data.remote.TrafficStatsInterceptor
 import com.asmr.player.data.remote.NetworkHeaders
 import com.asmr.player.data.remote.NetworkRouteManager
-import com.asmr.player.subtitle.DEEPSEEK_TRANSLATION_CONCURRENCY
 import com.asmr.player.util.MessageManager
 import com.asmr.player.util.ASMR_ONE_SITE_FAILURE_MESSAGE
+import com.asmr.player.util.DEEPSEEK_HTTP_CLIENT
+import com.asmr.player.util.DEEPSEEK_TRANSLATION_CONCURRENCY
 import com.asmr.player.util.DlsiteAntiHotlink
 import com.google.gson.Gson
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-internal const val DEEPSEEK_HTTP_CLIENT = "deepseek"
 private val ASMR_ONE_SITE_DOMAINS = setOf("asmr.one", "asmr-100.com", "asmr-200.com", "asmr-300.com")
 
 internal fun createDeepSeekDispatcher(): Dispatcher = Dispatcher().apply {

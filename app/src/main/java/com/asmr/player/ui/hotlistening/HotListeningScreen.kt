@@ -1,6 +1,6 @@
 package com.asmr.player.ui.hotlistening
 
-import com.asmr.player.translation.PageTranslationHost
+import com.asmr.player.ui.translation.PageTranslationHost
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration

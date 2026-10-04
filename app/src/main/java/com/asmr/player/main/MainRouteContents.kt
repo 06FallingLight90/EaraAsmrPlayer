@@ -27,6 +27,7 @@ import com.asmr.player.ui.playlists.SystemPlaylistScreen
 import com.asmr.player.ui.search.SearchAssistScreen
 import com.asmr.player.ui.search.SearchAssistSearchRequest
 import com.asmr.player.ui.common.core.SearchBlockedKeywordsViewModel
+import com.asmr.player.util.isVideoPlaybackItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 

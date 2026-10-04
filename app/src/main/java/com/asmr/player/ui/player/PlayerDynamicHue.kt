@@ -6,7 +6,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.media3.common.MediaItem
-import com.asmr.player.main.toThemeMediaSource
 import com.asmr.player.ui.theme.AsmrColorScheme
 import com.asmr.player.ui.theme.HuePalette
 import com.asmr.player.ui.theme.ThemeMode
@@ -14,9 +13,34 @@ import com.asmr.player.ui.theme.deriveHuePalette
 import com.asmr.player.ui.theme.neutralPaletteForMode
 import com.asmr.player.ui.theme.rememberDynamicHuePalette
 import com.asmr.player.ui.theme.rememberDynamicHuePaletteFromVideoFrame
+import com.asmr.player.util.isVideoPlaybackItem
+import android.net.Uri
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+
+/** R3-B2 环1 消解自 main/MainNavigationSupport.kt 迁入（动态取色专用的媒体源描述）。 */
+internal data class ThemeMediaSource(
+    val artworkUri: Uri? = null,
+    val videoUri: Uri? = null,
+    val isVideo: Boolean = false
+)
+
+internal fun MediaItem?.toThemeMediaSource(): ThemeMediaSource {
+    val item = this ?: return ThemeMediaSource()
+    val metadata = item.mediaMetadata
+    val artworkUri = metadata.artworkUri?.takeUnless { uri ->
+        val uriTextValue = uri.toString()
+        uri.scheme.equals("android.resource", ignoreCase = true) ||
+            uriTextValue.contains("ic_placeholder", ignoreCase = true)
+    }
+    val videoUri = item.localConfiguration?.uri
+    return ThemeMediaSource(
+        artworkUri = artworkUri,
+        videoUri = videoUri,
+        isVideo = item.isVideoPlaybackItem()
+    )
+}
 
 @Composable
 internal fun rememberPlayerDynamicHuePalette(

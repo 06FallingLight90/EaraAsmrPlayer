@@ -75,12 +75,17 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
-import com.asmr.player.AsmrApp
 import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.util.MessageManager
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import javax.inject.Named
+import okhttp3.OkHttpClient
 
 internal const val IMAGE_PREVIEW_DIALOG_TAG = "image_preview_dialog"
 internal const val IMAGE_PREVIEW_CLOSE_TAG = "image_preview_close"
@@ -99,6 +104,18 @@ internal data class ImagePreviewLayoutSpec(
 )
 
 internal val DefaultImagePreviewLayoutSpec = ImagePreviewLayoutSpec()
+
+/** R3-B2 环11 消解：ui.common.cover 不再直引根包 AsmrApp，经 Hilt EntryPoint 取图片客户端。 */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+internal interface ImagePreviewEntryPoint {
+    @Named("image")
+    fun imageOkHttpClient(): OkHttpClient
+}
+
+private fun imageOkHttpClient(context: android.content.Context): OkHttpClient {
+    return EntryPointAccessors.fromApplication(context, ImagePreviewEntryPoint::class.java).imageOkHttpClient()
+}
 
 @Suppress("DEPRECATION")
 private fun Window.applyImagePreviewSystemBarStyle() {
@@ -201,12 +218,10 @@ internal fun ImagePreviewDialog(
         savingImageKey = request.key
         scope.launch {
             try {
-                val app = context.applicationContext as? AsmrApp
-                    ?: error("Image client is unavailable")
                 savePreviewImageToGallery(
                     context = context.applicationContext,
                     request = request,
-                    httpClient = app.imageOkHttpClient
+                    httpClient = imageOkHttpClient(context.applicationContext)
                 )
                 savingImageKey = null
                 savedImageKey = request.key
@@ -261,12 +276,10 @@ internal fun ImagePreviewDialog(
         openingExternalImageKey = openRequest.key
         scope.launch {
             try {
-                val app = context.applicationContext as? AsmrApp
-                    ?: error("Image client is unavailable")
                 val prepared = preparePreviewImageForExternalOpen(
                     context = context.applicationContext,
                     request = openRequest,
-                    httpClient = app.imageOkHttpClient
+                    httpClient = imageOkHttpClient(context.applicationContext)
                 )
                 val viewIntent = Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(prepared.uri, prepared.mimeType)

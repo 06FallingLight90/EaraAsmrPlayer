@@ -1,6 +1,6 @@
 package com.asmr.player.ui.common.audio
 
-import com.asmr.player.translation.translatedPageText
+import com.asmr.player.ui.translation.translatedPageText
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

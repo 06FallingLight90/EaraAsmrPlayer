@@ -2,7 +2,7 @@ package com.asmr.player.ui.library.albumdetail
 
 import android.graphics.PathMeasure as AndroidPathMeasure
 
-import com.asmr.player.translation.translatedPageText
+import com.asmr.player.ui.translation.translatedPageText
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing

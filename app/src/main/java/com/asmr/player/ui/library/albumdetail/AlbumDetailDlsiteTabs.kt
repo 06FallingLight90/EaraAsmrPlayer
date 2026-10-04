@@ -2,7 +2,7 @@ package com.asmr.player.ui.library.albumdetail
 
 import com.asmr.player.domain.model.TreeFileType
 import com.asmr.player.domain.model.isDownloadableTreeFileType
-import com.asmr.player.translation.translatedPageText
+import com.asmr.player.ui.translation.translatedPageText
 
 import android.content.Intent
 import android.net.Uri

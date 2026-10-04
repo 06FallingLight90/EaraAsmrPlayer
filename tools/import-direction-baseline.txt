@@ -170,7 +170,6 @@ app/src/main/java/com/asmr/player/main/MainPrimaryPagerUi.kt com.asmr.player.dat
 app/src/main/java/com/asmr/player/main/MainTopBarUi.kt com.asmr.player.data.remote.scraper.resolveRecommendedWorkHeroCoverUrl
 app/src/main/java/com/asmr/player/main/MainOverlayUi.kt com.asmr.player.data.remote.scraper.resolveRecommendedWorkHeroCoverUrl
 app/src/main/java/com/asmr/player/main/MainRouteContents.kt com.asmr.player.data.remote.scraper.resolveRecommendedWorkHeroCoverUrl
-app/src/main/java/com/asmr/player/hotlistening/ListeningTracker.kt com.asmr.player.ui.player.isOnlineMedia
 app/src/main/java/com/asmr/player/main/ClipboardRjNavigation.kt com.asmr.player.data.local.datastore.SettingsDataStore
 app/src/main/java/com/asmr/player/main/MainChromeUi.kt com.asmr.player.data.local.datastore.SettingsDataStore
 app/src/main/java/com/asmr/player/main/MainContainer.kt com.asmr.player.data.local.datastore.SettingsDataStore
@@ -180,7 +179,6 @@ app/src/main/java/com/asmr/player/main/MainNavigationSupport.kt com.asmr.player.
 app/src/main/java/com/asmr/player/main/MainOverlayUi.kt com.asmr.player.data.local.datastore.SettingsDataStore
 app/src/main/java/com/asmr/player/main/MainPrimaryPagerUi.kt com.asmr.player.data.local.datastore.SettingsDataStore
 app/src/main/java/com/asmr/player/main/MainTopBarUi.kt com.asmr.player.data.local.datastore.SettingsDataStore
-app/src/main/java/com/asmr/player/translation/PageTranslationUi.kt com.asmr.player.ui.theme.AsmrTheme
 app/src/main/java/com/asmr/player/ui/calendar/ListeningCalendarScreen.kt com.asmr.player.data.local.db.entities.ListeningSessionEntity
 app/src/main/java/com/asmr/player/ui/calendar/ListeningCalendarViewModel.kt com.asmr.player.data.local.db.entities.DailyStatEntity
 app/src/main/java/com/asmr/player/ui/calendar/ListeningCalendarViewModel.kt com.asmr.player.data.local.db.entities.ListeningSessionEntity
@@ -255,3 +253,4 @@ app/src/main/java/com/asmr/player/ui/sidepanel/RecentAlbumsPanel.kt com.asmr.pla
 app/src/main/java/com/asmr/player/ui/sidepanel/RecentAlbumsPanelViewModel.kt com.asmr.player.data.local.db.AppDatabase
 app/src/main/java/com/asmr/player/ui/sidepanel/RecentAlbumsPanelViewModel.kt com.asmr.player.data.local.db.entities.AlbumEntity
 app/src/main/java/com/asmr/player/ui/theme/DynamicHueGenerator.kt com.asmr.player.cache.ImageCacheEntryPoint
+app/src/main/java/com/asmr/player/ui/common/cover/ImagePreviewDialog.kt okhttp3.OkHttpClient

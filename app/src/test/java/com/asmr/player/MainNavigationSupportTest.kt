@@ -15,7 +15,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import com.asmr.player.main.computePrimaryNavSelectionProgresses
 import com.asmr.player.main.isAlbumDetailStackTransition
-import com.asmr.player.main.isVideoPlaybackItem
+import com.asmr.player.main.isVideoPlaybackItem as playlistItemIsVideoPlaybackItem
 import com.asmr.player.main.resolveCurrentPrimaryDestinationRoute
 import com.asmr.player.main.resolveMainRequestedOrientation
 import com.asmr.player.main.resolvePrimaryNavVisualRoute
@@ -27,7 +27,8 @@ import com.asmr.player.main.shouldKeepVideoOutputEnabled
 import com.asmr.player.main.shouldScrollPrimaryRouteToTop
 import com.asmr.player.main.shouldSyncPrimaryPagerToRoute
 import com.asmr.player.main.shouldTriggerPrimaryRouteScrollToTop
-import com.asmr.player.main.toThemeMediaSource
+import com.asmr.player.ui.player.toThemeMediaSource
+import com.asmr.player.util.isVideoPlaybackItem
 
 @RunWith(RobolectricTestRunner::class)
 class MainNavigationSupportTest {
@@ -434,6 +435,6 @@ class MainNavigationSupportTest {
 
         assertEquals(false, audio.isVideoPlaybackItem())
         assertEquals(true, video.isVideoPlaybackItem())
-        assertEquals(true, playlistVideo.isVideoPlaybackItem())
+        assertEquals(true, playlistVideo.playlistItemIsVideoPlaybackItem())
     }
 }

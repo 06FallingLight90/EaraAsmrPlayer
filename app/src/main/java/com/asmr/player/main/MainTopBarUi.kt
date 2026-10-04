@@ -15,11 +15,11 @@ import com.asmr.player.domain.model.AppVolume
 import com.asmr.player.ui.common.audio.AppVolumeVerticalSlider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import com.asmr.player.translation.LocalPageTranslationHeader
-import com.asmr.player.translation.PageTranslationAction
-import com.asmr.player.translation.PageTranslationHeaderAction
-import com.asmr.player.translation.PageTranslationHeaderState
-import com.asmr.player.translation.PageTranslationHost
+import com.asmr.player.ui.translation.LocalPageTranslationHeader
+import com.asmr.player.ui.translation.PageTranslationAction
+import com.asmr.player.ui.translation.PageTranslationHeaderAction
+import com.asmr.player.ui.translation.PageTranslationHeaderState
+import com.asmr.player.ui.translation.PageTranslationHost
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.Choreographer

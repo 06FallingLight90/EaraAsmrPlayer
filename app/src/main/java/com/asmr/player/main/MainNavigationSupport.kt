@@ -155,6 +155,7 @@ import com.asmr.player.data.local.datastore.SettingsDataStore
 import com.asmr.player.data.settings.CoverPreviewMode
 import com.asmr.player.data.settings.LyricsPageSettings
 import com.asmr.player.util.MessageManager
+import com.asmr.player.util.isVideoPlaybackSource
 import com.asmr.player.ui.common.status.NonTouchableAppMessageOverlay
 import com.asmr.player.ui.common.list.StableWindowInsets
 import com.asmr.player.ui.common.status.VisibleAppMessage
@@ -438,36 +439,6 @@ internal data class DefaultSystemUiState(
     val layoutInDisplayCutoutMode: Int? = null
 )
 
-internal data class ThemeMediaSource(
-    val artworkUri: Uri? = null,
-    val videoUri: Uri? = null,
-    val isVideo: Boolean = false
-)
-
-private val VideoPlaybackExtensions = setOf("mp4", "m4v", "webm", "mkv", "mov")
-
-private fun isVideoPlaybackSource(
-    uriText: String,
-    mimeType: String,
-    metadataFlag: Boolean
-): Boolean {
-    val fileExtension = uriText
-        .substringBefore('#')
-        .substringBefore('?')
-        .substringAfterLast('.', "")
-        .lowercase()
-    return metadataFlag || mimeType.startsWith("video/") || fileExtension in VideoPlaybackExtensions
-}
-
-internal fun MediaItem?.isVideoPlaybackItem(): Boolean {
-    val item = this ?: return false
-    return isVideoPlaybackSource(
-        uriText = item.localConfiguration?.uri?.toString().orEmpty(),
-        mimeType = item.localConfiguration?.mimeType.orEmpty(),
-        metadataFlag = item.mediaMetadata.extras?.getBoolean("is_video") == true
-    )
-}
-
 internal fun PlaylistItemEntity?.isVideoPlaybackItem(): Boolean {
     val item = this ?: return false
     return isVideoPlaybackSource(
@@ -498,22 +469,6 @@ internal fun shouldKeepVideoOutputEnabled(
 ): Boolean {
     return currentItemIsVideo &&
         (miniPlayerEnabled || nowPlayingVisible)
-}
-
-internal fun MediaItem?.toThemeMediaSource(): ThemeMediaSource {
-    val item = this ?: return ThemeMediaSource()
-    val metadata = item.mediaMetadata
-    val artworkUri = metadata.artworkUri?.takeUnless { uri ->
-        val uriTextValue = uri.toString()
-        uri.scheme.equals("android.resource", ignoreCase = true) ||
-            uriTextValue.contains("ic_placeholder", ignoreCase = true)
-    }
-    val videoUri = item.localConfiguration?.uri
-    return ThemeMediaSource(
-        artworkUri = artworkUri,
-        videoUri = videoUri,
-        isVideo = item.isVideoPlaybackItem()
-    )
 }
 
 internal fun Context.findActivity(): Activity? {

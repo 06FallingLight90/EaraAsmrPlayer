@@ -1,6 +1,6 @@
 package com.asmr.player.ui.library
 
-import com.asmr.player.translation.translatedPageText
+import com.asmr.player.ui.translation.translatedPageText
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing

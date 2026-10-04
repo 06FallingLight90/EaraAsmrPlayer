@@ -1,7 +1,7 @@
 package com.asmr.player.main
 
-import com.asmr.player.translation.PageTranslationAction
-import com.asmr.player.translation.PageTranslationHost
+import com.asmr.player.ui.translation.PageTranslationAction
+import com.asmr.player.ui.translation.PageTranslationHost
 import android.view.Choreographer
 import android.view.View
 import android.view.WindowManager

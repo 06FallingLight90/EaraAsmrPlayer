@@ -2,7 +2,7 @@ package com.asmr.player.hotlistening
 
 import androidx.media3.common.MediaItem
 import com.asmr.player.playback.PlaybackSnapshot
-import com.asmr.player.ui.player.isOnlineMedia
+import com.asmr.player.util.isOnlineMedia
 import com.asmr.player.util.DlsiteWorkNo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

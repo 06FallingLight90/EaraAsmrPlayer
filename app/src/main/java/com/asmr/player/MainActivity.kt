@@ -204,8 +204,8 @@ import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import com.asmr.player.main.MainContainer
-import com.asmr.player.main.ThemeMediaSource
-import com.asmr.player.main.toThemeMediaSource
+import com.asmr.player.ui.player.ThemeMediaSource
+import com.asmr.player.ui.player.toThemeMediaSource
 
 private const val MONOCHROME_THEME_SENTINEL = 0x01000000
 

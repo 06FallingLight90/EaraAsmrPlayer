@@ -7,7 +7,7 @@ import androidx.core.graphics.ColorUtils
 import com.google.android.material.color.utilities.Hct
 import com.google.android.material.color.utilities.QuantizerCelebi
 import com.google.android.material.color.utilities.Score
-import com.asmr.player.ui.common.cover.computeCenterWeightedHintColorInt
+import com.asmr.player.util.computeCenterWeightedHintColorInt
 import kotlin.math.sqrt
 
 private const val DEFAULT_MAX_COLORS = 24

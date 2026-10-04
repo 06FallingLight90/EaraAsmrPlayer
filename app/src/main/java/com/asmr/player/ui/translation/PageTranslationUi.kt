@@ -1,4 +1,4 @@
-package com.asmr.player.translation
+package com.asmr.player.ui.translation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -18,6 +18,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.asmr.player.translation.PageTranslationException
+import com.asmr.player.translation.PageTranslationPreferences
+import com.asmr.player.translation.PageTranslationRepository
+import com.asmr.player.translation.PageTranslationSettings
+import com.asmr.player.translation.pageTranslationText
+import com.asmr.player.translation.shouldTranslatePageText
 import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.util.MessageManager
 import dagger.hilt.EntryPoint

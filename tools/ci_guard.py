@@ -32,8 +32,8 @@ ROOT_ENTRY_TYPES = (
     "com.asmr.player.ThemeStartupSupport",
 )
 
-# feature-to-feature 白名单：ui.common / ui.theme 是跨特征共享层，任何 ui.* 可引
-UI_FEATURE_WHITELIST = ("common", "theme")
+# feature-to-feature 白名单：ui.common / ui.theme / ui.translation 是跨特征共享层，任何 ui.* 可引
+UI_FEATURE_WHITELIST = ("common", "theme", "translation")
 
 
 def ui_feature(fq: str) -> str:
