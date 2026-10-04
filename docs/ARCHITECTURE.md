@@ -119,13 +119,13 @@ UI（ui/player/PlayerViewModel.kt 等）
 
 - 环境：JDK 17；Windows 本机可用仓库自带的 `gradlew-local.bat` 辅助脚本（重定向 Gradle 本地缓存）。
 - 构建：`./gradlew :app:assembleDebug`
-- 测试：`./gradlew :app:testDebugUnitTest`（当前基线约 **906** 个用例，改动后应保持全绿且只增不减）
+- 测试：`./gradlew :app:testDebugUnitTest`（当前基线 **938** 个用例，改动后应保持全绿且只增不减）
 - CI：`.github/workflows/ci.yml`（push/PR）：架构守护（`tools/ci_guard.py`：单文件行数 ratchet「路径:行数」pin + 9 条 import 方向规则 + 反例夹具自检）→ `:app:testDebugUnitTest`；`.github/workflows/release.yml` 由 `v*` tag 触发，先运行 `:app:testReleaseUnitTest` 再构建 Release 签名 APK。
 - 签名配置与字幕模型按需下载说明见 README「Getting Started」一节。
 
 ## 7. 已知问题与重构状态
 
-> 门禁报告索引：各阶段审查报告落 [docs/iteration/](iteration/)（`phase-1/2/3-review.md` 为第一轮，`r2-phase-A/B-review.md` 为第二轮），含审查发现（P0/P1/P2 分级）与实机走查证据。
+> 门禁报告索引：各阶段审查报告落 [docs/iteration/](iteration/)（`phase-1/2/3-review.md` 为第一轮，`r2-phase-A/B/C-review.md` 为第二轮），含审查发现（P0/P1/P2 分级）与实机走查证据。
 
 ### 7.1 第一轮重构（阶段 1–3，已完成）
 
@@ -146,7 +146,8 @@ UI（ui/player/PlayerViewModel.kt 等）
 
 - **阶段 A 已完成**（tag `refactor-r2/phase-A`）：目录=包名 22 文件统一；ci_guard 重写（真实包名匹配 + 全仓扫描 + 9 条方向规则 + 反例自检）；`collectSubtitleCandidates` 三份收敛；runBlocking 超时兜底 / OkHttp 显式超时 / DownloadWorker IO 重试 ≤2。
 - **阶段 B 已完成**（tag `refactor-r2/phase-B` @ 9afcccb）：data→上层反向 import 清零（B1 模型下沉）；service 去 `MainActivity` import（B2，含**切片后台循环修复** `awaitFrameCommitOrTimeout`，上游 issue #322，实机验证通过）；`PlaybackController` 接口（B3）；两个 God VM 数据访问收进 `LibraryReadRepository`/`LibraryWriteRepository`（B4/B5，行为档案见 7.3）；ui→DAO 存量 19 处/15 文件入 baseline（B6）。测试 880→**906** 只增不减；门禁实机走查 5/6（下载全链被既有在线树请求取消问题阻塞，`git diff refactor-r2/phase-A..HEAD` 佐证非回归）。
-- **阶段 C 待开工**：MainContainer 路由族拆分 / NowPlaying / Settings 区块化 / 两 God VM 方法族拆分 / ratchet 收紧 1500→800。开工前先做 [2026-10-02 体检](project-quality-review-20261002.md)的「第一阶段：补闸门与校准」——size ratchet 收紧（现松弛 805 行）+ 新守卫规则 `ui-to-data-remote`（UI 直连 `data.remote` 160 处 / 27 文件当前零覆盖，最大结构洞）等。
+- **阶段 C 已完成**（tag `refactor-r2/phase-C` @ 814627b；审查报告 [r2-phase-C-review.md](iteration/r2-phase-C-review.md)）：三个 God 组合函数拆分退出 pin（MainContainer 2375→796、NowPlayingScreen 2902→836、SettingsScreen 2675→1270）；消 3 组特征环（ui.player→ui.library、AlbumDetail↔Settings、ui.sidepanel→ui.library）；C 批次 G 补闸门（size ratchet 贴实测、`ui-to-data-remote` 规则入守护、CI 编译门禁）；C4 数据编排下沉 4 类新 repository——`OnlineContentRepository`（ASMR.ONE 解析缓存/云同步/封面补全/预览/文件体积/推荐富化）、`UpdateRepository`、`SearchRepository`、`DownloadQueueRepository`（AlbumDetailViewModel 2996→2510、LibraryViewModel 2641→2521，行为契约见 7.3 档案）；`DownloadManager` 迁 `data/download`、`LibraryQuerySpec` 族迁 `data/local/db/query`。门禁三件套：本机测试 906→**938** 全绿、子代理审查无 P0 且 P1 闭环（缓存并发安全 ConcurrentHashMap+Mutex、ci_guard main 包盲区补夹具）、实机走查通过（ASMR.ONE 解析端到端、云同步链路、DL Play 登录态，受限项如实记录）；CI 双绿。
+- **C5 结论（阶段内闭环）**：size ratchet 持续还债后两 VM pin 贴实测（2510/2521）。1500→800 的进一步收紧需先做编排层 state holder 重构——云同步/删除/扫描族是 UI 状态机（`_syncStatus`/选择队列/消息/bulk 进度），直接下沉只是搬运代码+回调透传。列为后续方向，不在阶段 C 强行达成。
 
 ### 7.3 行为档案索引（隐性行为文档化）
 
@@ -155,7 +156,8 @@ UI（ui/player/PlayerViewModel.kt 等）
 
 ### 7.4 backlog
 
-- 2026-10-02 体检新增：UI→`data.remote` 160 处随各 ViewModel 下沉 Repository；特征环 3 组（main↔ui.player、ui.library↔{ui.player, ui.settings, ui.sidepanel}）；`LibraryWriteRepository` 1050 行拆族；根文档三缺（LICENSE/CHANGELOG/CONTRIBUTING）。
+- 2026-10-02 体检新增（阶段 C 已偿部分见 7.2）：~~特征环 3 组~~（C1/C4b-4 已消）；剩余：编排层 state holder 重构（两 God VM 1500 收紧前提）、`LibraryWriteRepository` 1050 行拆族、根文档三缺（LICENSE/CHANGELOG/CONTRIBUTING）。
+- 决策待定：`ensureAlbumCoverSaved` 双实现统一（LibraryViewModel 旧版仅网络/2048/ARGB_8888，repo 版支持本地来源/1280/RGB_565——统一属行为变更，见 r2-phase-C-review.md）。
 - 沿用：`LibraryViewModel.walkTree` / `scanFromDocumentTree` 拆函数、Chrome 概念归包（main 与 ui/nav）、dao 包投影 DTO 归位（`LibraryTrackRow` 等）。
 
 快速读懂本工程的建议顺序：`MainActivity` → `main/MainContainer`（导航骨架）→ `ui/library`（库页与详情家族）→ `playback/PlayerConnection` → `service/PlaybackService`（播放落地）。
