@@ -23,6 +23,7 @@ SIZE_LIMIT = 1500
 SIZE_SLACK_TOLERANCE = 50
 SIZE_BASELINE = Path(__file__).resolve().parent / "size-guard-baseline.txt"
 IMPORT_BASELINE = Path(__file__).resolve().parent / "import-direction-baseline.txt"
+SCC_BASELINE = Path(__file__).resolve().parent / "package-scc-baseline.txt"
 
 # 根包留守的入口类型：service/subtitle 直接 import 即构成 ui(main)↔service 环
 ROOT_ENTRY_TYPES = (
@@ -171,23 +172,168 @@ def match_imports(rel: str, pkg: str, lines) -> list:
     return hits
 
 
-def check_dir(root: Path, import_baseline: set):
-    """扫描目录，返回 (failures, baseline_hits)。"""
-    failures, baseline_hits = [], []
+def collect_violations(root: Path):
+    """扫描目录，返回所有 (rule, rel, line_no, fq) 违规（供 check_dir 与 refresh 复用）。"""
+    out = []
     if not root.exists():
-        return failures, baseline_hits
+        return out
     for f in sorted(root.rglob("*.kt")):
         rel = f.relative_to(REPO).as_posix()
         lines = read_lines(f)
         pkg = file_package(lines)
-        for rule, _rel, no, fq in match_imports(rel, pkg, lines):
-            entry = f"{rel}:{no} {fq}"
-            short = f"{rel} {fq}"
-            if entry in import_baseline or short in import_baseline:
-                baseline_hits.append(f"[import] 存量违规（baseline）：{entry}")
-            else:
-                failures.append(f"[import] {rule} 违规 {entry}")
+        out.extend(match_imports(rel, pkg, lines))
+    return out
+
+
+def check_dir(violations, import_baseline: set):
+    """按当前违规与 baseline 比对，返回 (failures, baseline_hits)。"""
+    failures, baseline_hits = [], []
+    for rule, rel, no, fq in violations:
+        entry = f"{rel}:{no} {fq}"
+        short = f"{rel} {fq}"
+        if entry in import_baseline or short in import_baseline:
+            baseline_hits.append(f"[import] 存量违规（baseline）：{entry}")
+        else:
+            failures.append(f"[import] {rule} 违规 {entry}")
     return failures, baseline_hits
+
+
+def violation_keys(violations) -> set:
+    """当前违规的可匹配键（含 'rel:no fq' 与 'rel fq' 两种形式）。"""
+    keys = set()
+    for _rule, rel, no, fq in violations:
+        keys.add(f"{rel}:{no} {fq}")
+        keys.add(f"{rel} {fq}")
+    return keys
+
+
+def check_dead_entries(import_baseline: set, violations) -> list:
+    """失效条目检测：baseline 里已不再构成当前违规的条目（配额虚高）须移除。
+
+    两类失效：① 导入已删除/文件已不存在；② 规则或白名单变更后该导入不再违规。
+    拆文件仅改行号不算失效——匹配键含 "<rel> <fq>" 短形式。
+    """
+    keys = violation_keys(violations)
+    problems = []
+    for entry in sorted(import_baseline):
+        if entry not in keys:
+            problems.append(f"[import] baseline 失效条目（不再违规/导入已移除，请移除）：{entry}")
+    return problems
+
+
+def known_packages(root: Path) -> set:
+    """收集目录下所有 .kt 的真实 package 名（供 import → 包 的最长前缀解析）。"""
+    pkgs = set()
+    if not root.exists():
+        return pkgs
+    for f in sorted(root.rglob("*.kt")):
+        pkg = file_package(read_lines(f))
+        if pkg:
+            pkgs.add(pkg)
+    return pkgs
+
+
+def resolve_package(fq: str, pkgs: set):
+    """把 import 的 FQ 名解析到已知包（取最长前缀）；非本项目返回 None。"""
+    if not fq.startswith("com.asmr.player"):
+        return None
+    parts = fq.split(".")
+    for i in range(len(parts), 0, -1):
+        cand = ".".join(parts[:i])
+        if cand in pkgs:
+            return cand
+    return None
+
+
+def build_package_graph(root: Path) -> dict:
+    """构建包级有向图（含自环之外的包间边）。"""
+    pkgs = known_packages(root)
+    graph = {p: set() for p in pkgs}
+    if not root.exists():
+        return graph
+    for f in sorted(root.rglob("*.kt")):
+        lines = read_lines(f)
+        src = file_package(lines)
+        if not src:
+            continue
+        for line in lines:
+            s = line.strip()
+            if not s.startswith("import "):
+                continue
+            fq = s[len("import "):].strip()
+            if fq.endswith(".*"):
+                fq = fq[:-2]
+            tgt = resolve_package(fq, pkgs)
+            if tgt and tgt != src:
+                graph[src].add(tgt)
+    return graph
+
+
+def tarjan_scc(graph: dict) -> list:
+    """Tarjan 求强连通分量（节点数 ≤ 数十，递归安全）。"""
+    counter = [0]
+    stack, on_stack = [], set()
+    index, low, result = {}, {}, []
+
+    def strongconnect(v):
+        index[v] = low[v] = counter[0]
+        counter[0] += 1
+        stack.append(v)
+        on_stack.add(v)
+        for w in graph.get(v, ()):
+            if w not in index:
+                strongconnect(w)
+                low[v] = min(low[v], low[w])
+            elif w in on_stack:
+                low[v] = min(low[v], index[w])
+        if low[v] == index[v]:
+            comp = []
+            while True:
+                w = stack.pop()
+                on_stack.discard(w)
+                comp.append(w)
+                if w == v:
+                    break
+            result.append(comp)
+
+    for v in graph:
+        if v not in index:
+            strongconnect(v)
+    return result
+
+
+def read_scc_baseline() -> int:
+    """读包级 SCC 规模上界（max_scc_size=<int>）；缺省 0 表示未设。"""
+    if not SCC_BASELINE.exists():
+        return 0
+    for raw in SCC_BASELINE.read_text(encoding="utf-8").splitlines():
+        s = raw.strip()
+        if not s or s.startswith("#"):
+            continue
+        if s.startswith("max_scc_size"):
+            return int(s.split("=", 1)[1].strip())
+    return 0
+
+
+def biggest_scc(graph: dict) -> list:
+    comps = tarjan_scc(graph)
+    return max(comps, key=len) if comps else []
+
+
+def check_scc(root: Path, limit: int):
+    """包级 SCC ratchet：只许减不许增。返回 (failures, notes)。"""
+    failures, notes = [], []
+    members = biggest_scc(build_package_graph(root))
+    size = len(members)
+    if limit <= 0:
+        notes.append(f"[scc] baseline 未设（当前最大连通团 {size} 包），请写入 {SCC_BASELINE.name}")
+    elif size > limit:
+        sample = ", ".join(sorted(members)[:8])
+        failures.append(
+            f"[scc] 包级连通团增大：{size} > 上界 {limit}（新增环）。示例成员：{sample} ...")
+    elif size < limit:
+        notes.append(f"[scc] 包级连通团缩小：{size} < 上界 {limit}，请收缩 baseline")
+    return failures, notes
 
 
 def selftest() -> list:
@@ -243,6 +389,18 @@ def selftest_size() -> list:
     return problems
 
 
+def selftest_scc() -> list:
+    """SCC 判定逻辑自检（纯合成图，证明环可识别、无环不误报）。"""
+    problems = []
+    cyc = {"a": {"b"}, "b": {"a"}, "c": {"a"}}
+    if len(biggest_scc(cyc)) != 2:
+        problems.append("[selftest] scc: 合成 2-环未被识别")
+    acyclic = {"a": {"b"}, "b": {"c"}, "c": set()}
+    if len(biggest_scc(acyclic)) != 1:
+        problems.append("[selftest] scc: 无环图误判为环")
+    return problems
+
+
 def main() -> int:
     failures = []
 
@@ -250,6 +408,7 @@ def main() -> int:
     failures.extend(selftest())
     failures.extend(selftest_feature_whitelist())
     failures.extend(selftest_size())
+    failures.extend(selftest_scc())
 
     # --- 行数守护（"路径: 行数上限" pin）---
     size_pins = read_size_baseline()
@@ -269,10 +428,20 @@ def main() -> int:
 
     # --- import 方向守护（真实包名，全仓）---
     import_baseline = read_import_baseline()
-    failures_, baseline_hits = check_dir(SRC, import_baseline)
+    violations = collect_violations(SRC)
+    failures_, baseline_hits = check_dir(violations, import_baseline)
     failures.extend(failures_)
     for h in baseline_hits:
         print(h)
+
+    # --- baseline 失效条目检测（移包/拆文件后旧条目须同步移除）---
+    failures.extend(check_dead_entries(import_baseline, violations))
+
+    # --- 包级 SCC ratchet（断环只许减不许增）---
+    scc_failures, scc_notes = check_scc(SRC, read_scc_baseline())
+    failures.extend(scc_failures)
+    for n in scc_notes:
+        print(n)
 
     if failures:
         print("\n=== 架构守护失败 ===")

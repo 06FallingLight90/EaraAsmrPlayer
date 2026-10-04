@@ -35,7 +35,6 @@ app/src/main/java/com/asmr/player/ui/library/CloudSyncSelectionDialog.kt okhttp3
 app/src/main/java/com/asmr/player/ui/library/LibraryFilterSheet.kt com.asmr.player.data.local.db.dao.TagWithCount
 app/src/main/java/com/asmr/player/ui/library/LibraryPresetStore.kt com.google.gson.Gson
 app/src/main/java/com/asmr/player/ui/library/LibraryPresetStore.kt com.google.gson.reflect.TypeToken
-app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt com.asmr.player.data.local.db.dao.LibraryTrackAlbumHeaderRow
 app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt com.asmr.player.data.local.db.dao.LibraryTrackRow
 app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt com.asmr.player.data.local.db.dao.TagWithCount
 app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt okhttp3.OkHttpClient
@@ -79,10 +78,8 @@ app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.playe
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.data.remote.scraper.DLSITE_DOMAIN
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.data.remote.scraper.storeSegment
-app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.ui.dlsite.DlsitePlayViewModel
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.ui.groups.AlbumGroupPickerScreen
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.ui.groups.AlbumGroupsViewModel
-app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.ui.player.PlayerViewModel
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.ui.playlists.PlaylistPickerScreen
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.ui.playlists.PlaylistsViewModel
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.remote.ONLINE_DIRECTORY_REQUEST_TIMEOUT_MS
@@ -143,7 +140,6 @@ app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailHero.kt com.
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailHero.kt com.asmr.player.ui.player.PlayerViewModel
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailHero.kt com.asmr.player.ui.playlists.PlaylistPickerScreen
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailHero.kt com.asmr.player.ui.playlists.PlaylistsViewModel
-app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailHero.kt com.asmr.player.ui.settings.SettingsViewModel
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailLandscapeArtwork.kt com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailLandscapeArtwork.kt com.asmr.player.ui.player.PlayerViewModel
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailLocalTab.kt com.asmr.player.data.local.db.AppDatabaseProvider
@@ -169,7 +165,6 @@ app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailViewModelSup
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailViewModelSupport.kt com.asmr.player.ui.nav.AlbumCoverHint
 app/src/main/java/com/asmr/player/ui/nav/BottomChrome.kt com.asmr.player.ui.player.MiniPlayer
 app/src/main/java/com/asmr/player/ui/nav/BottomChrome.kt com.asmr.player.ui.player.MiniPlayerDisplayMode
-app/src/main/java/com/asmr/player/ui/player/NowPlayingScreen.kt com.asmr.player.ui.common.dialog.TagAssignDialog
 app/src/main/java/com/asmr/player/ui/search/SearchAssistViewModel.kt com.asmr.player.data.remote.api.AsmrOneAvailabilityApi
 app/src/main/java/com/asmr/player/ui/search/SearchAssistViewModel.kt com.asmr.player.data.remote.api.AsmrOneRecommendationCursorExpiredException
 app/src/main/java/com/asmr/player/ui/search/SearchAssistViewModel.kt com.asmr.player.data.remote.api.AsmrOneRecommendationItem

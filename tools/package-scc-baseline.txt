@@ -1,0 +1,9 @@
+# 包级强连通分量（SCC）规模上界 —— 断环的可验收 ratchet。
+#
+# 由 tools/ci_guard.py 的 check_scc 校验：当前最大包级连通团的包数不得超过 max_scc_size，
+# 只许减不许增（新增环即失败）。消环后若连通团缩小，请同步下调此值。
+#
+# 实测口径：仅统计 app/src/main/java 下的包级 import 边（自环不计），
+# 用 import FQ 名的最长已知包前缀解析目标包。
+# 基线确立：R3-B0（refactor-r3/phase-A 之后），当前为 1 个 50 包巨型连通团。
+max_scc_size=50

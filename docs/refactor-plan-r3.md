@@ -2,7 +2,7 @@
 
 > 依据：`docs/project-quality-review-20261004.md`（总评 C）+ 本计划制定前的逐条回源码复核。
 > 与上轮关系：R2（`docs/refactor-plan-r2.md`，tag `refactor-r2/phase-A/B/C`）完成数据访问层下沉与全局守卫；R3 清 R2 明确遗留的三笔账——**剩余依赖环**、**两个 God VM 无法收紧到 800 行**、**ui 层穿透收口未完成**，并治理主要 P1。
-> 状态：阶段 A 已完成（tag `refactor-r3/phase-A`，测试 945/0/4）；阶段 B 开工前评估见 [dependency-forecast](refactor-plan-r3-dependency-forecast.md)。基线：`refactor/architecture-cleanup`，测试 **945/0/4**，size pin 8 条，import baseline **344 条**。
+> 状态：阶段 A 已完成（tag `refactor-r3/phase-A`，测试 945/0/4）；阶段 B 开工前评估见 [dependency-forecast](refactor-plan-r3-dependency-forecast.md)。**B0（基线/检测前置）已完成**（SCC ratchet + 失效条目检测 + 机械重写脚本；import baseline **344 → 339**）。基线：`refactor/architecture-cleanup`，测试 **945/0/4**，size pin 8 条，import baseline **339 条**。
 
 ## 0. 已确认决策（用户 2026-10-04 拍板）
 
@@ -11,6 +11,7 @@
 3. **不加 LICENSE**（根文档三缺中的 LICENSE 明确不做；CHANGELOG/CONTRIBUTING 亦本轮不做，留 P2）。
 4. **`ensureAlbumCoverSaved` 双实现：只记录、不改动**（两版行为不同属行为变更；仅在行为档案与 backlog 记录，不统一）。
 5. **不引入 Konsist/ArchUnit**（继续用 python `ci_guard.py`）。
+6. **不引入新依赖**（2026-10-04 追加）：本轮不新增任何第三方依赖（含 coroutines-test/Turbine）——C8 重写测试沿用项目既有的 `runBlocking` + 真实时间小超时模式（§7）。
 
 ## 1. 总原则（沿用 R2 + 新增）
 
@@ -66,10 +67,11 @@
 
 > **多跳环（开工前评估新增）**：包级 SCC 实测为 **1 个 48 包巨型连通团**，11 组 2-环只是其可读子集；只消 2-环**不会解散该团**。本轮策略：**消 2-环 + 以 SCC ratchet 冻结规模**（见 B0），并打断 3 条代表性长环——`data.download→data.remote→data.repository→data.download`（B4 扩到 `repository→download` 边）、`data.remote→data.settings→hotlistening→data.remote`（常量下沉）；`root→ui.*→root`（经 `R`，结构性，接受）。
 
-### B0 基线与检测前置（先于一切移包）
-- 新增 **包级 SCC ratchet** 进 `ci_guard.py`：当前 48 包团规模设为上界，只许减不许增（这是"断环"的可验收指标——否则消环无验收手段）。
-- baseline **失效条目（dead entry）检测**：移包后旧条目静默遗留会被报出。
-- 提供**机械重写 baseline** 脚本步骤：移包 → 全仓 import 重写 → 重键 `import-direction-baseline.txt`；拆文件同理重键 `size-guard-baseline.txt`。
+### B0 基线与检测前置（先于一切移包）—— ✅ 已完成（2026-10-04）
+- 新增 **包级 SCC ratchet** 进 `ci_guard.py`：当前 48 包团规模设为上界，只许减不许增（这是"断环"的可验收指标——否则消环无验收手段）。**落地实测**：最大连通团为 **50 包**（含根包；计划估值 48，以实测为准），上界写入 `tools/package-scc-baseline.txt`；含 Tarjan 合成图自检（防空转）。
+- baseline **失效条目（dead entry）检测**：移包后旧条目静默遗留会被报出。**落地**：按"当前违规键集合"判定，覆盖 ①导入/文件已删 ②规则或白名单变更后不再违规 两类；缺行号（`<rel> <fq>` 短键）容忍拆文件改行号。
+- 提供**机械重写 baseline** 脚本：新增 `tools/refresh_baseline.py`（`import`/`size`/`scc` 三子命令；保留原序以最小化 diff）。移包 → 全仓 import 重写 → 重键 `import-direction-baseline.txt`；拆文件同理重键 `size-guard-baseline.txt`。
+- **附带清账**：失效检测当场报出 5 条历史 stale 条目（4 条导入已删 + 1 条因 `ui.common` 白名单不再违规），已移除，`import-direction-baseline.txt` **344 → 339**。`python tools/ci_guard.py` 全绿。
 
 ### B1 纯类型下沉批次（收益最大、零行为风险，最先做；净 ≈−83 条）
 把跨层共享的**纯类型/常量/纯函数**从 data/cache 提到中立包（`domain`/`util`）——不改逻辑，仅改 `package` 与全仓 import：
@@ -161,7 +163,7 @@
 
 ### C8 详情页 VM 状态机重写（条件式；行为安全网先行）
 - **目标**：单一不可变 `AlbumDetailUiState`（分区 sub-state 取代 26 字段 `AlbumDetailModel`）+ `LoadPhase{Idle,Loading,Loaded,Failed}` 取代 4 组 token+job+bool；holder 各持**纯 reducer** `(State,Event)->State`；树/滚动抽 `TreeSessionHolder`。目标消除 71 个状态读写点的大半。
-- **前置（硬性）**：① 新建 `AlbumDetailViewModelTest`（fake repo 收 `uiState`，钉三路 `ensure*Loaded` 的时序/幂等/去重/token 竞态——**现不存在，VM 本体无直测**）；② 录行为档案（`applyResolvedCloudSync` title 覆盖、双 `ensureAlbumCoverSaved`）；③ **测试基建决策**：项目无 coroutines-test/Turbine（现有测试用 `runBlocking`），重写前须先定用哪套。
+- **前置（硬性）**：① 新建 `AlbumDetailViewModelTest`（fake repo 收 `uiState`，钉三路 `ensure*Loaded` 的时序/幂等/去重/token 竞态——**现不存在，VM 本体无直测**）；② 录行为档案（`applyResolvedCloudSync` title 覆盖、双 `ensureAlbumCoverSaved`）；③ **测试基建已定**：遵守"不引入新依赖"，不新增 coroutines-test/Turbine，沿用既有 `runBlocking` + 真实时间小超时模式（见 §0-6 / §7）。
 - **步骤**：新旧 reducer 并存 → 暗影比对（同一 Event 驱动、比对 state）→ 逐 tab 切换 → 删旧路径。
 - **风险**：ensure 防抖/取消语义、listentogether 60s 轮询、云同步 title 覆盖语义。
 - **验证**：reducer 表驱动测试 + 实机（`start_route` 直达 DL tab / ASMR.ONE / 本地 tab）。
@@ -199,7 +201,7 @@
 - **`ensureAlbumCoverSaved` 双实现**：VM 版（仅网络 / 2048 / ARGB_8888）vs repo 版（支持本地来源 / 1280 / RGB_565）——**保留现状**，录行为档案并在 backlog 标注，不统一。
 - **LICENSE / CHANGELOG / CONTRIBUTING**：本轮不加不建，留 P2 backlog。
 - **Konsist/ArchUnit**：不引入，沿用 python `ci_guard.py`。
-- **重写测试基建（C8 前置，待拍板）**：项目无 coroutines-test/Turbine（现有测试用 `runBlocking`）——C8 开工前须定"新增测试依赖"或"沿用 runBlocking 模式"。
+- **重写测试基建（C8 前置）**：**已定（2026-10-04）**——遵守"不引入新依赖"，不新增 coroutines-test/Turbine；沿用项目既有 `runBlocking` + 真实时间小超时模式（与 B2c 一致）。
 
 ## 8. 执行第一步与验收
 
