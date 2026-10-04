@@ -233,7 +233,7 @@ import com.asmr.player.ui.common.audio.rememberCurrentAudioOutputRouteKind
 import com.asmr.player.ui.common.audio.rememberProtectedAppVolumeChangeState
 import com.asmr.player.ui.common.audio.AudioOutputRouteIcon
 import com.asmr.player.ui.common.dialog.DismissOutsideBoundsOverlay
-import com.asmr.player.service.AudioOutputRouteKind
+import com.asmr.player.util.AudioOutputRouteKind
 import com.asmr.player.service.PlaybackService
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -399,7 +399,7 @@ internal fun MainNowPlayingOverlay(
     nowPlayingHomeLayoutHintDismissed: Boolean?,
     nowPlayingLyricsSettings: com.asmr.player.data.settings.NowPlayingLyricsSettings,
     lyricsPageSettings: com.asmr.player.data.settings.LyricsPageSettings,
-    audioOutputRouteKind: com.asmr.player.service.AudioOutputRouteKind,
+    audioOutputRouteKind: com.asmr.player.util.AudioOutputRouteKind,
     appVolumeWarningSessionState: com.asmr.player.ui.common.audio.AppVolumeWarningSessionState,
     albumBatchPlaylistPickerRequest: BatchPlaylistPickerRequest?,
     setAlbumBatchPlaylistPickerRequest: (BatchPlaylistPickerRequest?) -> Unit
@@ -561,7 +561,7 @@ internal fun MainVolumeOverlayHost(
     hardwareVolumeOverlayBounds: androidx.compose.ui.geometry.Rect?,
     setHardwareVolumeOverlayBounds: (androidx.compose.ui.geometry.Rect?) -> Unit,
     appVolumePercent: Int,
-    audioOutputRouteKind: com.asmr.player.service.AudioOutputRouteKind,
+    audioOutputRouteKind: com.asmr.player.util.AudioOutputRouteKind,
     playerViewModel: com.asmr.player.ui.player.PlayerViewModel,
     bumpVolumeOverlayHoldTick: () -> Unit,
     setHardwareVolumeOverlayInteracting: (Boolean) -> Unit,

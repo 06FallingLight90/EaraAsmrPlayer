@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import com.asmr.player.service.AudioOutputRouteKind
+import com.asmr.player.util.AudioOutputRouteKind
 import com.asmr.player.service.resolveCurrentAudioOutputRouteKind
 
 @Composable

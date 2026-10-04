@@ -2,11 +2,7 @@ package com.asmr.player.service
 
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
-
-enum class AudioOutputRouteKind {
-    Speaker,
-    Headphones
-}
+import com.asmr.player.util.AudioOutputRouteKind
 
 internal fun AudioDeviceInfo.isDisconnectSensitiveOutputDevice(): Boolean {
     return isDisconnectSensitiveOutputDeviceType(type)
