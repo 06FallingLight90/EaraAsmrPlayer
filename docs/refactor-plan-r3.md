@@ -113,7 +113,24 @@
 
 **阶段 B 门禁**：全量测试双绿（基线只增不减）+ 子代理审查 `git diff refactor-r3/phase-A..HEAD` + 实机走查（库页/详情页/下载页/播放链）+ tag `refactor-r3/phase-B`。
 
-## 4. 阶段 C —— 编排层 State Holder 与 God 收缩（P0-2）
+## 4. 阶段 C —— 编排层 State Holder / 局部重写 与 God 收缩（P0-2）
+
+### C0 重写 vs 抽取：取舍判定（开工前评估）
+
+> 判据：只有当"**结构已结构性纠缠（增量修补只会继续加分支）+ 存在可一举降复杂度的目标架构 + 有/可建测试安全网 + 收益明显大于重写回归风险**"时，**内部重写**才优于抽取。
+
+| 区域 | 现状证据（实测） | 判定 | 理由 |
+|---|---|---|---|
+| **AlbumDetailViewModel 状态机** | 2510 行/83 fun；**71 个状态读写点**（`Success` 28 写 + `as? Success` 43 读）；4 条 `ensure*Loaded` 并行状态机交织 token/job；26 字段 `AlbumDetailModel` | **重写（条件式）→ C8** | 抽取只是"把散落 mutableState 装进 4 个盒子"，71 读写点与 4 分支原样保留，可测性不增 |
+| **搜索编排（Screen + VM）** | `SearchScreenContent` **单函数 ~1093 行**/54 remember·LaunchedEffect/20+ rememberSaveable 双向同步；`SearchViewModel` 四分支集中在 `fetchPage` 单链 + 15 mutable var | **重写 → C9** | 单函数 + 双向同步的补丁只会继续加 remember |
+| LibraryViewModel 编排 | 2500 行/101 fun；四族混居，但共享树 helper 是天然 seam；已有删除族行为档案 + 仓储测试；状态面小（3 态） | **抽取**（C1 维持） | 重写删除族回归高、状态面小、无收益 |
+| PlaybackService | 1471 行/59 fun，焦点/通知/歌词/统计强耦合；已有 3 个 seam 测试 | **抽取**（C7 维持） | 核心播放重写回归面极大、无目标架构收益 |
+| SubtitleTaskService | 1429 行/71 fun，但 `SubtitleTaskState` **已是显式状态机** + 测试 | **抽取**（C7 维持） | 状态机已达标，是良好 seam |
+| DownloadManager | 1122 行但仅 18 fun；`DownloadQueueCoordinator` 已解耦干净 | **抽取大纯函数**（C7 维持） | 协调器已达标 |
+| main / Chrome | R2 已拆 16 文件；`MainContainer` 仅 2 fun | **修补/微抽取** | R2 已重写 |
+| AlbumDetailScreen / DirectorySupport / DlsiteTabs | Screen 单函数 1271 行但 Hero/Header 已抽出（抽取在途）；DlsiteTabs 无 `viewModel` 引用（纯无状态） | **抽取**（C4 维持） | 延续既有抽取路线，重写无净收益 |
+
+**结论：真正"重写 > 修补"的只有 C8（详情页 VM 状态机）与 C9（搜索编排）；其余维持抽取/修补，不扩为重写以避免过度重构。**
 
 ### C1/C2 两个 God VM 的 State Holder 抽取
 
@@ -127,10 +144,10 @@
 `TagWrite` / `DeleteWrite` / `ScanWrite` / `OnlineSave`。
 
 ### C4 God 文件区块化（≥1500 全部纳入）
-`AlbumDetailDirectorySupport` 2700、`DownloadsScreen` 2281、`SearchScreen` 2186（`SearchScreenContent` 单函数 **1086 行**/19 形参 → 拆子 composable + 状态对象）、`AlbumDetailDlsiteTabs` 1932、`LibraryScreen` 1582（`LibraryScreenContent` 914）。
+`AlbumDetailDirectorySupport` 2700、`DownloadsScreen` 2281、`SearchScreen` 2186（`SearchScreenContent` 单函数 **1086 行**/19 形参 → 拆子 composable + 状态对象；**该文件的完整重写见 C9**）、`AlbumDetailDlsiteTabs` 1932、`LibraryScreen` 1582（`LibraryScreenContent` 914）。
 **补充（开工前评估发现，否则 C5 不可达）**：`AlbumDetailScreen` 1518（单函数 **1271 行**，是 ">1500 清零" 的必达前提）、`ui/settings/SettingsScreen` 1270（单函数 1101）、`ui/common/audio/EqualizerPanel` 1190（单函数 1140）——三者同为"单巨型 Composable"，拆法同构（区块化 + 状态对象）。
 
-### C5 ratchet 收紧（依赖 C1/C2/C3/C4/C7；分级目标）
+### C5 ratchet 收紧（依赖 C1/C2/C3/C4/C7/C8/C9；分级目标）
 - **第一级**：**>1500 清零**（含新纳入的 `AlbumDetailScreen`）；每拆完一批即从 `size-guard-baseline.txt` 移除对应 pin 并贴实测收缩 cap。
 - **第二级**：处理 **1000–1500 区间**（14 个文件，现完全不受守卫，见 forecast §4）后，把 `SIZE_LIMIT` 从 1500 下调。
 - **第三级**：向 800 逼近，以实际进度为准、不强达。
@@ -141,6 +158,21 @@
 
 ### C7 service 层 God 拆解（开工前评估新增）
 `service/PlaybackService` 1471（59 fun，MediaSession/播放链/DB）、`subtitle/SubtitleTaskService` 1429（71 fun，前台服务/DB/SAF）、`data/download/DownloadManager` 1122（下载/DB/SAF）——三者强耦合、原计划只字未拆，须与 A4 seam 测试合并立项（无拆解则 A4 无稳定测点，测试欠账无从偿还）。
+
+### C8 详情页 VM 状态机重写（条件式；行为安全网先行）
+- **目标**：单一不可变 `AlbumDetailUiState`（分区 sub-state 取代 26 字段 `AlbumDetailModel`）+ `LoadPhase{Idle,Loading,Loaded,Failed}` 取代 4 组 token+job+bool；holder 各持**纯 reducer** `(State,Event)->State`；树/滚动抽 `TreeSessionHolder`。目标消除 71 个状态读写点的大半。
+- **前置（硬性）**：① 新建 `AlbumDetailViewModelTest`（fake repo 收 `uiState`，钉三路 `ensure*Loaded` 的时序/幂等/去重/token 竞态——**现不存在，VM 本体无直测**）；② 录行为档案（`applyResolvedCloudSync` title 覆盖、双 `ensureAlbumCoverSaved`）；③ **测试基建决策**：项目无 coroutines-test/Turbine（现有测试用 `runBlocking`），重写前须先定用哪套。
+- **步骤**：新旧 reducer 并存 → 暗影比对（同一 Event 驱动、比对 state）→ 逐 tab 切换 → 删旧路径。
+- **风险**：ensure 防抖/取消语义、listentogether 60s 轮询、云同步 title 覆盖语义。
+- **验证**：reducer 表驱动测试 + 实机（`start_route` 直达 DL tab / ASMR.ONE / 本地 tab）。
+- **与 C2 的关系**：C8 **取代** C2 的"纯抽取"；风险不可控时回退为 C2 抽取。
+
+### C9 搜索编排重写
+- **目标**：`SearchScreenContent`（单函数 ~1093 行/19 形参）→ 区块化子 composable + 状态对象；`SearchViewModel` 四分支（purchased/collected/直 RJ/默认）→ 策略/UseCase 分层（消除 15 mutable var 交织）。
+- **前置**：补四分支 seam 测试（各分支命中与 locale 回退链）。
+- **风险**：`rememberSaveable` 双向同步、筛选状态回填。
+- **验证**：分支表驱动测试 + 实机走查搜索四态。
+- **与 C4/B5 的关系**：C9 **取代** C4 中 SearchScreen 的"区块化"表述，并承接 B5 的 `SearchViewModel` 穿透收口。
 
 **阶段 C 门禁**：全量测试双绿 + 子代理审查 + 实机全链 smoke + tag `refactor-r3/phase-C`。
 
@@ -158,7 +190,8 @@
 | B5 未清穿透即做 C1/C2（违规换目录） | 顺序约束：B5 先于 C1/C2；holder 落包前确认无 dao/entity/okhttp 残留 |
 | ui 穿透收口触及大批文件 | 按 repository 出口分族、逐族收缩 baseline，禁止一次性大改 |
 | 开启 schema 导出暴露历史迁移缺陷 | 近 3 版本优先补测试，缺陷单独记录不夹带修 |
-| ratchet 收紧过急阻塞 | 只在 C1/C2/C3/C4/C7 完成后逐批收紧（分级目标见 §4 C5），不设"一步到 800" |
+| ratchet 收紧过急阻塞 | 只在 C1/C2/C3/C4/C7/C8/C9 完成后逐批收紧（分级目标见 §4 C5），不设"一步到 800" |
+| 重写（C8/C9）致行为回归 | C8/C9 均**前置 seam 测试 + 行为档案**，新旧并存暗影比对后再切换；风险不可控则 C8 回退为 C2 抽取 |
 | 与用户设备走查冲突 | 走查前约定前台切换时机（用户可能正在游戏） |
 
 ## 7. 记录但不改动项（用户 2026-10-04 决策）
@@ -166,6 +199,7 @@
 - **`ensureAlbumCoverSaved` 双实现**：VM 版（仅网络 / 2048 / ARGB_8888）vs repo 版（支持本地来源 / 1280 / RGB_565）——**保留现状**，录行为档案并在 backlog 标注，不统一。
 - **LICENSE / CHANGELOG / CONTRIBUTING**：本轮不加不建，留 P2 backlog。
 - **Konsist/ArchUnit**：不引入，沿用 python `ci_guard.py`。
+- **重写测试基建（C8 前置，待拍板）**：项目无 coroutines-test/Turbine（现有测试用 `runBlocking`）——C8 开工前须定"新增测试依赖"或"沿用 runBlocking 模式"。
 
 ## 8. 执行第一步与验收
 
@@ -173,7 +207,7 @@
 1. 本文件落盘为 `docs/refactor-plan-r3.md`。
 2. A1→A5 实施阶段 A，过门禁打 `refactor-r3/phase-A`。
 3. B1 逐环 → B2–B5 穿透收口 → B6 baseline 收缩，过门禁打 `refactor-r3/phase-B`。
-4. C1/C2 State Holder → C3/C4/C7 拆族 → C5 ratchet → C6，过门禁打 `refactor-r3/phase-C`。
+4. C1/C2 State Holder → C3/C4/C7 拆族 → C8（详情页 VM 重写，条件式）→ C9（搜索重写）→ C5 ratchet → C6，过门禁打 `refactor-r3/phase-C`。
 5. 终态：ARCHITECTURE.md §7 全面同步（阶段完成记录 + backlog 清账）。
 
 **验证方式（每阶段复跑）**：
