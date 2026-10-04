@@ -50,7 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.asmr.player.data.local.db.dao.AlbumGroupStatsRow
+import com.asmr.player.domain.model.AlbumGroupStatsRow
 import com.asmr.player.data.local.db.entities.AlbumGroupEntity
 import com.asmr.player.ui.common.cover.AsmrAsyncImage
 import com.asmr.player.ui.common.status.EaraBrandedEmptyState

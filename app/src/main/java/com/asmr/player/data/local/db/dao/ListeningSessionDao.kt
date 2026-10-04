@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.asmr.player.data.local.db.entities.ListeningSessionEntity
+import com.asmr.player.domain.model.AlbumListeningRow
 import kotlinx.coroutines.flow.Flow
 
 /** [ListeningSessionDao.tagDurationTotals] 的投影：某 tags 快照对应的累计时长。 */
@@ -18,20 +19,6 @@ data class TagDurationRow(
 data class HourDurationRow(
     val hour: Int,
     val durationMs: Long
-)
-
-/** 单个作品的累计收听投影，用于"最常收听作品"排行。 */
-data class AlbumListeningRow(
-    val albumId: Long,
-    val rjCode: String,
-    val title: String,
-    val circle: String,
-    val cv: String,
-    val coverUrl: String,
-    val coverPath: String,
-    val coverThumbPath: String,
-    val durationMs: Long,
-    val sessionCount: Int
 )
 
 @Dao

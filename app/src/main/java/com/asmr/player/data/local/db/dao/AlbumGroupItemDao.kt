@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.asmr.player.data.local.db.entities.AlbumGroupItemEntity
+import com.asmr.player.domain.model.AlbumGroupTrackRow
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -90,24 +91,3 @@ interface AlbumGroupItemDao {
     )
     suspend fun deleteAlbumFromGroup(groupId: Long, albumId: Long)
 }
-
-data class AlbumGroupTrackRow(
-    val groupId: Long,
-    val mediaId: String,
-    val itemOrder: Int,
-    val createdAt: Long,
-    val trackId: Long,
-    val albumId: Long,
-    val trackTitle: String,
-    val trackDuration: Double,
-    val hasSubtitles: Boolean,
-    val trackPath: String,
-    val trackGroup: String,
-    val albumTitle: String?,
-    val albumCv: String?,
-    val albumRjCode: String?,
-    val albumWorkId: String?,
-    val albumCoverThumbPath: String?,
-    val albumCoverPath: String?,
-    val albumCoverUrl: String?
-)

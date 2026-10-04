@@ -59,7 +59,7 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.asmr.player.data.local.db.dao.TagWithCount
+import com.asmr.player.domain.model.TagWithCount
 import com.asmr.player.ui.common.dialog.FlatTextFieldDialog
 import com.asmr.player.ui.common.list.LocalBottomOverlayPadding
 import com.asmr.player.ui.common.list.rememberCalmScrollableFlingBehavior

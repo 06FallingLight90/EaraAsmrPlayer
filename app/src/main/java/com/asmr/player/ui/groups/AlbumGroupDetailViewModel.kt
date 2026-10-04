@@ -3,7 +3,7 @@ package com.asmr.player.ui.groups
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.asmr.player.data.local.db.dao.AlbumGroupTrackRow
+import com.asmr.player.domain.model.AlbumGroupTrackRow
 import com.asmr.player.data.repository.AlbumGroupRepository
 import com.asmr.player.util.MessageManager
 import dagger.hilt.android.lifecycle.HiltViewModel

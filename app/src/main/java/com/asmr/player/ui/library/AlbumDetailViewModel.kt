@@ -11,7 +11,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.asmr.player.cache.AppCacheManager
-import com.asmr.player.data.local.db.dao.TagWithCount
+import com.asmr.player.domain.model.TagWithCount
 import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.domain.model.TagSource
 import com.asmr.player.data.local.db.entities.TrackEntity
@@ -56,7 +56,7 @@ import com.asmr.player.util.DlsiteWorkNo
 import com.asmr.player.util.ASMR_ONE_SITE_FAILURE_MESSAGE
 import com.asmr.player.util.MessageManager
 import com.asmr.player.util.OnlineLyricsStore
-import com.asmr.player.util.RemoteSubtitleSource
+import com.asmr.player.domain.model.RemoteSubtitleSource
 import com.asmr.player.util.SubtitleMatchSupport
 import com.asmr.player.util.SyncCoordinator
 import com.asmr.player.util.TagNormalizer

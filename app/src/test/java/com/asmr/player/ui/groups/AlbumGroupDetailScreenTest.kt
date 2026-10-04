@@ -10,7 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.media3.common.MediaItem
-import com.asmr.player.data.local.db.dao.AlbumGroupTrackRow
+import com.asmr.player.domain.model.AlbumGroupTrackRow
 import com.asmr.player.ui.common.status.EARA_EMPTY_STATE_TAG
 import com.asmr.player.ui.testWindowSizeClass
 import com.asmr.player.ui.theme.AsmrPlayerTheme

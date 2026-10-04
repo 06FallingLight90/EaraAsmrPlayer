@@ -5,7 +5,7 @@ import androidx.media3.common.MediaItem
 import com.asmr.player.data.local.db.dao.AlbumDao
 import com.asmr.player.data.local.db.dao.PlaylistDao
 import com.asmr.player.data.local.db.dao.PlaylistItemDao
-import com.asmr.player.data.local.db.dao.PlaylistStatsRow
+import com.asmr.player.domain.model.PlaylistStatsRow
 import com.asmr.player.data.local.db.dao.TrackDao
 import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.data.local.db.entities.PlaylistEntity

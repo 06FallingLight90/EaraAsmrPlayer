@@ -1,12 +1,7 @@
 package com.asmr.player.util
 
+import com.asmr.player.domain.model.RemoteSubtitleSource
 import java.util.concurrent.ConcurrentHashMap
-
-data class RemoteSubtitleSource(
-    val url: String,
-    val language: String = "default",
-    val ext: String
-)
 
 object OnlineLyricsStore {
     private val byMediaId = ConcurrentHashMap<String, List<RemoteSubtitleSource>>()

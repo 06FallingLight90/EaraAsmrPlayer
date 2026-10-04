@@ -14,7 +14,7 @@ import com.asmr.player.data.lyrics.deriveLyricsRelativePathNoExt
 import com.asmr.player.data.repository.PlaylistMediaItemMapper
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
-import com.asmr.player.util.RemoteSubtitleSource
+import com.asmr.player.domain.model.RemoteSubtitleSource
 import java.io.File
 
 data class MediaItemRequest(

@@ -134,7 +134,7 @@ import com.asmr.player.ui.theme.AsmrPlayerTheme
 import com.asmr.player.ui.theme.dynamicPageContainerColor
 import com.asmr.player.util.Formatting
 import com.asmr.player.util.MessageManager
-import com.asmr.player.util.RemoteSubtitleSource
+import com.asmr.player.domain.model.RemoteSubtitleSource
 import com.asmr.player.util.isOnlineTrackPath
 import com.asmr.player.ui.common.cover.ImagePreviewPreparedItem
 

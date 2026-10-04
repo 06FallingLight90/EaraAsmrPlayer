@@ -17,7 +17,7 @@ import com.asmr.player.domain.model.TreeFileType
 import com.asmr.player.data.local.library.buildOnlineAlbumPath
 import com.asmr.player.data.local.library.shouldBackfillLegacyOnlineSavedAlbumRoot
 import com.asmr.player.domain.model.Album
-import com.asmr.player.util.RemoteSubtitleSource
+import com.asmr.player.domain.model.RemoteSubtitleSource
 import com.asmr.player.util.TagNormalizer
 import com.asmr.player.util.SubtitleEntry
 import com.asmr.player.util.buildTagsToken

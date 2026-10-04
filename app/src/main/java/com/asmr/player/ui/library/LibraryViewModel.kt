@@ -17,8 +17,8 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import com.asmr.player.data.local.db.dao.LibraryTrackRow
-import com.asmr.player.data.local.db.dao.TagWithCount
+import com.asmr.player.domain.model.LibraryTrackRow
+import com.asmr.player.domain.model.TagWithCount
 import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.domain.model.*
 import com.asmr.player.data.local.db.entities.TrackEntity

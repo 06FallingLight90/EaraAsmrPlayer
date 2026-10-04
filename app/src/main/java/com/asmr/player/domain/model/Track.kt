@@ -1,7 +1,7 @@
 package com.asmr.player.domain.model
 
 import androidx.compose.runtime.Immutable
-import com.asmr.player.util.RemoteSubtitleSource
+import com.asmr.player.domain.model.RemoteSubtitleSource
 
 @Immutable
 data class Track(

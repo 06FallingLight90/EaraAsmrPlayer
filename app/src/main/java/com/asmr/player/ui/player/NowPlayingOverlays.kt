@@ -82,7 +82,7 @@ import kotlinx.coroutines.delay
 @Composable
 internal fun NowPlayingTagDialogHost(
     dialog: NowPlayingTagViewModel.DialogState?,
-    availableTags: List<com.asmr.player.data.local.db.dao.TagWithCount>,
+    availableTags: List<com.asmr.player.domain.model.TagWithCount>,
     tagViewModel: NowPlayingTagViewModel
 ) {
     if (dialog != null) {

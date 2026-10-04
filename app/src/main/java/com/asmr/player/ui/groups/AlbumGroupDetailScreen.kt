@@ -62,7 +62,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.asmr.player.data.local.db.AppDatabaseProvider
-import com.asmr.player.data.local.db.dao.AlbumGroupTrackRow
+import com.asmr.player.domain.model.AlbumGroupTrackRow
 import com.asmr.player.ui.common.cover.AsmrAsyncImage
 import com.asmr.player.ui.common.audio.AudioItemMenuAction
 import com.asmr.player.ui.common.audio.AudioItemRow

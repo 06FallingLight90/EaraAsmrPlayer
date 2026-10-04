@@ -155,7 +155,7 @@ import com.asmr.player.ui.theme.AsmrPlayerTheme
 import com.asmr.player.ui.theme.dynamicPageContainerColor
 import com.asmr.player.util.Formatting
 import com.asmr.player.util.MessageManager
-import com.asmr.player.util.RemoteSubtitleSource
+import com.asmr.player.domain.model.RemoteSubtitleSource
 import com.asmr.player.util.TrackKeyNormalizer
 import com.asmr.player.util.isOnlineTrackPath
 import java.util.ArrayDeque
@@ -1132,7 +1132,7 @@ internal data class AsmrOneLeafUi(
     val title: String,
     val url: String,
     val duration: Double?,
-    val subtitles: List<com.asmr.player.util.RemoteSubtitleSource>
+    val subtitles: List<com.asmr.player.domain.model.RemoteSubtitleSource>
 ) {
 fun toTrack(): Track {
         val normalizedRelativePath = relativePath.replace('\\', '/').trim().trimStart('/')
@@ -1191,7 +1191,7 @@ internal fun flattenAsmrOneTracksForUi(tree: List<AsmrOneTrackNodeResponse>): Li
             val matched = SubtitleMatchSupport.matchBest(path.substringBeforeLast('.'), subtitleCandidates.map { it.first })
             val subs = if (matched != null) {
                 subtitleCandidates.firstOrNull { it.first.sourceRef == matched.sourceRef }?.second?.let { subtitleLeaf ->
-                    listOf(com.asmr.player.util.RemoteSubtitleSource(url = subtitleLeaf.url, language = matched.language, ext = subtitleLeaf.ext))
+                    listOf(com.asmr.player.domain.model.RemoteSubtitleSource(url = subtitleLeaf.url, language = matched.language, ext = subtitleLeaf.ext))
                 }.orEmpty()
             } else {
                 emptyList()

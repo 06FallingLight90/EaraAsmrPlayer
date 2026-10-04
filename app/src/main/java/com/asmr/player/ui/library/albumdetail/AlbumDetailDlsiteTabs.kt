@@ -149,7 +149,7 @@ import com.asmr.player.ui.theme.AsmrPlayerTheme
 import com.asmr.player.ui.theme.dynamicPageContainerColor
 import com.asmr.player.util.Formatting
 import com.asmr.player.util.MessageManager
-import com.asmr.player.util.RemoteSubtitleSource
+import com.asmr.player.domain.model.RemoteSubtitleSource
 
 private val DlsiteGalleryThumbWidth = 140.dp
 private val DlsiteGalleryThumbHeight = 100.dp

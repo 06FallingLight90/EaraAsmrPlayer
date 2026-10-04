@@ -23,7 +23,7 @@ import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
 import com.asmr.player.ui.nav.AlbumCoverHint
 import com.asmr.player.util.OnlineLyricsStore
-import com.asmr.player.util.RemoteSubtitleSource
+import com.asmr.player.domain.model.RemoteSubtitleSource
 import com.asmr.player.util.SyncCoordinator
 import com.asmr.player.util.SubtitleMatchCandidate
 import com.asmr.player.util.SubtitleMatchSupport

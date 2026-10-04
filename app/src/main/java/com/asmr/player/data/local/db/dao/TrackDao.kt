@@ -10,6 +10,8 @@ import com.asmr.player.data.local.db.entities.TagEntity
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.db.entities.SubtitleEntity
 import com.asmr.player.data.local.db.entities.TrackTagEntity
+import com.asmr.player.domain.model.LibraryTrackAlbumHeaderRow
+import com.asmr.player.domain.model.LibraryTrackRow
 import kotlinx.coroutines.flow.Flow
 
 @Dao

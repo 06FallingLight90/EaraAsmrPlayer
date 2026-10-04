@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.asmr.player.data.local.db.dao.AlbumListeningRow
+import com.asmr.player.domain.model.AlbumListeningRow
 import com.asmr.player.data.local.db.entities.DailyStatEntity
 import com.asmr.player.data.local.db.entities.ListeningSessionEntity
 import com.asmr.player.data.remote.auth.DlsiteAuthStore

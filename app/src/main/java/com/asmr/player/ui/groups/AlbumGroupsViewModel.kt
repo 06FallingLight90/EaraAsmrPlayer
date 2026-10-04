@@ -2,7 +2,7 @@ package com.asmr.player.ui.groups
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.asmr.player.data.local.db.dao.AlbumGroupStatsRow
+import com.asmr.player.domain.model.AlbumGroupStatsRow
 import com.asmr.player.data.local.db.entities.AlbumGroupEntity
 import com.asmr.player.data.repository.AlbumGroupRepository
 import com.asmr.player.data.repository.RenameAlbumGroupResult

@@ -41,7 +41,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.asmr.player.data.local.db.dao.PlaylistStatsRow
+import com.asmr.player.domain.model.PlaylistStatsRow
 import com.asmr.player.data.local.db.entities.PlaylistEntity
 import com.asmr.player.ui.common.cover.AsmrAsyncImage
 

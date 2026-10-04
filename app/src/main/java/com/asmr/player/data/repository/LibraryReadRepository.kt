@@ -4,9 +4,9 @@ import androidx.paging.PagingSource
 import androidx.sqlite.db.SupportSQLiteQuery
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.dao.AlbumTagsCsv
-import com.asmr.player.data.local.db.dao.LibraryTrackAlbumHeaderRow
-import com.asmr.player.data.local.db.dao.LibraryTrackRow
-import com.asmr.player.data.local.db.dao.TagWithCount
+import com.asmr.player.domain.model.LibraryTrackAlbumHeaderRow
+import com.asmr.player.domain.model.LibraryTrackRow
+import com.asmr.player.domain.model.TagWithCount
 import com.asmr.player.data.local.db.dao.TrackTagsCsv
 import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.data.local.db.entities.DownloadTaskEntity

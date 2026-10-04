@@ -37,7 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.asmr.player.data.local.db.dao.TagWithCount
+import com.asmr.player.domain.model.TagWithCount
 import com.asmr.player.ui.common.list.LocalBottomOverlayPadding
 import com.asmr.player.ui.common.list.rememberCalmScrollableFlingBehavior
 import com.asmr.player.ui.theme.AsmrTheme

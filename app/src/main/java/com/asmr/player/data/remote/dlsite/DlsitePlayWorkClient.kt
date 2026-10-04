@@ -7,7 +7,7 @@ import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
 import com.asmr.player.data.remote.awaitResponse
 import com.asmr.player.data.remote.auth.DlsiteAuthStore
 import com.asmr.player.util.DlsiteWorkNo
-import com.asmr.player.util.RemoteSubtitleSource
+import com.asmr.player.domain.model.RemoteSubtitleSource
 import com.asmr.player.util.SubtitleMatchSupport
 import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext

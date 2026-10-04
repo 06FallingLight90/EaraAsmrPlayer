@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.asmr.player.data.local.db.entities.AlbumGroupEntity
+import com.asmr.player.domain.model.AlbumGroupStatsRow
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -57,12 +58,3 @@ interface AlbumGroupDao {
     @Delete
     suspend fun deleteGroup(group: AlbumGroupEntity)
 }
-
-data class AlbumGroupStatsRow(
-    val id: Long,
-    val name: String,
-    val createdAt: Long,
-    val itemCount: Int,
-    val albumCount: Int,
-    val firstArtworkUri: String?
-)

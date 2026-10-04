@@ -25,7 +25,7 @@ import com.asmr.player.util.MessageManager
 import com.asmr.player.domain.model.AppVolume
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.asmr.player.util.NetworkMeteredChecker
-import com.asmr.player.util.RemoteSubtitleSource
+import com.asmr.player.domain.model.RemoteSubtitleSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

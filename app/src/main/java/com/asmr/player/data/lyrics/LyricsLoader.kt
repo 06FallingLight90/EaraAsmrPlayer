@@ -18,7 +18,7 @@ import com.asmr.player.domain.model.LocalTreeLeafCacheEntry
 import com.asmr.player.domain.model.TreeFileType
 import com.asmr.player.util.EmbeddedMediaExtractor
 import com.asmr.player.util.OnlineLyricsStore
-import com.asmr.player.util.RemoteSubtitleSource
+import com.asmr.player.domain.model.RemoteSubtitleSource
 import com.asmr.player.util.SubtitleEntry
 import com.asmr.player.util.SubtitleMatchCandidate
 import com.asmr.player.util.SubtitleMatchSupport

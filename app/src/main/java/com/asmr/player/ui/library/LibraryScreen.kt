@@ -1449,7 +1449,7 @@ private fun TrackAlbumHeader(
 
 @Composable
 private fun rememberAlbumTrackListTotalSizeBytes(
-    rows: List<com.asmr.player.data.local.db.dao.LibraryTrackRow>,
+    rows: List<com.asmr.player.domain.model.LibraryTrackRow>,
     loadFileSizes: Boolean
 ): Long? {
     if (rows.isEmpty() || !loadFileSizes) return null

@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import com.asmr.player.data.local.db.entities.AlbumTagEntity
 import com.asmr.player.data.local.db.entities.TagEntity
+import com.asmr.player.domain.model.TagWithCount
 import kotlinx.coroutines.flow.Flow
 
 @Dao

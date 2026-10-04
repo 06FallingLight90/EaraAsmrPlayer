@@ -1,4 +1,4 @@
-package com.asmr.player.data.local.db.dao
+package com.asmr.player.domain.model
 
 data class TagWithCount(
     val id: Long,

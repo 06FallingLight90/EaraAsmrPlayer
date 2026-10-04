@@ -2,8 +2,8 @@ package com.asmr.player.data.repository
 
 import com.asmr.player.data.local.db.dao.AlbumGroupDao
 import com.asmr.player.data.local.db.dao.AlbumGroupItemDao
-import com.asmr.player.data.local.db.dao.AlbumGroupStatsRow
-import com.asmr.player.data.local.db.dao.AlbumGroupTrackRow
+import com.asmr.player.domain.model.AlbumGroupStatsRow
+import com.asmr.player.domain.model.AlbumGroupTrackRow
 import com.asmr.player.data.local.db.dao.TrackDao
 import com.asmr.player.data.local.db.entities.AlbumGroupEntity
 import com.asmr.player.data.local.db.entities.AlbumGroupItemEntity

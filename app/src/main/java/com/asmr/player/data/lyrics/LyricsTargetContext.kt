@@ -3,7 +3,7 @@ package com.asmr.player.data.lyrics
 import androidx.media3.common.MediaItem
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
-import com.asmr.player.util.RemoteSubtitleSource
+import com.asmr.player.domain.model.RemoteSubtitleSource
 import com.asmr.player.util.TrackKeyNormalizer
 
 const val EXTRA_ALBUM_WORK_ID = "album_work_id"

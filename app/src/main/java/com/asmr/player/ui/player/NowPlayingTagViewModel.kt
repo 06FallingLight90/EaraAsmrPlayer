@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
 import com.asmr.player.data.local.db.AppDatabase
-import com.asmr.player.data.local.db.dao.TagWithCount
+import com.asmr.player.domain.model.TagWithCount
 import com.asmr.player.data.local.db.entities.TagEntity
 import com.asmr.player.domain.model.TagSource
 import com.asmr.player.data.local.db.entities.TrackTagEntity

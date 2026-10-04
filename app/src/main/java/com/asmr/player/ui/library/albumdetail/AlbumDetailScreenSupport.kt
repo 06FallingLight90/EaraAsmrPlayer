@@ -26,7 +26,7 @@ import com.asmr.player.data.lyrics.deriveLyricsRelativePathNoExt
 import com.asmr.player.playback.MediaItemFactory
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.map
-import com.asmr.player.util.RemoteSubtitleSource
+import com.asmr.player.domain.model.RemoteSubtitleSource
 import kotlin.math.roundToInt
 
 

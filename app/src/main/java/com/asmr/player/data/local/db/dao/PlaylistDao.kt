@@ -4,6 +4,7 @@ import androidx.room.*
 import com.asmr.player.data.local.db.entities.PlaylistEntity
 import com.asmr.player.data.local.db.entities.PlaylistTrackCrossRef
 import com.asmr.player.data.local.db.entities.TrackEntity
+import com.asmr.player.domain.model.PlaylistStatsRow
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -94,13 +95,3 @@ interface PlaylistDao {
     """)
     fun getTracksForPlaylist(playlistId: Long): Flow<List<TrackEntity>>
 }
-
-data class PlaylistStatsRow(
-    val id: Long,
-    val name: String,
-    val category: String,
-    val createdAt: Long,
-    val itemCount: Int,
-    val firstArtworkUri: String?,
-    val firstItemUri: String?
-)

@@ -42,7 +42,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.asmr.player.data.local.db.dao.TagWithCount
+import com.asmr.player.domain.model.TagWithCount
 import com.asmr.player.ui.common.dialog.FlatActionDialog
 import com.asmr.player.ui.common.dialog.FlatDialogAction
 import com.asmr.player.ui.common.dialog.FlatDialogActionTone

@@ -3,7 +3,7 @@ package com.asmr.player.ui.playlists
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
-import com.asmr.player.data.local.db.dao.PlaylistStatsRow
+import com.asmr.player.domain.model.PlaylistStatsRow
 import com.asmr.player.data.local.db.entities.PlaylistEntity
 import com.asmr.player.data.repository.PlaylistAddSummary
 import com.asmr.player.data.repository.PlaylistRepository
