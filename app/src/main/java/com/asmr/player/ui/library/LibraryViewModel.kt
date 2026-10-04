@@ -3,9 +3,6 @@ package com.asmr.player.ui.library
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Rect
 import android.net.Uri
 import android.os.SystemClock
 import android.provider.DocumentsContract
@@ -59,6 +56,7 @@ import com.asmr.player.util.isScannableLocalDirectoryName
 import com.asmr.player.util.isVirtualAlbumPath
 import com.asmr.player.util.parseAlbumTags
 import com.asmr.player.util.EmbeddedMediaExtractor
+import com.asmr.player.util.centerCropSquare
 import com.asmr.player.work.AlbumCoverThumbWorker
 import com.asmr.player.work.TrackDurationWorker
 import com.asmr.player.BuildConfig
@@ -1443,25 +1441,6 @@ class LibraryViewModel @Inject constructor(
         }.getOrElse { e ->
             fail("db_update_${e.javaClass.simpleName}")
         }
-    }
-
-    private fun centerCropSquare(src: Bitmap, size: Int): Bitmap {
-        val w = src.width
-        val h = src.height
-        if (w <= 0 || h <= 0) return Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val side = minOf(w, h)
-        val left = (w - side) / 2
-        val top = (h - side) / 2
-        val out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(out)
-        val paint = Paint(Paint.FILTER_BITMAP_FLAG)
-        canvas.drawBitmap(
-            src,
-            Rect(left, top, left + side, top + side),
-            Rect(0, 0, size, size),
-            paint
-        )
-        return out
     }
 
     fun rescanAlbum(album: Album) {

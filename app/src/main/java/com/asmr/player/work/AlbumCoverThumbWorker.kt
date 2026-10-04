@@ -2,9 +2,6 @@ package com.asmr.player.work
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Rect
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.unit.IntSize
 import androidx.work.CoroutineWorker
@@ -13,6 +10,7 @@ import com.asmr.player.cache.CacheImageModel
 import com.asmr.player.cache.ImageCacheEntryPoint
 import com.asmr.player.data.local.db.AppDatabaseProvider
 import com.asmr.player.util.DlsiteAntiHotlink
+import com.asmr.player.util.centerCropSquare
 import dagger.hilt.android.EntryPointAccessors
 import java.io.File
 import java.io.FileOutputStream
@@ -57,25 +55,6 @@ class AlbumCoverThumbWorker(
         val updated = entity.copy(coverThumbPath = target.absolutePath)
         albumDao.updateAlbum(updated)
         return Result.success()
-    }
-
-    private fun centerCropSquare(src: Bitmap, size: Int): Bitmap {
-        val w = src.width
-        val h = src.height
-        if (w <= 0 || h <= 0) return Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val side = minOf(w, h)
-        val left = (w - side) / 2
-        val top = (h - side) / 2
-        val out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(out)
-        val paint = Paint(Paint.FILTER_BITMAP_FLAG)
-        canvas.drawBitmap(
-            src,
-            Rect(left, top, left + side, top + side),
-            Rect(0, 0, size, size),
-            paint
-        )
-        return out
     }
 
     companion object {

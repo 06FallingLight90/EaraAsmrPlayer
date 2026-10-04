@@ -1,4 +1,4 @@
-package com.asmr.player.data.remote
+package com.asmr.player.util
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -6,8 +6,10 @@ import android.graphics.Paint
 import android.graphics.Rect
 
 /**
- * R2-C4b-3b：封面位图纯函数迁入 data 层，供 OnlineContentRepository 使用
- * （原 ui/library/albumdetail/AlbumDetailViewModelSupport.centerCropSquare，纯搬迁）。
+ * 封面位图纯函数（中性 util 包，供 ui / work / data 三方共用）。
+ *
+ * R3-A5：此前 `data/remote/CoverSupport`、`work/AlbumCoverThumbWorker`、
+ * `ui/library/LibraryViewModel` 各有一份**逐字相同**的实现，收敛为单一来源。
  */
 
 internal fun centerCropSquare(src: Bitmap, size: Int): Bitmap {

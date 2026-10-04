@@ -28,7 +28,7 @@ import com.asmr.player.data.remote.dlsite.parseDlsitePlayImageSeed
 import com.asmr.player.data.remote.dlsite.resolveCloudSyncWorkId
 import com.asmr.player.data.remote.dlsite.resolveDlsiteCloudSync
 import com.asmr.player.data.remote.dlsite.resolveSelectedDlsiteCloudSync
-import com.asmr.player.data.remote.centerCropSquare
+import com.asmr.player.util.centerCropSquare
 import com.asmr.player.util.isLikelyPlaceholderCover
 import com.asmr.player.data.remote.scraper.DLSiteScraper
 import com.asmr.player.data.remote.scraper.DlsiteRecommendations

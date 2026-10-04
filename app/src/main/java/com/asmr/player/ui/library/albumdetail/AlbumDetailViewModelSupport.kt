@@ -312,6 +312,18 @@ internal fun Album.withResolvedWorkIdentity(
     )
 }
 
+/**
+ * 头部合并的"标题优先"规则（R3-A5 抽公共）：候选标题为空白、占位「专辑」或等于 RJ 号时，
+ * 回退到 [fallback]。两处头部合并（DLsite 在线信息 / ASMR.ONE）共用同一规则。
+ */
+internal fun preferredHeaderTitle(candidate: String, candidateRjCode: String, fallback: String): String {
+    return candidate.takeUnless { title ->
+        title.isBlank() ||
+            title == "专辑" ||
+            title.equals(candidateRjCode, ignoreCase = true)
+    } ?: fallback
+}
+
 internal fun mergeDetailHeaderAlbum(
     currentDisplayAlbum: Album,
     localAlbum: Album?,
@@ -328,13 +340,11 @@ internal fun mergeDetailHeaderAlbum(
     }
     return if (fetchedDlsiteInfo != null) {
         val mergedOnlineInfo = fetchedDlsiteInfo.copy(
-            title = fetchedDlsiteInfo.title
-                .takeUnless { title ->
-                    title.isBlank() ||
-                        title == "专辑" ||
-                        title.equals(fetchedDlsiteInfo.rjCode, ignoreCase = true)
-                }
-                ?: currentDisplayAlbum.title,
+            title = preferredHeaderTitle(
+                candidate = fetchedDlsiteInfo.title,
+                candidateRjCode = fetchedDlsiteInfo.rjCode,
+                fallback = currentDisplayAlbum.title
+            ),
             circle = fetchedDlsiteInfo.circle.ifBlank { currentDisplayAlbum.circle },
             cv = fetchedDlsiteInfo.cv.ifBlank { currentDisplayAlbum.cv },
             tags = fetchedDlsiteInfo.tags.ifEmpty { currentDisplayAlbum.tags },
@@ -399,13 +409,11 @@ internal fun mergeAsmrOneHeaderAlbum(
         fetchedDlsiteInfo == null -> asmrOneInfo
         asmrOneInfo == null -> fetchedDlsiteInfo
         else -> fetchedDlsiteInfo.copy(
-            title = fetchedDlsiteInfo.title
-                .takeUnless { title ->
-                    title.isBlank() ||
-                        title == "专辑" ||
-                        title.equals(fetchedDlsiteInfo.rjCode, ignoreCase = true)
-                }
-                ?: asmrOneInfo.title,
+            title = preferredHeaderTitle(
+                candidate = fetchedDlsiteInfo.title,
+                candidateRjCode = fetchedDlsiteInfo.rjCode,
+                fallback = asmrOneInfo.title
+            ),
             circle = fetchedDlsiteInfo.circle.ifBlank { asmrOneInfo.circle },
             cv = fetchedDlsiteInfo.cv.ifBlank { asmrOneInfo.cv },
             tags = fetchedDlsiteInfo.tags.ifEmpty { asmrOneInfo.tags },

@@ -153,6 +153,7 @@ UI（ui/player/PlayerViewModel.kt 等）
 
 - [docs/behavior-notes/library-delete-family.md](behavior-notes/library-delete-family.md) — 删除/标签/扫描/在线保存事务族的原状不对称（如 deleteAlbum 路径不清 track_tag/remote_subtitle_sources/local_tree_cache），R2-B4/B5 逐字下沉时钉住，勿"顺手"清理。
 - [docs/behavior-notes/online-content-caching-scope.md](behavior-notes/online-content-caching-scope.md) — ASMR.ONE 解析/曲目缓存为进程级全局共享（切端点 invalidate 影响所有实例）+ ConcurrentHashMap/Mutex 并发语义，R2-C4b-3 下沉产生。
+- [docs/behavior-notes/path-normalizer-variants.md](behavior-notes/path-normalizer-variants.md) — 两份相对路径归一化（`TrackKeyNormalizer.normalizeRelativePath` 去扩展名/NFKC vs 目录树 `normalizeTreeRelativePath` 仅斜杠+小写）语义不同，禁止合并；R3-A5 记录。
 
 ### 7.4 backlog
 

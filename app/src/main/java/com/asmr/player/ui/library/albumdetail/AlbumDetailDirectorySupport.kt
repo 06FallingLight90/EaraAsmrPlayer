@@ -515,7 +515,7 @@ internal fun resolveExistingRemoteSelectionPaths(
         val fileType: TreeFileType
     )
 
-    fun normalizeRelativePath(path: String): String {
+    fun normalizeTreeRelativePath(path: String): String {
         return path.replace('\\', '/').trim().trim('/').lowercase()
     }
 
@@ -526,7 +526,7 @@ internal fun resolveExistingRemoteSelectionPaths(
     }
 
     fun fileName(path: String): String {
-        return normalizeRelativePath(path).substringAfterLast('/')
+        return normalizeTreeRelativePath(path).substringAfterLast('/')
     }
 
     fun remoteTrackKey(path: String, includeGroup: Boolean): String {
@@ -555,7 +555,7 @@ internal fun resolveExistingRemoteSelectionPaths(
             val fallbackGroup = local.relativePath.replace('\\', '/').substringBeforeLast('/', "")
             val sourcePath = track?.path.orEmpty().ifBlank { local.absolutePath }
             MatchCandidate(
-                normalizedRelativePath = normalizeRelativePath(local.relativePath),
+                normalizedRelativePath = normalizeTreeRelativePath(local.relativePath),
                 canonicalUrl = canonicalUrl(sourcePath),
                 fileName = fileName(local.relativePath),
                 trackKey = track?.let {
@@ -573,7 +573,7 @@ internal fun resolveExistingRemoteSelectionPaths(
     val remotes = remoteFiles.map { remote ->
         RemoteCandidate(
             file = remote,
-            normalizedRelativePath = normalizeRelativePath(remote.relativePath),
+            normalizedRelativePath = normalizeTreeRelativePath(remote.relativePath),
             canonicalUrl = canonicalUrl(remote.url),
             fileName = fileName(remote.relativePath),
             trackKey = remoteTrackKey(remote.relativePath, includeGroup = true),
