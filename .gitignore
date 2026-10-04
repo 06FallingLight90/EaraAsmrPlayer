@@ -2,6 +2,7 @@
 .vscode/
 .claude/
 .trae/
+__pycache__/
 *.iml
 .worktrees/
 EaraServer/
