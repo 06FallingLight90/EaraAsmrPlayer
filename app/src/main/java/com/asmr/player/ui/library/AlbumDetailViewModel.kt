@@ -1,10 +1,7 @@
 package com.asmr.player.ui.library
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.SystemClock
 import android.provider.DocumentsContract
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
@@ -14,7 +11,6 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import com.asmr.player.BuildConfig
 import com.asmr.player.cache.AppCacheManager
 import com.asmr.player.data.local.db.dao.TagWithCount
 import com.asmr.player.data.local.db.entities.AlbumEntity
@@ -22,8 +18,6 @@ import com.asmr.player.data.local.db.entities.TagSource
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.db.entities.titleForDisplay
 import com.asmr.player.data.lyrics.LyricsLoader
-import com.asmr.player.data.lyrics.deriveLyricsRelativePathNoExt
-import com.asmr.player.data.remote.NetworkHeaders
 import com.asmr.player.data.remote.ONLINE_DIRECTORY_REQUEST_TIMEOUT_MS
 import com.asmr.player.data.remote.api.AsmrOneAvailabilityApi
 import com.asmr.player.data.remote.api.AsmrOneEndpoint
@@ -31,10 +25,8 @@ import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
 import com.asmr.player.data.remote.api.AsmrOneRecommendationSeedFeatures
 import com.asmr.player.data.remote.api.WorkDetailsResponse
 import com.asmr.player.data.remote.auth.DlsiteAuthStore
-import com.asmr.player.data.remote.auth.buildDlsiteCookieHeader
 import com.asmr.player.data.remote.crawler.AsmrOneCrawler
 import com.asmr.player.data.remote.crawler.AsmrOneTracksResult
-import com.asmr.player.data.remote.dlsite.DLSITE_PLAY_PREVIEW_CACHE_VERSION
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncCandidate
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncResolveResult
 import com.asmr.player.data.remote.dlsite.DlsiteLanguageEdition
@@ -42,8 +34,6 @@ import com.asmr.player.data.remote.dlsite.DlsitePlayLoadStatus
 import com.asmr.player.data.remote.dlsite.DlsitePlayTreeResult
 import com.asmr.player.data.remote.dlsite.DlsitePlayWorkClient
 import com.asmr.player.data.remote.dlsite.DlsiteProductInfoClient
-import com.asmr.player.data.remote.dlsite.descrambleDlsitePlayBitmap
-import com.asmr.player.data.remote.dlsite.parseDlsitePlayImageSeed
 import com.asmr.player.data.remote.dlsite.resolveCloudSyncWorkId
 import com.asmr.player.data.download.DownloadManager
 import com.asmr.player.data.download.DownloadBatchRequest
@@ -77,7 +67,6 @@ import com.asmr.player.work.AlbumCoverThumbWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
-import java.io.FileOutputStream
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Named
@@ -102,11 +91,8 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response

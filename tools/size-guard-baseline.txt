@@ -1,6 +1,6 @@
 app/src/main/java/com/asmr/player/ui/downloads/DownloadsScreen.kt: 2281
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt: 1524
-app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt: 2535
+app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt: 2521
 app/src/main/java/com/asmr/player/ui/library/LibraryScreen.kt: 1582
 app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt: 2641
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailDirectorySupport.kt: 2705
