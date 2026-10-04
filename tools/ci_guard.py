@@ -55,7 +55,7 @@ RULES = [
      ("com.asmr.player.ui",),
      ("com.asmr.player.data.local.db.dao.", "com.asmr.player.data.local.db.AppDatabaseProvider")),
     ("ui-to-data-remote",
-     ("com.asmr.player.ui",),
+     ("com.asmr.player.ui", "com.asmr.player.main"),
      ("com.asmr.player.data.remote.",)),
     ("feature-to-feature",
      ("com.asmr.player.ui",),

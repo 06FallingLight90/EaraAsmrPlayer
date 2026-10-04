@@ -190,3 +190,7 @@ app/src/main/java/com/asmr/player/ui/settings/SettingsScreen.kt com.asmr.player.
 app/src/main/java/com/asmr/player/ui/settings/SettingsScreen.kt com.asmr.player.ui.library.LibraryViewModel
 app/src/main/java/com/asmr/player/ui/settings/SettingsScreen.kt com.asmr.player.ui.update.launchDownloadedApkInstall
 app/src/main/java/com/asmr/player/ui/sidepanel/RecentAlbumsPanel.kt com.asmr.player.ui.player.PlayerViewModel
+app/src/main/java/com/asmr/player/main/MainPrimaryPagerUi.kt com.asmr.player.data.remote.scraper.resolveRecommendedWorkHeroCoverUrl
+app/src/main/java/com/asmr/player/main/MainTopBarUi.kt com.asmr.player.data.remote.scraper.resolveRecommendedWorkHeroCoverUrl
+app/src/main/java/com/asmr/player/main/MainOverlayUi.kt com.asmr.player.data.remote.scraper.resolveRecommendedWorkHeroCoverUrl
+app/src/main/java/com/asmr/player/main/MainRouteContents.kt com.asmr.player.data.remote.scraper.resolveRecommendedWorkHeroCoverUrl

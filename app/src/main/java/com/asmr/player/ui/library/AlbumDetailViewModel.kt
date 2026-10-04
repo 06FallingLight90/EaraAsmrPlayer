@@ -900,14 +900,6 @@ class AlbumDetailViewModel @Inject constructor(
             .enqueueUniqueWork("album_cover_thumb_$albumId", ExistingWorkPolicy.REPLACE, request)
     }
 
-    private suspend fun upsertAlbumFtsIndex(albumId: Long, entity: AlbumEntity) {
-        libraryWriteRepository.upsertAlbumFtsIndex(albumId, entity)
-    }
-
-    private suspend fun upsertAlbumTagsFromCsv(albumId: Long, tagsCsv: String, source: Int) {
-        libraryWriteRepository.upsertAlbumTagsFromCsv(albumId, tagsCsv, source)
-    }
-
     private suspend fun resolveInitialDlsiteLoadTarget(
         model: AlbumDetailModel
     ): ResolvedDlsiteLoadTarget {

@@ -40,6 +40,7 @@ import com.asmr.player.util.DlsiteWorkNo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
@@ -50,7 +51,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -78,20 +81,24 @@ class OnlineContentRepository @Inject constructor(
     private val dlsiteProductInfoClient: DlsiteProductInfoClient,
     private val libraryReadRepository: LibraryReadRepository,
     private val libraryWriteRepository: LibraryWriteRepository,
+    private val dlsiteAuthStore: DlsiteAuthStore,
 ) {
-    // 原 VM 用 viewModelScope 承载在途去重；repo 内以独立 scope 等价承载。
+    // 原 VM 用 viewModelScope 承载在途去重；repo 内以独立 scope 承载。
+    // 注意：原 VM 全部缓存访问在 Main.immediate 单线程串行；repo 后可能被多实例/多协程并发调用，
+    // 故缓存容器改 ConcurrentHashMap，复合读写（TTL 判定+写入+淘汰、在途去重 get-or-put）用 cacheMutex 串行化。
     private val resolutionScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val cacheMutex = Mutex()
 
-    private val asmrOneResolvedCache = linkedMapOf<String, Pair<Long, Pair<String, Int?>?>>()
-    private val asmrOneResolvedDetailsCache = linkedMapOf<String, WorkDetailsResponse>()
-    private val asmrOneResolutionInFlight = mutableMapOf<String, Deferred<Pair<String, Int?>?>>()
-    private val asmrOneTracksCache = linkedMapOf<String, Pair<Long, AsmrOneTracksResult>>()
-    private val remoteFileSizeCache = linkedMapOf<String, Long?>()
+    private val asmrOneResolvedCache = ConcurrentHashMap<String, Pair<Long, Pair<String, Int?>?>>()
+    private val asmrOneResolvedDetailsCache = ConcurrentHashMap<String, WorkDetailsResponse>()
+    private val asmrOneResolutionInFlight = ConcurrentHashMap<String, Deferred<Pair<String, Int?>?>>()
+    private val asmrOneTracksCache = ConcurrentHashMap<String, Pair<Long, AsmrOneTracksResult>>()
+    private val remoteFileSizeCache = ConcurrentHashMap<String, Long?>()
 
-    private fun cacheAsmrOneResolution(
+    private suspend fun cacheAsmrOneResolution(
         key: String,
         result: AsmrOneSearchResult
-    ): Pair<String, Int?>? {
+    ): Pair<String, Int?>? = cacheMutex.withLock {
         val found = selectAsmrOneWorkForRj(result.response.works, key)
         val workId = found?.id?.toString()?.trim().orEmpty()
         if (found == null) {
@@ -110,7 +117,7 @@ class OnlineContentRepository @Inject constructor(
                 asmrOneResolvedDetailsCache.remove(firstKey)
             }
         }
-        return resolved
+        resolved
     }
 
     private suspend fun resolveAsmrOneWorkUncached(
@@ -131,7 +138,7 @@ class OnlineContentRepository @Inject constructor(
         val key = workNo.trim().uppercase()
         if (key.isBlank()) return null
         val now = SystemClock.elapsedRealtime()
-        val cached = asmrOneResolvedCache[key]
+        val cached = cacheMutex.withLock { asmrOneResolvedCache[key] }
         if (cached != null) {
             val ttlMs = if (cached.second == null) 5_000L else 10 * 60_000L
             if ((now - cached.first) <= ttlMs && (!throwOnRequestFailure || cached.second != null)) {
@@ -145,12 +152,22 @@ class OnlineContentRepository @Inject constructor(
             }
         }
 
-        val request = asmrOneResolutionInFlight[key] ?: resolutionScope.async {
-            runCatching { resolveAsmrOneWorkUncached(key, throwOnRequestFailure = false) }.getOrNull()
-        }.also { deferred ->
-            asmrOneResolutionInFlight[key] = deferred
-            deferred.invokeOnCompletion {
-                asmrOneResolutionInFlight.remove(key, deferred)
+        val existing = asmrOneResolutionInFlight[key]
+        val request = if (existing != null) {
+            existing
+        } else {
+            val deferred = resolutionScope.async {
+                runCatching { resolveAsmrOneWorkUncached(key, throwOnRequestFailure = false) }.getOrNull()
+            }
+            val winner = asmrOneResolutionInFlight.putIfAbsent(key, deferred)
+            if (winner != null) {
+                deferred.cancel()
+                winner
+            } else {
+                deferred.invokeOnCompletion {
+                    asmrOneResolutionInFlight.remove(key, deferred)
+                }
+                deferred
             }
         }
         return withTimeoutOrNull(timeoutMs) { request.await() }
@@ -287,7 +304,7 @@ class OnlineContentRepository @Inject constructor(
             .header("User-Agent", NetworkHeaders.USER_AGENT)
             .header("Accept-Language", NetworkHeaders.ACCEPT_LANGUAGE)
             .get()
-        val cookie = buildDlsiteCookieHeader(DlsiteAuthStore(context).getPlayCookie())
+        val cookie = buildDlsiteCookieHeader(dlsiteAuthStore.getPlayCookie())
         if (cookie.isNotBlank()) requestBuilder.header("Cookie", cookie)
 
         val bytes = runCatching {
