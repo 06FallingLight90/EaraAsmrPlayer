@@ -61,7 +61,7 @@ feature 服务包：subtitle · translation · cache · work · hotlistening · 
 
 ## 3. AlbumDetail 家族职责表
 
-详情页是全库最大的文件家族：14 个文件、合计约 14 821 行。除前两个位于 `ui/library/` 外，其余在 `ui/library/albumdetail/`（包 `com.asmr.player.ui.library.albumdetail`，目录与包名一致）。
+详情页是全库最大的文件家族：14 个文件、合计约 14 829 行。除前两个位于 `ui/library/` 外，其余在 `ui/library/albumdetail/`（包 `com.asmr.player.ui.library.albumdetail`，目录与包名一致）。
 
 | 文件 | 约行数 | 职责 |
 |---|---|---|
@@ -74,7 +74,7 @@ feature 服务包：subtitle · translation · cache · work · hotlistening · 
 | `albumdetail/AlbumDetailHero.kt` | 734 | Hero 区：背景模糊、身份覆盖层、在线听众信息、稳定身份/封面源记忆、滚动渐隐 |
 | `albumdetail/AlbumDetailDialogs.kt` | 1093 | `AsmrOneDownloadDialog`、`OnlineSaveDialog`、`InlineVideoPlayer`、`FilePreviewDialog` 及保存树扁平化工具 |
 | `albumdetail/AlbumDetailScreenSupport.kt` | 447 | 支撑层：枚举/数据类/动画 spec/`AlbumDetailHeroMotionState`/加载计划/`isVideoPreviewUrl`/`PlaylistAddTarget` |
-| `albumdetail/AlbumDetailViewModelSupport.kt` | 773 | VM 纯函数支撑：`AlbumDetailModel`、相似作品推荐特征、头部专辑合并、DLSite 语言版本解析、asmr.one 轨道树扁平化、远程文件大小探测（含收敛后的 `collectSubtitleCandidates`） |
+| `albumdetail/AlbumDetailViewModelSupport.kt` | 781 | VM 纯函数支撑：`AlbumDetailModel`、相似作品推荐特征、头部专辑合并、DLSite 语言版本解析、asmr.one 轨道树扁平化、远程文件大小探测（含收敛后的 `collectSubtitleCandidates`） |
 | `albumdetail/AlbumDetailSharedSections.kt` | 684 | 共享区块：`AlbumDescription`、`AlbumTracks` / `TrackItem` / `OnlineTrackRow`、DLSite 推荐卡、区块标题 |
 | `albumdetail/AlbumDetailLocalTab.kt` | 590 | 本地目录页签 `AlbumLocalBreadcrumbTabV2` |
 | `albumdetail/AlbumDetailLocalAvailability.kt` | 56 | 本地专辑物理来源枚举与缺失专辑清理判断 |
@@ -119,7 +119,7 @@ UI（ui/player/PlayerViewModel.kt 等）
 
 - 环境：JDK 17；Windows 本机可用仓库自带的 `gradlew-local.bat` 辅助脚本（重定向 Gradle 本地缓存）。
 - 构建：`./gradlew :app:assembleDebug`
-- 测试：`./gradlew :app:testDebugUnitTest`（当前基线 **938** 个用例，改动后应保持全绿且只增不减）
+- 测试：`./gradlew :app:testDebugUnitTest`（当前基线 **945** 个用例，改动后应保持全绿且只增不减）
 - CI：`.github/workflows/ci.yml`（push/PR）：架构守护（`tools/ci_guard.py`：单文件行数 ratchet「路径:行数」pin + 17 条 import 方向规则 + 反例夹具自检）→ `:app:testDebugUnitTest`；`.github/workflows/release.yml` 由 `v*` tag 触发，先运行 `:app:testReleaseUnitTest` 再构建 Release 签名 APK。
 - 签名配置与字幕模型按需下载说明见 README「Getting Started」一节。
 
