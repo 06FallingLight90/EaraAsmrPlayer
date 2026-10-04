@@ -2,7 +2,7 @@
 
 > 依据：`docs/project-quality-review-20261004.md`（总评 C）+ 本计划制定前的逐条回源码复核。
 > 与上轮关系：R2（`docs/refactor-plan-r2.md`，tag `refactor-r2/phase-A/B/C`）完成数据访问层下沉与全局守卫；R3 清 R2 明确遗留的三笔账——**剩余依赖环**、**两个 God VM 无法收紧到 800 行**、**ui 层穿透收口未完成**，并治理主要 P1。
-> 状态：待开工。基线：`refactor/architecture-cleanup @ 4920f37`，测试 938/0/4，size pin 8 条，import baseline 196 条。
+> 状态：阶段 A 已完成（tag `refactor-r3/phase-A`，测试 945/0/4）；阶段 B 开工前评估见 [dependency-forecast](refactor-plan-r3-dependency-forecast.md)。基线：`refactor/architecture-cleanup`，测试 **945/0/4**，size pin 8 条，import baseline **344 条**。
 
 ## 0. 已确认决策（用户 2026-10-04 拍板）
 
@@ -64,15 +64,23 @@
 
 `data↔work`/`data↔listentogether`/`data↔hotlistening` 为单向非环，不动。
 
-### B1 纯类型下沉批次（收益最大、零行为风险，最先做；≈−80 条）
+> **多跳环（开工前评估新增）**：包级 SCC 实测为 **1 个 48 包巨型连通团**，11 组 2-环只是其可读子集；只消 2-环**不会解散该团**。本轮策略：**消 2-环 + 以 SCC ratchet 冻结规模**（见 B0），并打断 3 条代表性长环——`data.download→data.remote→data.repository→data.download`（B4 扩到 `repository→download` 边）、`data.remote→data.settings→hotlistening→data.remote`（常量下沉）；`root→ui.*→root`（经 `R`，结构性，接受）。
+
+### B0 基线与检测前置（先于一切移包）
+- 新增 **包级 SCC ratchet** 进 `ci_guard.py`：当前 48 包团规模设为上界，只许减不许增（这是"断环"的可验收指标——否则消环无验收手段）。
+- baseline **失效条目（dead entry）检测**：移包后旧条目静默遗留会被报出。
+- 提供**机械重写 baseline** 脚本步骤：移包 → 全仓 import 重写 → 重键 `import-direction-baseline.txt`；拆文件同理重键 `size-guard-baseline.txt`。
+
+### B1 纯类型下沉批次（收益最大、零行为风险，最先做；净 ≈−83 条）
 把跨层共享的**纯类型/常量/纯函数**从 data/cache 提到中立包（`domain`/`util`）——不改逻辑，仅改 `package` 与全仓 import：
 - `TreeFileType` 族（枚举 + 6 纯函数；序列化按枚举名，移包不破坏存量数据）**23 条** → `domain`
 - `TagSource` **3 条** → `domain`
-- `LibraryQuerySpec`/`LibrarySort`/`LibrarySourceFilter` **12 条** → `domain`（`LibraryQueryBuilder` 依赖 SQL，留 data）
+- `LibraryQuerySpec`/`LibrarySort`/`LibrarySourceFilter` **12 条** → `domain`（⚠️ 与 SQL 的 `LibraryQueryBuilder` **同文件** `query/LibraryQuerySpec.kt:6/37/44/59`，须**先拆文件**，builder 留 data）
 - cache 纯类型 `CachePolicy`/`CacheImageModel`/`AppCacheLimits` **22 条** → `domain`/`util`（**不可放 `ui.common.cover`**：cache 层自身也引用）
 - 纯投影 DTO（`TagWithCount`/`LibraryTrackRow`/`LibraryTrackAlbumHeaderRow`/`AlbumGroupStatsRow`/`AlbumGroupTrackRow`/`PlaylistStatsRow`/`AlbumListeningRow`）**15 条** → `domain`
 - `AudioOutputRouteKind` **5 条** → `util`（顺带消环 #1 一半）
-- **预期结果**：baseline ≈344 → **≈264**；零新违规、零行为变更。
+- **预期结果**：baseline ≈344 → **≈261**（ui→db −52、ui→cache/work −26、ui→service −5）；零新违规、零行为变更。
+- ⚠️ 本轮不动：`titleForDisplay`（`entities/DisplayTitleSupport.kt`，@Entity 扩展，ui 用 7 处、data/subtitle 也用）随实体走，留 backlog；每个迁移任务**须同步 test/androidTest 的 import（≥20 处）**，否则 androidTest 编译红。
 
 ### B2 低风险消环批次（独立提交，逐环）
 - 环1：`AudioOutputRouteKind`→`util`（B1 已含）+ `HardwareVolumeOverlay`→`ui/common/audio`（main 与 ui.player 共用）；
@@ -83,7 +91,7 @@
 - **预期结果**：环 #1/#2/#4/#5/#6/#11 消解（#3/#9 缓、#10 不动）；baseline 净 **−2**（倒挂）。
 
 ### B3 守卫补强（防回潮）
-- 扩 `ui-to-service` 源包含 `main`：复查发现 **main 侧 10 条 `service.*` 盲区**（`AudioOutputRouteKind`×6、`PlaybackService`×4，如 `MainContainer.kt:70`）未入 baseline 也不被拦截；存量入 baseline。
+- 扩 `ui-to-service` 源包含 `main`：复查发现 **main 侧 10 条 `service.*` 盲区**（`AudioOutputRouteKind`×6、`PlaybackService`×4，如 `MainContainer.kt:70`）未入 baseline 也不被拦截；存量入 baseline（**净 +10，须与 B6 目标合账**：目标相应上调为 ≤110，或记为"补检测费"）。
 - 评估新增 `cache`/`data` 内部方向规则（会把现存单向边判为违规，需连带倒置或入 baseline）——单独立项决策，不在本轮强上。
 
 ### B4 中风险消环（接口倒置）
@@ -93,13 +101,15 @@
 
 ### B5 ui 穿透收口（承接 B1 后的剩余）
 - **DTO/repository 出口**：实体类（`AlbumEntity`/`TrackEntity` 等）经 repository 出领域模型（需新映射，中风险）；B1 后各 VM 仅余约 2–4 条实体引用。
+- **cache/work 剩余（24 条）**：`ImageCacheEntryPoint`（`cache/ImageCacheManager.kt:456`）**非 UI 专用**（`work/AlbumCoverThumbWorker`、`service/LyricMediaNotificationProvider`、`MainActivity` 也消费）→ **不可搬 `ui.common.cover`**，须抽**中立门面/接口**；`LazyListPreloader`/`LazyStaggeredGridPreloader` 自身依赖 `cache.ImageCacheManager` → 先抽接口再搬（否则只是把违规挪到新路径并新增 `ui.common.cover→cache`）。
 - **net-stack seam（28 条）**：`LibraryPresetStore` 整体下沉 data（−5）；AlbumDetail 家族 Gson 解析下沉（需核实解析对象）；OkHttp（图片下载/保存、站点探测）下沉 repository；`CloudSyncSelectionDialog.toHttpUrlOrNull`→util 纯函数；`SearchViewModel.retrofit2.HttpException`→repository 转 domain 错误。
 - **DataStore 收口（12 条）**：main 8 条改经 `SettingsRepository`；搜索 3 条经 `SearchRepository`。
 - **额外**：`LibraryTrackQuery.kt`（ui 构建 Room SQL）整体迁 `data/local/db/query`（−3）。
 
 ### B6 baseline 与守卫
-- `import-direction-baseline.txt` ≈344 → 目标 **≤100**（B1 ≈−80、倒挂 −2、DataStore −11、net −28 等）。
+- `import-direction-baseline.txt` ≈344 → 目标 **≤110**（B1 −83、倒挂 −2、DataStore −11、net −28 等；含 B3 补检测 +10）。
 - `size-guard-baseline.txt` 不动（C 阶段）。
+- **执行顺序约束**：B0 → B1 → B2/B3/B4/B5；**B5（repository 出口）须先于 §4 的 C1/C2**——否则 holder 以新路径复用旧穿透（旧 baseline 条目 dead + 新路径违规），等于"把违规换目录"而非真消。
 
 **阶段 B 门禁**：全量测试双绿（基线只增不减）+ 子代理审查 `git diff refactor-r3/phase-A..HEAD` + 实机走查（库页/详情页/下载页/播放链）+ tag `refactor-r3/phase-B`。
 
@@ -109,21 +119,28 @@
 
 放置：`ui/library/holder/`、`ui/library/albumdetail/holder/`；构造注入 Repository、暴露 `StateFlow`、VM 内 `by lazy` 或 `@Singleton`；VM 外壳保留 `uiState` 组合与生命周期。
 
-- **C1 `LibraryViewModel` 2521 → 目标 ≤800**：`LibraryScanStateHolder` / `LibraryCloudSyncStateHolder` / `LibraryDeleteStateHolder` / `LibraryFilterStateHolder` / `LibraryTagStateHolder`。
+- **C1 `LibraryViewModel` 2500 → 目标 ≤800**（A5 后实测）：`LibraryScanStateHolder` / `LibraryCloudSyncStateHolder` / `LibraryDeleteStateHolder` / `LibraryFilterStateHolder` / `LibraryTagStateHolder`。
 - **C2 `AlbumDetailViewModel` 2510 → 目标 ≤800**：`DlsiteSectionStateHolder` / `AsmrOneSectionStateHolder` / `DownloadSelectionStateHolder` / `TreeStateHolder`。
   - ⚠️ 保留 VM 版 `applyResolvedCloudSync` 的 title 覆盖语义（与 repo 合并规则不同，**不可混用**）。
 
 ### C3 `LibraryWriteRepository` 1050 → 拆族
 `TagWrite` / `DeleteWrite` / `ScanWrite` / `OnlineSave`。
 
-### C4 God 文件区块化
-`AlbumDetailDirectorySupport` 2700、`DownloadsScreen` 2281、`SearchScreen` 2186（`SearchScreenContent` 单函数近千行/19 形参 → 拆子 composable + 状态对象）、`AlbumDetailDlsiteTabs` 1932、`LibraryScreen` 1582（按热点优先级）。
+### C4 God 文件区块化（≥1500 全部纳入）
+`AlbumDetailDirectorySupport` 2700、`DownloadsScreen` 2281、`SearchScreen` 2186（`SearchScreenContent` 单函数 **1086 行**/19 形参 → 拆子 composable + 状态对象）、`AlbumDetailDlsiteTabs` 1932、`LibraryScreen` 1582（`LibraryScreenContent` 914）。
+**补充（开工前评估发现，否则 C5 不可达）**：`AlbumDetailScreen` 1518（单函数 **1271 行**，是 ">1500 清零" 的必达前提）、`ui/settings/SettingsScreen` 1270（单函数 1101）、`ui/common/audio/EqualizerPanel` 1190（单函数 1140）——三者同为"单巨型 Composable"，拆法同构（区块化 + 状态对象）。
 
-### C5 ratchet 收紧（依赖 C1/C2/C3）
-每完成一批拆解即从 `size-guard-baseline.txt` 移除对应 pin 并下调 `SIZE_LIMIT`（1500 → 1200 → 1000 → 800，渐进）；目标 >1500 清零，向 800 逼近但以实际进度为准、不强达。
+### C5 ratchet 收紧（依赖 C1/C2/C3/C4/C7；分级目标）
+- **第一级**：**>1500 清零**（含新纳入的 `AlbumDetailScreen`）；每拆完一批即从 `size-guard-baseline.txt` 移除对应 pin 并贴实测收缩 cap。
+- **第二级**：处理 **1000–1500 区间**（14 个文件，现完全不受守卫，见 forecast §4）后，把 `SIZE_LIMIT` 从 1500 下调。
+- **第三级**：向 800 逼近，以实际进度为准、不强达。
+- ⚠️ **不可直接降 `SIZE_LIMIT` 到 ≤1000**：会令上述 14 个未纳入文件全部违约；须先保证"不再新增超限"，再分批下调。
 
 ### C6 结构收尾
 `walkTree`/`scanFromDocumentTree` 拆函数、Chrome 概念归包（`main` 与 `ui/nav/BottomChrome.kt`）、dao 投影 DTO 归位。
+
+### C7 service 层 God 拆解（开工前评估新增）
+`service/PlaybackService` 1471（59 fun，MediaSession/播放链/DB）、`subtitle/SubtitleTaskService` 1429（71 fun，前台服务/DB/SAF）、`data/download/DownloadManager` 1122（下载/DB/SAF）——三者强耦合、原计划只字未拆，须与 A4 seam 测试合并立项（无拆解则 A4 无稳定测点，测试欠账无从偿还）。
 
 **阶段 C 门禁**：全量测试双绿 + 子代理审查 + 实机全链 smoke + tag `refactor-r3/phase-C`。
 
@@ -136,10 +153,12 @@
 | 风险 | 缓解 |
 |---|---|
 | State Holder 抽取致 UI 状态机行为回归 | 抽前录行为档案 + 每 holder 钉 seam 测试 + 分批提交 + 实机对照 |
-| 消环改动面广（11 组） | 逐环独立提交，单环可独立回退；A 阶段守护先兜底 |
+| 消环改动面广（11 组）+ 多跳环未断 | 逐环独立提交，单环可独立回退；B0 加 SCC ratchet 冻结规模，明确"本轮只消 2-环 + 冻结大团" |
+| 移包后 baseline 条目失配（dead / 报错） | B0 增失效条目检测 + 机械重写脚本；每个迁移任务把"同步 test/androidTest import + 重键 baseline"列为验收项 |
+| B5 未清穿透即做 C1/C2（违规换目录） | 顺序约束：B5 先于 C1/C2；holder 落包前确认无 dao/entity/okhttp 残留 |
 | ui 穿透收口触及大批文件 | 按 repository 出口分族、逐族收缩 baseline，禁止一次性大改 |
 | 开启 schema 导出暴露历史迁移缺陷 | 近 3 版本优先补测试，缺陷单独记录不夹带修 |
-| ratchet 收紧过急阻塞 | 只在 C1/C2/C3 完成后逐批收紧，不设"一步到 800" |
+| ratchet 收紧过急阻塞 | 只在 C1/C2/C3/C4/C7 完成后逐批收紧（分级目标见 §4 C5），不设"一步到 800" |
 | 与用户设备走查冲突 | 走查前约定前台切换时机（用户可能正在游戏） |
 
 ## 7. 记录但不改动项（用户 2026-10-04 决策）
@@ -154,11 +173,11 @@
 1. 本文件落盘为 `docs/refactor-plan-r3.md`。
 2. A1→A5 实施阶段 A，过门禁打 `refactor-r3/phase-A`。
 3. B1 逐环 → B2–B5 穿透收口 → B6 baseline 收缩，过门禁打 `refactor-r3/phase-B`。
-4. C1/C2 State Holder → C3/C4 拆族 → C5 ratchet → C6，过门禁打 `refactor-r3/phase-C`。
+4. C1/C2 State Holder → C3/C4/C7 拆族 → C5 ratchet → C6，过门禁打 `refactor-r3/phase-C`。
 5. 终态：ARCHITECTURE.md §7 全面同步（阶段完成记录 + backlog 清账）。
 
 **验证方式（每阶段复跑）**：
-- `\.gradlew-local.bat -g "C:\Users\24131\.gradle" :app:testDebugUnitTest` — 全绿、只增不减（基线 938）。
+- `\.gradlew-local.bat -g "C:\Users\24131\.gradle" :app:testDebugUnitTest` — 全绿、只增不减（当前基线 **945**）。
 - `python tools/ci_guard.py`（含规则自检）通过；两个 baseline 按实测收缩。
-- 子代理只读审查 `git diff refactor-r2/phase-C..HEAD`，报告落 `docs/iteration/r3-phase-N-review.md`。
+- 子代理只读审查 `git diff <上阶段tag>..HEAD`，报告落 `docs/iteration/r3-phase-N-review.md`。
 - 实机走查（小米 14）：库页 / 详情页（DL tab / ASMR.ONE）/ 下载页 / 播放链，`adb shell am start --es start_route "<route>"` 直达取证。
