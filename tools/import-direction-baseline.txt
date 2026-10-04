@@ -254,3 +254,7 @@ app/src/main/java/com/asmr/player/ui/sidepanel/RecentAlbumsPanelViewModel.kt com
 app/src/main/java/com/asmr/player/ui/sidepanel/RecentAlbumsPanelViewModel.kt com.asmr.player.data.local.db.entities.AlbumEntity
 app/src/main/java/com/asmr/player/ui/theme/DynamicHueGenerator.kt com.asmr.player.cache.ImageCacheEntryPoint
 app/src/main/java/com/asmr/player/ui/common/cover/ImagePreviewDialog.kt okhttp3.OkHttpClient
+app/src/main/java/com/asmr/player/main/MainContainerRuntime.kt com.asmr.player.service.PlaybackService
+app/src/main/java/com/asmr/player/main/MainOverlayUi.kt com.asmr.player.service.PlaybackService
+app/src/main/java/com/asmr/player/main/MainPrimaryPagerUi.kt com.asmr.player.service.PlaybackService
+app/src/main/java/com/asmr/player/main/MainTopBarUi.kt com.asmr.player.service.PlaybackService

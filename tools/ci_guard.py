@@ -71,7 +71,7 @@ RULES = [
      ("com.asmr.player.ui",),
      ("okhttp3.", "retrofit2.", "com.google.gson.")),
     ("ui-to-service",
-     ("com.asmr.player.ui",),
+     ("com.asmr.player.ui", "com.asmr.player.main"),
      ("com.asmr.player.service.",)),
     ("service-to-ui",
      ("com.asmr.player.service",),
