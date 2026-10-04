@@ -30,7 +30,10 @@ jobs:
         run: python3 tools/ci_guard.py
       - name: Compile androidTest and baselineprofile assets
         # 防止"写了但从不跑"的测试资产腐烂（20261002 体检 P1-6）：
-        # androidTest 迁移/分页测试与 baselineprofile 至少保持可编译
-        run: ./gradlew :app:assembleDebugAndroidTest :baselineprofile:assemble
+        # androidTest 迁移/分页测试与 baselineprofile 至少保持可编译。
+        # 注意：不能用 `:baselineprofile:assemble`——androidx.baselineprofile 插件的
+        # assemble 会连带生成 baseline profile（connectedNonMinifiedReleaseAndroidTest），
+        # 需要真机，CI 上必挂（20261004 首次远端触发即失败）。
+        run: ./gradlew :app:assembleDebugAndroidTest :baselineprofile:assembleAndroidTest
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest
