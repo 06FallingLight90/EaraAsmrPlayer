@@ -1295,14 +1295,7 @@ class PlaybackService : MediaSessionService() {
             }
         }
 
-        val nextStartMs = when {
-            idx + 1 in lyrics.indices -> lyrics[idx + 1].startMs
-            idx < 0 && lyrics.isNotEmpty() -> lyrics.first().startMs
-            else -> null
-        }
-        val rawDelay = nextStartMs?.let { it - positionMs } ?: 2_000L
-        val maxDelay = if (playing) 2_000L else 1_500L
-        return rawDelay.coerceIn(200L, maxDelay)
+        return nextLyricsTickDelayMs(lyrics, idx, positionMs, playing)
     }
 
     private fun startEffectLoops(startupAppVolumeSyncJob: Job) {
