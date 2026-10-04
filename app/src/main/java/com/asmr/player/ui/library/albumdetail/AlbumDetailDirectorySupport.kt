@@ -92,11 +92,11 @@ import com.asmr.player.data.local.db.entities.OnlineSavedResourceEntity
 import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
-import com.asmr.player.data.local.db.entities.LocalTreeLeafCacheEntry
-import com.asmr.player.data.local.db.entities.TreeFileType
-import com.asmr.player.data.local.db.entities.fileExtensionFromName
-import com.asmr.player.data.local.db.entities.treeFileTypeForName
-import com.asmr.player.data.local.db.entities.treeFileTypeForNode
+import com.asmr.player.domain.model.LocalTreeLeafCacheEntry
+import com.asmr.player.domain.model.TreeFileType
+import com.asmr.player.domain.model.fileExtensionFromName
+import com.asmr.player.domain.model.treeFileTypeForName
+import com.asmr.player.domain.model.treeFileTypeForNode
 import com.asmr.player.data.local.tree.LocalTreeIndex
 import com.asmr.player.data.local.tree.LocalTreeNode
 import com.asmr.player.data.local.tree.sanitizeFolderName

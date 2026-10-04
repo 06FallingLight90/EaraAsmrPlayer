@@ -1,4 +1,4 @@
-package com.asmr.player.data.local.db.entities
+package com.asmr.player.domain.model
 
 /**
  * 本地目录树扫描时对文件类型的分类；序列化进 [LocalTreeCacheEntity.payloadJson]

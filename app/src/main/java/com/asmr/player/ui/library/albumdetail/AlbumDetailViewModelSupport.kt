@@ -1,14 +1,14 @@
 package com.asmr.player.ui.library.albumdetail
 
-import com.asmr.player.data.local.db.entities.TreeFileType
+import com.asmr.player.domain.model.TreeFileType
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.asmr.player.data.local.db.entities.isDownloadableTreeFileType
-import com.asmr.player.data.local.db.entities.treeFileTypeForName
-import com.asmr.player.data.local.db.entities.treeFileTypeForNode
+import com.asmr.player.domain.model.isDownloadableTreeFileType
+import com.asmr.player.domain.model.treeFileTypeForName
+import com.asmr.player.domain.model.treeFileTypeForNode
 import com.asmr.player.data.local.tree.sanitizeFolderName
 import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
 import com.asmr.player.data.remote.api.AsmrOneRecommendationItem

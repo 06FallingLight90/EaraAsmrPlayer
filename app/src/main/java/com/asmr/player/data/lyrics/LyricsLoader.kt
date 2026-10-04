@@ -14,8 +14,8 @@ import com.asmr.player.data.local.db.entities.titleForDisplay
 import com.asmr.player.data.remote.NetworkHeaders
 import com.asmr.player.data.remote.auth.DlsiteAuthStore
 import com.asmr.player.data.remote.auth.buildDlsiteCookieHeader
-import com.asmr.player.data.local.db.entities.LocalTreeLeafCacheEntry
-import com.asmr.player.data.local.db.entities.TreeFileType
+import com.asmr.player.domain.model.LocalTreeLeafCacheEntry
+import com.asmr.player.domain.model.TreeFileType
 import com.asmr.player.util.EmbeddedMediaExtractor
 import com.asmr.player.util.OnlineLyricsStore
 import com.asmr.player.util.RemoteSubtitleSource

@@ -2,12 +2,12 @@ package com.asmr.player.data.local.tree
 
 import android.net.Uri
 import android.provider.DocumentsContract
-import com.asmr.player.data.local.db.entities.LocalTreeLeafCacheEntry
+import com.asmr.player.domain.model.LocalTreeLeafCacheEntry
 import com.asmr.player.data.local.db.entities.OnlineSavedResourceEntity
-import com.asmr.player.data.local.db.entities.TreeFileType
-import com.asmr.player.data.local.db.entities.isLibraryResourceSavableTreeFileType
-import com.asmr.player.data.local.db.entities.isPlayableTreeFileType
-import com.asmr.player.data.local.db.entities.treeFileTypeForNode
+import com.asmr.player.domain.model.TreeFileType
+import com.asmr.player.domain.model.isLibraryResourceSavableTreeFileType
+import com.asmr.player.domain.model.isPlayableTreeFileType
+import com.asmr.player.domain.model.treeFileTypeForNode
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
 import java.io.File

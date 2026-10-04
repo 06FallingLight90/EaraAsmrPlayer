@@ -35,7 +35,7 @@ import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.di.DEEPSEEK_HTTP_CLIENT
 import com.asmr.player.domain.model.Track
 import com.asmr.player.data.local.tree.LocalTreeNode
-import com.asmr.player.data.local.db.entities.TreeFileType
+import com.asmr.player.domain.model.TreeFileType
 import com.asmr.player.data.local.tree.loadOrBuildLocalTreeIndex
 import com.asmr.player.util.MessageManager
 import com.google.gson.Gson

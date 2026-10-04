@@ -1,9 +1,9 @@
 package com.asmr.player.ui.library.albumdetail
 
-import com.asmr.player.data.local.db.entities.TreeFileType
-import com.asmr.player.data.local.db.entities.isLibraryResourceSavableTreeFileType
-import com.asmr.player.data.local.db.entities.treeFileTypeForName
-import com.asmr.player.data.local.db.entities.treeFileTypeForNode
+import com.asmr.player.domain.model.TreeFileType
+import com.asmr.player.domain.model.isLibraryResourceSavableTreeFileType
+import com.asmr.player.domain.model.treeFileTypeForName
+import com.asmr.player.domain.model.treeFileTypeForNode
 import com.asmr.player.data.local.tree.sanitizeFolderName
 import android.content.Intent
 import android.net.Uri

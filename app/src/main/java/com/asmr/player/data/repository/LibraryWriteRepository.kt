@@ -13,7 +13,7 @@ import com.asmr.player.data.local.db.entities.TagEntity
 import com.asmr.player.data.local.db.entities.TagSource
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.db.entities.TrackTagEntity
-import com.asmr.player.data.local.db.entities.TreeFileType
+import com.asmr.player.domain.model.TreeFileType
 import com.asmr.player.data.local.library.buildOnlineAlbumPath
 import com.asmr.player.data.local.library.shouldBackfillLegacyOnlineSavedAlbumRoot
 import com.asmr.player.domain.model.Album

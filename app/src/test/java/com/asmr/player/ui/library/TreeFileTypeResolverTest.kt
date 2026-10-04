@@ -2,9 +2,9 @@ package com.asmr.player.ui.library
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import com.asmr.player.data.local.db.entities.TreeFileType
-import com.asmr.player.data.local.db.entities.treeFileTypeForName
-import com.asmr.player.data.local.db.entities.treeFileTypeForNode
+import com.asmr.player.domain.model.TreeFileType
+import com.asmr.player.domain.model.treeFileTypeForName
+import com.asmr.player.domain.model.treeFileTypeForNode
 
 class TreeFileTypeResolverTest {
     @Test

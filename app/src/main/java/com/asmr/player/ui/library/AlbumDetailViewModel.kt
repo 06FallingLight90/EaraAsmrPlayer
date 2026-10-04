@@ -108,11 +108,11 @@ import com.asmr.player.ui.library.albumdetail.buildDlsiteTrialDownloadTree
 import com.asmr.player.ui.library.albumdetail.collectLocalSelectionFiles
 import com.asmr.player.ui.library.albumdetail.defaultDlsiteEditions
 import com.asmr.player.ui.library.albumdetail.flattenAsmrOneLeafDownloads
-import com.asmr.player.data.local.db.entities.isDownloadableTreeFileType
-import com.asmr.player.data.local.db.entities.isLibraryResourceSavableTreeFileType
+import com.asmr.player.domain.model.isDownloadableTreeFileType
+import com.asmr.player.domain.model.isLibraryResourceSavableTreeFileType
 import com.asmr.player.ui.library.albumdetail.isMissingLocalDocumentFailure
 import com.asmr.player.ui.library.albumdetail.resolveInitialDlsiteLoadTarget
-import com.asmr.player.data.local.db.entities.isPlayableTreeFileType
+import com.asmr.player.domain.model.isPlayableTreeFileType
 import com.asmr.player.data.local.tree.loadOrBuildLocalTreeIndex
 import com.asmr.player.ui.library.albumdetail.LocalIncrementalSelectionPaths
 import com.asmr.player.ui.library.albumdetail.LocalSourceAvailability
@@ -129,9 +129,9 @@ import com.asmr.player.ui.library.albumdetail.shouldPreserveHeaderAlbumMetadata
 import com.asmr.player.ui.library.albumdetail.shouldReloadAsmrOneForResolvedInitialTarget
 import com.asmr.player.ui.library.albumdetail.shouldRemoveMissingLocalAlbum
 import com.asmr.player.ui.library.albumdetail.shouldReuseAlbumDetailModel
-import com.asmr.player.data.local.db.entities.TreeFileType
-import com.asmr.player.data.local.db.entities.treeFileTypeForName
-import com.asmr.player.data.local.db.entities.treeFileTypeForNode
+import com.asmr.player.domain.model.TreeFileType
+import com.asmr.player.domain.model.treeFileTypeForName
+import com.asmr.player.domain.model.treeFileTypeForNode
 import com.asmr.player.ui.library.albumdetail.ALBUM_DETAIL_SIMILAR_WORK_LIMIT
 import com.asmr.player.ui.library.albumdetail.DlsiteTrialDownloadDirectoryName
 

@@ -87,8 +87,8 @@ import okhttp3.Request
 import com.asmr.player.ui.library.albumdetail.LocalTreeDeletionTarget
 import com.asmr.player.ui.library.albumdetail.localTreePathMatchesTarget
 import com.asmr.player.ui.library.albumdetail.normalizeLocalTreeRelativePath
-import com.asmr.player.data.local.db.entities.TreeFileType
-import com.asmr.player.data.local.db.entities.treeFileTypeForName
+import com.asmr.player.domain.model.TreeFileType
+import com.asmr.player.domain.model.treeFileTypeForName
 
 sealed class LibraryUiState {
     object Loading : LibraryUiState()

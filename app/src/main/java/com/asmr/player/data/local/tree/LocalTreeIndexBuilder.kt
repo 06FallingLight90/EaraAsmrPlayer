@@ -4,10 +4,10 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import com.asmr.player.data.local.db.AppDatabaseProvider
 import com.asmr.player.data.local.db.entities.LocalTreeCacheEntity
-import com.asmr.player.data.local.db.entities.LocalTreeLeafCacheEntry
+import com.asmr.player.domain.model.LocalTreeLeafCacheEntry
 import com.asmr.player.data.local.db.entities.OnlineSavedResourceEntity
-import com.asmr.player.data.local.db.entities.TreeFileType
-import com.asmr.player.data.local.db.entities.treeFileTypeForName
+import com.asmr.player.domain.model.TreeFileType
+import com.asmr.player.domain.model.treeFileTypeForName
 import com.asmr.player.domain.model.Track
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken

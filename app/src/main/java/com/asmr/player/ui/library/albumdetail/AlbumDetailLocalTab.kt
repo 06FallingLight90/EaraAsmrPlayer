@@ -1,6 +1,6 @@
 package com.asmr.player.ui.library.albumdetail
 
-import com.asmr.player.data.local.db.entities.TreeFileType
+import com.asmr.player.domain.model.TreeFileType
 import com.asmr.player.data.local.tree.LocalTreeIndex
 import com.asmr.player.data.local.tree.loadOrBuildLocalTreeIndex
 import com.asmr.player.data.local.tree.localTreeSourcesForAlbum
