@@ -69,7 +69,7 @@ Eara 是一款面向 ASMR 内容的 Android 播放器：既有顺滑的本地媒
 - **DLsite 已购**：登录后可在应用内播放或下载 Play 已购内容
 - **后台下载与离线**：WorkManager 管理下载任务，结合本地数据库实现离线浏览与播放
 - **悬浮歌词**：在系统悬浮窗中显示歌词，适合边做事边听
-- **视频支持**：支持常见视频格式与 m3u8 资源的预览与播放
+- **视频支持**：支持常见视频格式的预览与播放（暂不支持 m3u8/HLS 流媒体）
 - **定时与通知**：睡眠定时、系统通知控制与后台播放
 
 ## 适合谁？
@@ -103,7 +103,7 @@ Eara 是一款面向 ASMR 内容的 Android 播放器：既有顺滑的本地媒
 
 - Android Studio（建议使用稳定版）
 - JDK 17（Android Gradle Plugin 8.x 需要）
-- Android SDK：`compileSdk/targetSdk = 34`，`minSdk = 24`
+- Android SDK：`compileSdk = 36` / `targetSdk = 34`，`minSdk = 24`
 
 ### 命令行构建与安装
 

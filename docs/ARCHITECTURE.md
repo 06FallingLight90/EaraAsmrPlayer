@@ -17,8 +17,8 @@
 
 ```
               ┌───────────── main ──────────────┐
-              │ MainContainer（导航宿主，约2700行）│
-              │ MainContainerSupport（约620行：  │
+              │ MainContainer（导航宿主，约798行） │
+              │ MainContainerSupport（约623行：  │
               │  路由框/顶栏/系统栏/底部Chrome）  │
               └───────────────┬─────────────────┘
                               ▼
@@ -55,32 +55,32 @@ feature 服务包：subtitle · translation · cache · work · hotlistening · 
 
 - 预期方向：`ui → (playback, data, domain)`；`playback → (data, domain)`；`service → (playback, data)`；`data → (domain, util)`。
 - 数据访问边界（R2-B4/B5，2026-10-02）：两个 God VM（LibraryViewModel / AlbumDetailViewModel）的数据库读写已收进 `data/repository/LibraryWriteRepository`（标签/删除/扫描/在线保存事务族，平台接缝 lambda 注入）与 `LibraryReadRepository`（查询/流/PagingSource 出口），构造不再注入 `AppDatabase`/DAO。
-- 已知穿透（存量入 `tools/import-direction-baseline.txt`，新增违规会被 CI 拦截）：`ui → data.local.db.dao` 存量 19 处 / 15 文件（多为 Row 投影类型出口；`AppDatabaseProvider` 直引是守卫规则缺口，待补规则，见 2026-10-02 体检 P0-1）。
+- 已知穿透（存量入 `tools/import-direction-baseline.txt`，新增违规会被 CI 拦截）：R3-A1 起 ui 侧（含 main）不得 import `data.local.db.*`（含实体与查询类型，此前规则仅覆盖 `dao.`/`AppDatabaseProvider`）、`data.local.datastore.*`、`cache.*` 与 `work.*`；反向 `translation`/`hotlistening` 不得 import `ui.*`。存量欠账见 baseline，随 R3-B 分族收口。
 - 反向耦合（`data → 上层`）已清零（R2-B1 模型下沉 domain/data，守卫规则锁死）。
 - `domain` 基本纯净：仅 `Track.kt` 依赖 `util.RemoteSubtitleSource`。
 
 ## 3. AlbumDetail 家族职责表
 
-详情页是全库最大的文件家族：14 个文件、合计约 15 450 行。除前两个位于 `ui/library/` 外，其余在 `ui/library/albumdetail/`（包 `com.asmr.player.ui.library.albumdetail`，目录与包名一致）。
+详情页是全库最大的文件家族：14 个文件、合计约 14 821 行。除前两个位于 `ui/library/` 外，其余在 `ui/library/albumdetail/`（包 `com.asmr.player.ui.library.albumdetail`，目录与包名一致）。
 
 | 文件 | 约行数 | 职责 |
 |---|---|---|
-| `AlbumDetailScreen.kt` | 1523 | 页面入口 Composable `AlbumDetailScreen`（S11 拆分后仅剩主 Composable 编排） |
-| `AlbumDetailViewModel.kt` | 2996 | `@HiltViewModel`：详情页状态编排——asmr.one / DLsite / 本地三路数据加载合并、播放与下载意图、相似作品推荐（数据访问已经 LibraryRead/WriteRepository，R2-B5） |
-| `albumdetail/AlbumDetailDirectorySupport.kt` | 2705 | 目录浏览面板：`DirectoryBrowserPanel`、`CompactDirectoryBreadcrumbContent`、`DirectoryFolderRow`、`DirectoryBatchBarEmbedded` |
-| `albumdetail/AlbumDetailDlsiteTabs.kt` | 1935 | DLsite 页签 `AlbumDlsiteInfoBreadcrumbTabV2`：画廊预览、试听列表、目录树加载占位与空态插画 |
+| `AlbumDetailScreen.kt` | 1518 | 页面入口 Composable `AlbumDetailScreen`（S11 拆分后仅剩主 Composable 编排） |
+| `AlbumDetailViewModel.kt` | 2510 | `@HiltViewModel`：详情页状态编排——asmr.one / DLsite / 本地三路数据加载合并、播放与下载意图、相似作品推荐（数据访问已经 LibraryRead/WriteRepository，R2-B5） |
+| `albumdetail/AlbumDetailDirectorySupport.kt` | 2700 | 目录浏览面板：`DirectoryBrowserPanel`、`CompactDirectoryBreadcrumbContent`、`DirectoryFolderRow`、`DirectoryBatchBarEmbedded` |
+| `albumdetail/AlbumDetailDlsiteTabs.kt` | 1932 | DLsite 页签 `AlbumDlsiteInfoBreadcrumbTabV2`：画廊预览、试听列表、目录树加载占位与空态插画 |
 | `albumdetail/AlbumDetailLandscapeArtwork.kt` | 971 | 横屏封面渲染：模糊源/缓存、曲线形状、Ribbon、背景/封面/身份、相似作品（横竖屏） |
 | `albumdetail/AlbumDetailHeader.kt` | 771 | 页头：`AlbumHeader`、动作栏、语言菜单、迟到元数据揭晓 |
-| `albumdetail/AlbumDetailHero.kt` | 743 | Hero 区：背景模糊、身份覆盖层、在线听众信息、稳定身份/封面源记忆、滚动渐隐 |
-| `albumdetail/AlbumDetailDialogs.kt` | 1098 | `AsmrOneDownloadDialog`、`OnlineSaveDialog`、`InlineVideoPlayer`、`FilePreviewDialog` 及保存树扁平化工具 |
+| `albumdetail/AlbumDetailHero.kt` | 734 | Hero 区：背景模糊、身份覆盖层、在线听众信息、稳定身份/封面源记忆、滚动渐隐 |
+| `albumdetail/AlbumDetailDialogs.kt` | 1093 | `AsmrOneDownloadDialog`、`OnlineSaveDialog`、`InlineVideoPlayer`、`FilePreviewDialog` 及保存树扁平化工具 |
 | `albumdetail/AlbumDetailScreenSupport.kt` | 447 | 支撑层：枚举/数据类/动画 spec/`AlbumDetailHeroMotionState`/加载计划/`isVideoPreviewUrl`/`PlaylistAddTarget` |
-| `albumdetail/AlbumDetailViewModelSupport.kt` | 876 | VM 纯函数支撑：`AlbumDetailModel`、相似作品推荐特征、头部专辑合并、DLSite 语言版本解析、asmr.one 轨道树扁平化、远程文件大小探测（含收敛后的 `collectSubtitleCandidates`） |
-| `albumdetail/AlbumDetailSharedSections.kt` | 687 | 共享区块：`AlbumDescription`、`AlbumTracks` / `TrackItem` / `OnlineTrackRow`、DLSite 推荐卡、区块标题 |
-| `albumdetail/AlbumDetailLocalTab.kt` | 596 | 本地目录页签 `AlbumLocalBreadcrumbTabV2` |
+| `albumdetail/AlbumDetailViewModelSupport.kt` | 773 | VM 纯函数支撑：`AlbumDetailModel`、相似作品推荐特征、头部专辑合并、DLSite 语言版本解析、asmr.one 轨道树扁平化、远程文件大小探测（含收敛后的 `collectSubtitleCandidates`） |
+| `albumdetail/AlbumDetailSharedSections.kt` | 684 | 共享区块：`AlbumDescription`、`AlbumTracks` / `TrackItem` / `OnlineTrackRow`、DLSite 推荐卡、区块标题 |
+| `albumdetail/AlbumDetailLocalTab.kt` | 590 | 本地目录页签 `AlbumLocalBreadcrumbTabV2` |
 | `albumdetail/AlbumDetailLocalAvailability.kt` | 56 | 本地专辑物理来源枚举与缺失专辑清理判断 |
 | `albumdetail/AlbumDetailScrollPersistence.kt` | 42 | `PersistAlbumDetailListScroll`：滚动停止或页面离开时保存/恢复列表位置 |
 
-> 重构纪律（由 CI 强制）：单文件 >1500 行禁入（存量 10 个记录于 `tools/size-guard-baseline.txt`，修复后须收缩 baseline）；新功能一律新建文件。
+> 重构纪律（由 CI 强制）：单文件 >1500 行禁入（存量 8 个记录于 `tools/size-guard-baseline.txt`，修复后须收缩 baseline）；新功能一律新建文件。
 
 ## 4. 播放数据流
 
@@ -120,7 +120,7 @@ UI（ui/player/PlayerViewModel.kt 等）
 - 环境：JDK 17；Windows 本机可用仓库自带的 `gradlew-local.bat` 辅助脚本（重定向 Gradle 本地缓存）。
 - 构建：`./gradlew :app:assembleDebug`
 - 测试：`./gradlew :app:testDebugUnitTest`（当前基线 **938** 个用例，改动后应保持全绿且只增不减）
-- CI：`.github/workflows/ci.yml`（push/PR）：架构守护（`tools/ci_guard.py`：单文件行数 ratchet「路径:行数」pin + 9 条 import 方向规则 + 反例夹具自检）→ `:app:testDebugUnitTest`；`.github/workflows/release.yml` 由 `v*` tag 触发，先运行 `:app:testReleaseUnitTest` 再构建 Release 签名 APK。
+- CI：`.github/workflows/ci.yml`（push/PR）：架构守护（`tools/ci_guard.py`：单文件行数 ratchet「路径:行数」pin + 17 条 import 方向规则 + 反例夹具自检）→ `:app:testDebugUnitTest`；`.github/workflows/release.yml` 由 `v*` tag 触发，先运行 `:app:testReleaseUnitTest` 再构建 Release 签名 APK。
 - 签名配置与字幕模型按需下载说明见 README「Getting Started」一节。
 
 ## 7. 已知问题与重构状态
@@ -144,7 +144,7 @@ UI（ui/player/PlayerViewModel.kt 等）
 
 计划 [docs/refactor-plan-r2.md](refactor-plan-r2.md)；依据 [2026-10-01 体检](project-quality-review-20261001.md)（总评 C）用户四决策：用户无感知 / 局部重写 / 隐性行为随改随文档化 / 双兜底（seam 测试先行 + 实机走查）。
 
-- **阶段 A 已完成**（tag `refactor-r2/phase-A`）：目录=包名 22 文件统一；ci_guard 重写（真实包名匹配 + 全仓扫描 + 9 条方向规则 + 反例自检）；`collectSubtitleCandidates` 三份收敛；runBlocking 超时兜底 / OkHttp 显式超时 / DownloadWorker IO 重试 ≤2。
+- **阶段 A 已完成**（tag `refactor-r2/phase-A`）：目录=包名 22 文件统一；ci_guard 重写（真实包名匹配 + 全仓扫描 + 17 条方向规则 + 反例自检）；`collectSubtitleCandidates` 三份收敛；runBlocking 超时兜底 / OkHttp 显式超时 / DownloadWorker IO 重试 ≤2。
 - **阶段 B 已完成**（tag `refactor-r2/phase-B` @ 9afcccb）：data→上层反向 import 清零（B1 模型下沉）；service 去 `MainActivity` import（B2，含**切片后台循环修复** `awaitFrameCommitOrTimeout`，上游 issue #322，实机验证通过）；`PlaybackController` 接口（B3）；两个 God VM 数据访问收进 `LibraryReadRepository`/`LibraryWriteRepository`（B4/B5，行为档案见 7.3）；ui→DAO 存量 19 处/15 文件入 baseline（B6）。测试 880→**906** 只增不减；门禁实机走查 5/6（下载全链被既有在线树请求取消问题阻塞，`git diff refactor-r2/phase-A..HEAD` 佐证非回归）。
 - **阶段 C 已完成**（tag `refactor-r2/phase-C` @ 814627b；审查报告 [r2-phase-C-review.md](iteration/r2-phase-C-review.md)）：三个 God 组合函数拆分退出 pin（MainContainer 2375→796、NowPlayingScreen 2902→836、SettingsScreen 2675→1270）；消 3 组特征环（ui.player→ui.library、AlbumDetail↔Settings、ui.sidepanel→ui.library）；C 批次 G 补闸门（size ratchet 贴实测、`ui-to-data-remote` 规则入守护、CI 编译门禁）；C4 数据编排下沉 4 类新 repository——`OnlineContentRepository`（ASMR.ONE 解析缓存/云同步/封面补全/预览/文件体积/推荐富化）、`UpdateRepository`、`SearchRepository`、`DownloadQueueRepository`（AlbumDetailViewModel 2996→2510、LibraryViewModel 2641→2521，行为契约见 7.3 档案）；`DownloadManager` 迁 `data/download`、`LibraryQuerySpec` 族迁 `data/local/db/query`。门禁三件套：本机测试 906→**938** 全绿、子代理审查无 P0 且 P1 闭环（缓存并发安全 ConcurrentHashMap+Mutex、ci_guard main 包盲区补夹具）、实机走查通过（ASMR.ONE 解析端到端、云同步链路、DL Play 登录态，受限项如实记录）；CI 双绿。
 - **C5 结论（阶段内闭环）**：size ratchet 持续还债后两 VM pin 贴实测（2510/2521）。1500→800 的进一步收紧需先做编排层 state holder 重构——云同步/删除/扫描族是 UI 状态机（`_syncStatus`/选择队列/消息/bulk 进度），直接下沉只是搬运代码+回调透传。列为后续方向，不在阶段 C 强行达成。
