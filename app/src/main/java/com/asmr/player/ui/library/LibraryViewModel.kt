@@ -31,21 +31,17 @@ import com.asmr.player.data.local.library.LocalAlbumMergeService
 import com.asmr.player.data.local.library.buildOnlineAlbumPath
 import com.asmr.player.data.local.library.ensureLibraryAlbumDir
 import com.asmr.player.data.local.library.legacyOnlineSavedAlbumFolderName
-import com.asmr.player.data.remote.api.AsmrOneApi
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncCandidate
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncResolveResult
-import com.asmr.player.data.remote.dlsite.DlsiteProductInfoClient
 import com.asmr.player.data.remote.dlsite.resolveCloudSyncWorkId
-import com.asmr.player.data.remote.dlsite.resolveDlsiteCloudSync
-import com.asmr.player.data.remote.dlsite.resolveSelectedDlsiteCloudSync
-import com.asmr.player.data.remote.scraper.DLSiteScraper
 import com.asmr.player.data.download.DownloadDestination
 import com.asmr.player.data.download.DownloadDestinationStore
-import com.asmr.player.data.remote.download.DownloadQueueCoordinator
+import com.asmr.player.data.repository.DownloadQueueRepository
 import com.asmr.player.data.repository.LibraryReadRepository
 import com.asmr.player.data.repository.LibraryWriteRepository
 import com.asmr.player.data.repository.LibraryWriteRepository.ScanCacheLeaf
 import com.asmr.player.data.repository.LibraryWriteRepository.ScanTrackSpec
+import com.asmr.player.data.repository.OnlineContentRepository
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
@@ -131,11 +127,10 @@ data class BulkProgress(
 class LibraryViewModel @Inject constructor(
     private val libraryReadRepository: LibraryReadRepository,
     private val libraryWriteRepository: LibraryWriteRepository,
-    private val dlsiteScraper: DLSiteScraper,
-    private val dlsiteProductInfoClient: DlsiteProductInfoClient,
-    private val asmrOneApi: AsmrOneApi,
     private val settingsRepository: SettingsRepository,
     private val downloadDestinationStore: DownloadDestinationStore,
+    private val downloadQueueRepository: DownloadQueueRepository,
+    private val onlineContentRepository: OnlineContentRepository,
     private val localAlbumMergeService: LocalAlbumMergeService,
     private val syncCoordinator: SyncCoordinator,
     @Named("image") private val imageOkHttpClient: OkHttpClient,
@@ -1225,31 +1220,14 @@ class LibraryViewModel @Inject constructor(
         }
     }
     private suspend fun resolveAlbumCloudSync(entity: AlbumEntity): DlsiteCloudSyncResolveResult {
-        return resolveDlsiteCloudSync(
-            keyword = entity.title.trim(),
-            baseWorkno = entity.rjCode.ifBlank { entity.workId }.trim().uppercase(),
-            search = { searchKeyword, locale ->
-                dlsiteScraper.search(searchKeyword, page = 1, order = "trend", locale = locale).items
-            },
-            fetchLanguageEditions = { productId ->
-                dlsiteProductInfoClient.fetchLanguageEditions(productId)
-            },
-            fetchDetails = { workno, locale ->
-                dlsiteScraper.getDetails(workno, locale = locale)
-            }
+        return onlineContentRepository.resolveManualCloudSync(
+            entity = entity,
+            baseWorkno = entity.rjCode.ifBlank { entity.workId }.trim().uppercase()
         )
     }
 
     private suspend fun resolveSelectedAlbumCloudSync(workno: String): DlsiteCloudSyncResolveResult {
-        return resolveSelectedDlsiteCloudSync(
-            workno = workno,
-            fetchLanguageEditions = { productId ->
-                dlsiteProductInfoClient.fetchLanguageEditions(productId)
-            },
-            fetchDetails = { selectedWorkno, locale ->
-                dlsiteScraper.getDetails(selectedWorkno, locale = locale)
-            }
-        )
+        return onlineContentRepository.resolveSelectedManualCloudSync(workno)
     }
 
     private suspend fun applyResolvedCloudSync(
@@ -1627,7 +1605,7 @@ class LibraryViewModel @Inject constructor(
                 if (downloadRoot.isNotBlank()) {
                     val task = runCatching { libraryReadRepository.getDownloadTaskByRootDir(downloadRoot) }.getOrNull()
                     if (task != null) {
-                        DownloadQueueCoordinator.cancelWorksByTag(context, task.taskKey)
+                        downloadQueueRepository.cancelWorksByTag(task.taskKey)
                         libraryWriteRepository.deleteDownloadTaskWithItems(task.id)
                     }
                     deletePathSafely(downloadRoot)
