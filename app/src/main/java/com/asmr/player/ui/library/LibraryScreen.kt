@@ -1,22 +1,17 @@
 package com.asmr.player.ui.library
 
 import com.asmr.player.ui.translation.PageTranslationHost
-import com.asmr.player.ui.translation.translatedPageText
 
-import android.content.Intent
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.gestures.stopScroll
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,47 +26,28 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items as staggeredItems
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CloudSync
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CreateNewFolder
 import androidx.compose.material.icons.rounded.FolderOpen
-import androidx.compose.material.icons.rounded.FilterList
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.Sync
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.ViewList
-import androidx.compose.material.icons.rounded.Audiotrack
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.foundation.layout.fillMaxHeight
 import com.asmr.player.domain.model.LibrarySort
-import com.asmr.player.util.Formatting
 import com.asmr.player.util.isOnlineTrackPath
 import com.asmr.player.data.local.db.entities.titleForDisplay
-import com.asmr.player.ui.common.audio.SubtitleStamp
-import com.asmr.player.ui.common.cover.DiscPlaceholder
 import com.asmr.player.ui.common.list.LocalBottomOverlayPadding
-import com.asmr.player.ui.common.audio.AudioItemMenuAction
-import com.asmr.player.ui.common.audio.AudioItemRow
 import com.asmr.player.ui.common.status.EaraBrandedEmptyState
 import com.asmr.player.ui.common.cover.EaraLogoLoadingIndicator
-import com.asmr.player.ui.common.cover.NoImageLoadingIndicator
 import com.asmr.player.ui.common.dialog.FlatActionDialog
 import com.asmr.player.ui.common.dialog.FlatDialogAction
 import com.asmr.player.ui.common.dialog.FlatDialogActionTone
 import com.asmr.player.ui.common.list.interruptScrollableFlingOnPointerDown
 import com.asmr.player.ui.common.list.lightweightVerticalStretchOverscroll
 import com.asmr.player.ui.common.audio.rememberAudioMeta
-import com.asmr.player.ui.common.audio.rememberAudioMetaText
 import com.asmr.player.ui.common.list.rememberCalmScrollableFlingBehavior
-import com.asmr.player.ui.common.audio.rememberTrackMetaLine
-import com.asmr.player.ui.common.audio.queryCachedTrackFileSize
 import com.asmr.player.ui.common.list.withAddedBottomPadding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
@@ -80,23 +56,17 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Surface
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import com.asmr.player.ui.common.core.isCompactWidth
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.State
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -105,17 +75,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
@@ -130,8 +97,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.graphics.lerp
 import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.ui.sidepanel.LandscapeRightPanelHost
 import com.asmr.player.ui.sidepanel.RecentAlbumsPanel
@@ -143,20 +108,10 @@ import com.asmr.player.ui.playlists.PlaylistsViewModel
 import com.asmr.player.ui.common.core.SearchBlockedKeywordsViewModel
 
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material.icons.automirrored.rounded.Label
-import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
-import androidx.compose.material.icons.automirrored.rounded.QueueMusic
-import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Label
-import androidx.compose.material3.Card
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextOverflow
-import com.asmr.player.ui.common.cover.AsmrAsyncImage
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import kotlinx.coroutines.CoroutineStart
@@ -165,17 +120,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
-import com.asmr.player.ui.common.core.CustomSearchBar
-import com.asmr.player.ui.common.list.ActiveDropdownMenuItem
-import com.asmr.player.ui.common.core.ActionButton
 import com.asmr.player.ui.common.core.clearFocusOnTapOutside
-import com.asmr.player.ui.common.list.CollapsibleHeaderState
-import com.asmr.player.ui.common.list.collapsibleHeaderUiState
 import com.asmr.player.ui.common.cover.albumCoverImageModel
 import com.asmr.player.ui.common.cover.shouldFadeInCover
 import com.asmr.player.ui.common.list.rememberCollapsibleHeaderState
@@ -185,18 +131,8 @@ import com.asmr.player.ui.common.list.StableWindowInsets
 import com.asmr.player.playback.MediaItemFactory
 import com.asmr.player.ui.common.dialog.TagAssignDialog
 
-internal const val LIBRARY_CHROME_TAG = "library_chrome"
-internal const val LIBRARY_SEARCH_INPUT_TAG = "library_search_input"
-internal const val LIBRARY_SORT_BUTTON_TAG = "library_sort_button"
-internal const val LIBRARY_SORT_LAST_PLAYED_ITEM_TAG = "library_sort_last_played_item"
-internal const val LIBRARY_SORT_ADDED_ITEM_TAG = "library_sort_added_item"
-internal const val LIBRARY_SORT_TITLE_ITEM_TAG = "library_sort_title_item"
-internal const val LIBRARY_FILTER_BUTTON_TAG = "library_filter_button"
 private val LibraryChromeContentGap = 20.dp
-private val LibraryChromeCollapseOvershoot = 12.dp
-private val LibraryPageHorizontalPadding = 8.dp
-private val LibraryTrackListHeaderCornerRadius = 10.dp
-private val LibraryTrackListItemCornerRadius = 10.dp
+internal val LibraryPageHorizontalPadding = 8.dp
 private const val LibraryTrackPagingHintDistance = 10
 
 private fun Album.withUserTags(userTags: List<String>): Album {
@@ -1185,164 +1121,6 @@ private fun LibraryScreenContent(
 
 }
 
-@Composable
-internal fun LibraryChrome(
-    modifier: Modifier = Modifier,
-    searchText: String,
-    onSearchTextChange: (String) -> Unit,
-    onClearSearch: () -> Unit,
-    currentSort: LibrarySort,
-    sortMenuExpanded: Boolean,
-    onSortMenuExpandedChange: (Boolean) -> Unit,
-    onSortLastPlayed: () -> Unit,
-    onSortAdded: () -> Unit,
-    onSortTitle: () -> Unit,
-    onOpenFilterScreen: () -> Unit,
-    filterActive: Boolean = false,
-    rightPanelToggle: (@Composable (Modifier) -> Unit)?,
-    materialColorScheme: androidx.compose.material3.ColorScheme,
-    chromeState: CollapsibleHeaderState,
-    onMeasured: (IntSize) -> Unit
-) {
-    val colorScheme = AsmrTheme.colorScheme
-    val collapseOvershootPx = with(LocalDensity.current) { LibraryChromeCollapseOvershoot.toPx() }
-    val collapseStateDescription by remember(chromeState) {
-        derivedStateOf { collapsibleHeaderUiState(chromeState.collapseFraction) }
-    }
-    val chromeActionContainerColor = lerp(
-        colorScheme.surface,
-        colorScheme.primarySoft,
-        if (colorScheme.isDark) 0.16f else 0.26f
-    ).copy(alpha = if (colorScheme.isDark) 0.95f else 0.97f)
-        .compositeOver(colorScheme.background)
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = LibraryPageHorizontalPadding, vertical = 8.dp)
-            .onSizeChanged(onMeasured)
-            .graphicsLayer {
-                val collapseFraction = chromeState.collapseFraction.coerceIn(0f, 1f)
-                translationY = chromeState.offsetPx - (collapseFraction * collapseOvershootPx)
-                alpha = 1f - (collapseFraction * 0.1f)
-            }
-            .semantics { stateDescription = collapseStateDescription }
-            .testTag(LIBRARY_CHROME_TAG),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        CustomSearchBar(
-            value = searchText,
-            onValueChange = onSearchTextChange,
-            placeholder = "社团 / CV / 标签...",
-            modifier = Modifier
-                .weight(1f),
-            inputTestTag = LIBRARY_SEARCH_INPUT_TAG,
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Rounded.Search,
-                    contentDescription = null,
-                    tint = colorScheme.onSurfaceVariant
-                )
-            },
-            trailingIcon = if (searchText.isNotBlank()) {
-                {
-                    IconButton(
-                        onClick = onClearSearch,
-                        modifier = Modifier.size(20.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Close,
-                            contentDescription = null,
-                            tint = colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
-            } else {
-                null
-            }
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Box {
-            ActionButton(
-                icon = Icons.Rounded.SwapVert,
-                onClick = { onSortMenuExpandedChange(true) },
-                modifier = Modifier.testTag(LIBRARY_SORT_BUTTON_TAG)
-            )
-            MaterialTheme(
-                colorScheme = materialColorScheme.copy(
-                    surface = chromeActionContainerColor,
-                    surfaceContainer = chromeActionContainerColor,
-                    surfaceVariant = chromeActionContainerColor
-                )
-            ) {
-                DropdownMenu(
-                    expanded = sortMenuExpanded,
-                    onDismissRequest = { onSortMenuExpandedChange(false) },
-                    modifier = Modifier.background(chromeActionContainerColor)
-                ) {
-                    ActiveDropdownMenuItem(
-                        label = "最近播放",
-                        selected = currentSort == LibrarySort.LastPlayedDesc,
-                        testTag = LIBRARY_SORT_LAST_PLAYED_ITEM_TAG,
-                        activeColor = materialColorScheme.primary,
-                        inactiveColor = materialColorScheme.onSurface,
-                        onClick = {
-                            onSortMenuExpandedChange(false)
-                            onSortLastPlayed()
-                        }
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        thickness = 0.5.dp,
-                        color = materialColorScheme.outlineVariant.copy(alpha = 0.3f)
-                    )
-                    ActiveDropdownMenuItem(
-                        label = "最近加入",
-                        selected = currentSort == LibrarySort.AddedDesc,
-                        testTag = LIBRARY_SORT_ADDED_ITEM_TAG,
-                        activeColor = materialColorScheme.primary,
-                        inactiveColor = materialColorScheme.onSurface,
-                        onClick = {
-                            onSortMenuExpandedChange(false)
-                            onSortAdded()
-                        }
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        thickness = 0.5.dp,
-                        color = materialColorScheme.outlineVariant.copy(alpha = 0.3f)
-                    )
-                    ActiveDropdownMenuItem(
-                        label = "专辑标题",
-                        selected = currentSort == LibrarySort.TitleAsc,
-                        testTag = LIBRARY_SORT_TITLE_ITEM_TAG,
-                        activeColor = materialColorScheme.primary,
-                        inactiveColor = materialColorScheme.onSurface,
-                        onClick = {
-                            onSortMenuExpandedChange(false)
-                            onSortTitle()
-                        }
-                    )
-                }
-            }
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        ActionButton(
-            icon = Icons.Rounded.FilterList,
-            onClick = onOpenFilterScreen,
-            modifier = Modifier
-                .testTag(LIBRARY_FILTER_BUTTON_TAG)
-                .semantics { stateDescription = if (filterActive) "筛选已启用" else "筛选未启用" },
-            active = filterActive
-        )
-        if (rightPanelToggle != null) {
-            Spacer(modifier = Modifier.width(8.dp))
-            rightPanelToggle(Modifier.size(50.dp))
-        }
-    }
-}
-
 private sealed class TagAssignTarget {
     data class Album(
         val albumId: Long,
@@ -1357,217 +1135,4 @@ private sealed class TagAssignTarget {
         val inheritedTags: List<String>,
         val userTags: List<String>
     ) : TagAssignTarget()
-}
-
-@Composable
-private fun TrackAlbumHeader(
-    albumTitle: String,
-    rjCode: String,
-    trackCount: Int,
-    totalDurationSeconds: Double,
-    totalSizeBytes: Long?,
-    coverModel: Any?,
-    expanded: Boolean,
-    isFirstInList: Boolean,
-    isLastInList: Boolean,
-    onToggle: () -> Unit
-) {
-    val colorScheme = AsmrTheme.colorScheme
-    val containerShape = if (expanded) {
-        RoundedCornerShape(
-            topStart = if (isFirstInList) LibraryTrackListHeaderCornerRadius else 0.dp,
-            topEnd = if (isFirstInList) LibraryTrackListHeaderCornerRadius else 0.dp,
-            bottomStart = 0.dp,
-            bottomEnd = 0.dp
-        )
-    } else {
-        RoundedCornerShape(
-            topStart = if (isFirstInList) LibraryTrackListHeaderCornerRadius else 0.dp,
-            topEnd = if (isFirstInList) LibraryTrackListHeaderCornerRadius else 0.dp,
-            bottomStart = if (isLastInList) LibraryTrackListHeaderCornerRadius else 0.dp,
-            bottomEnd = if (isLastInList) LibraryTrackListHeaderCornerRadius else 0.dp
-        )
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(containerShape)
-            .background(colorScheme.surface)
-            .clickable { onToggle() }
-            .padding(horizontal = LibraryPageHorizontalPadding, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AsmrAsyncImage(
-            model = coverModel,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            placeholderCornerRadius = 8,
-            peekAnySizeForInitial = true,
-            loading = NoImageLoadingIndicator,
-            modifier = Modifier
-                .size(50.dp)
-                .clip(RoundedCornerShape(8.dp)),
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = translatedPageText(albumTitle).ifBlank { rjCode.ifBlank { "专辑" } },
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                color = colorScheme.textPrimary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            val footerSegments = buildList {
-                if (rjCode.isNotBlank()) add(rjCode)
-                add("$trackCount 音频")
-                Formatting.formatTrackSeconds(totalDurationSeconds).takeIf { it.isNotBlank() }?.let(::add)
-                totalSizeBytes?.takeIf { it > 0L }?.let(Formatting::formatFileSize)?.let(::add)
-            }
-            if (footerSegments.isNotEmpty()) {
-                Text(
-                    text = footerSegments.joinToString(" · "),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colorScheme.textTertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-
-}
-
-@Composable
-private fun rememberAlbumTrackListTotalSizeBytes(
-    rows: List<com.asmr.player.domain.model.LibraryTrackRow>,
-    loadFileSizes: Boolean
-): Long? {
-    if (rows.isEmpty() || !loadFileSizes) return null
-    val context = LocalContext.current
-    val paths = remember(rows) { rows.map { it.trackPath } }
-    return androidx.compose.runtime.produceState<Long?>(initialValue = null, paths, loadFileSizes) {
-        value = withContext(Dispatchers.IO) {
-            val total = rows.sumOf { row ->
-                queryCachedTrackFileSize(context, row.trackPath) ?: 0L
-            }
-            total.takeIf { it > 0L }
-        }
-    }.value
-}
-
-@Composable
-private fun TrackListRow(
-    title: String,
-    subtitle: String,
-    fixedTrailingSubtitle: String,
-    showSubtitleStamp: Boolean,
-    isLastInSection: Boolean,
-    onClick: () -> Unit,
-    onAddToQueue: () -> Unit,
-    onAddToPlaylist: () -> Unit,
-    onManageTags: (() -> Unit)? = null,
-    onRemove: () -> Unit
-) {
-    val colorScheme = AsmrTheme.colorScheme
-    val rowShape = if (isLastInSection) {
-        RoundedCornerShape(
-            topStart = 0.dp,
-            topEnd = 0.dp,
-            bottomStart = LibraryTrackListItemCornerRadius,
-            bottomEnd = LibraryTrackListItemCornerRadius
-        )
-    } else {
-        RoundedCornerShape(0.dp)
-    }
-
-    AudioItemRow(
-        title = title,
-        subtitle = subtitle,
-        fixedTrailingSubtitle = fixedTrailingSubtitle,
-        showSubtitleStamp = showSubtitleStamp,
-        onClick = onClick,
-        compact = true,
-        compactContentPadding = PaddingValues(horizontal = 16.dp, vertical = 5.dp),
-        titleMaxLines = 1,
-        titleTextStyle = MaterialTheme.typography.bodyMedium,
-        subtitleTextStyle = MaterialTheme.typography.labelSmall.copy(lineHeight = 14.sp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(rowShape)
-            .background(colorScheme.surface),
-        actions = buildList {
-            add(
-                AudioItemMenuAction(
-                    label = "添加到播放队列",
-                    onClick = onAddToQueue,
-                    icon = Icons.AutoMirrored.Rounded.QueueMusic
-                )
-            )
-            add(
-                AudioItemMenuAction(
-                    label = "添加到播放列表",
-                    onClick = onAddToPlaylist,
-                    icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                    showDividerBefore = true
-                )
-            )
-            if (onManageTags != null) {
-                add(
-                    AudioItemMenuAction(
-                        label = "标签管理",
-                        onClick = onManageTags,
-                        icon = Icons.AutoMirrored.Rounded.Label,
-                        showDividerBefore = true
-                    )
-                )
-            }
-            add(
-                AudioItemMenuAction(
-                    label = "从专辑移除",
-                    onClick = onRemove,
-                    icon = Icons.Rounded.Delete,
-                    showDividerBefore = true
-                )
-            )
-        }
-    )
-}
-
-@Composable
-private fun AlbumSyncStatusOverlay(
-    syncStatus: SyncStatus,
-    indicatorSize: Dp,
-    blurRadius: Dp,
-) {
-    when (syncStatus) {
-        SyncStatus.Idle -> Unit
-        SyncStatus.Syncing -> Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.4f))
-                .blur(blurRadius),
-            contentAlignment = Alignment.Center,
-        ) {
-            EaraLogoLoadingIndicator(
-                size = indicatorSize,
-                tint = Color.White,
-                glowColor = Color.White,
-                showGlow = false,
-            )
-        }
-        is SyncStatus.Error -> Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Red.copy(alpha = 0.3f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.ErrorOutline,
-                contentDescription = "同步失败",
-                tint = Color.White,
-                modifier = Modifier.size(indicatorSize),
-            )
-        }
-    }
 }
