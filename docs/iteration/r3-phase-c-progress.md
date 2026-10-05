@@ -62,3 +62,16 @@
 ## 5. 阶段 C 后续队列（计划 §8.4）
 
 C1 收官（✅）→ C3 LibraryWriteRepository 拆族 → C4 God 文件区块化（7 文件）→ C7 service 拆解 → C8 详情页 VM 重写（前置 AlbumDetailViewModelTest）→ C9 搜索重写（前置四分支 seam 测试）→ C5 ratchet 分级收紧 → C6 收尾 → 门禁 tag `refactor-r3/phase-C`。
+## 6. 停工留档（2026-10-06，C4-6 进行中）
+
+**HEAD = 4b76d6d，工作树干净——C4-6 切片脚本断言失败于写盘前退出，仓库零改动。**
+
+- **C4-6 设计已定稿**（SettingsScreen.kt 1270 行）：
+  - 新文件 `SettingsScreenLocalLibrary.kt`：`SettingsLocalLibrarySection`（LocalLibrary 内容 = 原 407-590 行，12 参数：scanRoots / downloadDestination / bulkProgress / isGlobalSyncRunning / viewModel / libraryViewModel / pickRootLauncher / pickDownloadRootLauncher / pendingDownloadDestinationState / pendingRemoveRootState / colorScheme / context）。
+  - 新文件 `SettingsScreenDetailSections.kt`：`SettingsAppearanceSection`（原 618-750，12 参数，MONOCHROME_THEME_SENTINEL 随迁）/ `SettingsPlaybackSection`（原 758-857，11 参数）/ `SettingsLyricsSection`（原 866-992，11 参数）/ `SettingsAboutSection`（原 1046-1152，5 参数）。
+  - 主文件保留：BlockedKeywords / Translation / SupportStatus / AppCache 四薄分支（12-47 行不拆，勿过度拆）+ 四个 FlatActionDialog（原 1192-1269，与状态声明耦合紧）。
+  - 3 处状态改声明两行式（踩坑 10）：activeTipKey / pendingDownloadDestination / pendingRemoveRoot。
+  - 行号口径：Python 直读磁盘（坑 8），实测壳结构 591-593 / 751-753 / 858-860 / 993-995 / 1153-1155 为各分支三连收括号，与设计一致。
+- **切片脚本**：`C:\Users\24131\AppData\Local\Temp\c46_slice.py`（含边界/覆盖断言、CRLF 处理、stale import 自动清理、括号平衡自检；Temp 目录可能被系统清理，设计要点已录本节可机械重建）。
+- **首跑失败与诊断（复工直接改这处）**：`main brace balance: -1`——重组段 Playback 接缝用了 `lines[859:861]`（文件行 860-861），行 860 是 Playback if 的收括号，已含于 CALL_C 壳 → 重复一个 `}`。**修复：`lines[859:861]` 改为 `lines[860:861]`（只保留空行 861）**。其余接缝（404/593、615/753、862/995、1043/1155）核对无误。
+- **复工顺序**：修脚本一行 → 重跑（断言绿 + 主文件平衡 0）→ compileDebugKotlin 迭代（新文件 import 预填在脚本 ll_imports / ds_imports，注意踩坑 9 的 by 委托 getValue/setValue 补齐）→ ci_guard（SettingsScreen 无 size pin，baseline 不动）→ 后台三件套 + sleep 480 轮询 → 测试 945/0/4 核对 → 代码 + docs 两笔提交 → C4-7 EqualizerPanel 1190。
