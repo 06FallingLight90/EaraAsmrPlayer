@@ -81,8 +81,8 @@ class OnlineContentRepositoryTest {
             ),
             dlsiteScraper = DLSiteScraper(context),
             dlsiteProductInfoClient = com.asmr.player.data.remote.dlsite.DlsiteProductInfoClient(OkHttpClient()),
-            libraryReadRepository = LibraryReadRepository(db),
-            libraryWriteRepository = LibraryWriteRepository(db),
+            libraryReadRepository = LibraryReadRepository(db, context),
+            libraryWriteRepository = LibraryWriteRepository(db, context),
             dlsiteAuthStore = com.asmr.player.data.remote.auth.DlsiteAuthStore(context),
         )
     }

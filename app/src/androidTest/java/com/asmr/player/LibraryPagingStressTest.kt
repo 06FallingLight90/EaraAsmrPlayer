@@ -8,8 +8,8 @@ import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.repository.LibraryQueryBuilder
+import com.asmr.player.data.repository.LibraryTrackQueryBuilder
 import com.asmr.player.domain.model.LibraryQuerySpec
-import com.asmr.player.ui.library.LibraryTrackQueryBuilder
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertTrue

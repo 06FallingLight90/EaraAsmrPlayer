@@ -1,4 +1,4 @@
-package com.asmr.player.ui.library
+package com.asmr.player.data.local.datastore
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -16,6 +16,7 @@ import org.junit.Assert.assertEquals
 import com.asmr.player.domain.model.LibrarySort
 import com.asmr.player.domain.model.LibraryQuerySpec
 import com.asmr.player.domain.model.LibrarySourceFilter
+import com.asmr.player.domain.model.PersistedLibraryFilters
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner

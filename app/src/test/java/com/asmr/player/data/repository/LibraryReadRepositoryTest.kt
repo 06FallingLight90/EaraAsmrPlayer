@@ -35,7 +35,7 @@ class LibraryReadRepositoryTest {
             RuntimeEnvironment.getApplication(),
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
-        repo = LibraryReadRepository(db)
+        repo = LibraryReadRepository(db, RuntimeEnvironment.getApplication())
     }
 
     @After

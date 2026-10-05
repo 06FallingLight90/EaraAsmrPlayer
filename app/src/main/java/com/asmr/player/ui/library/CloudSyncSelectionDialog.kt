@@ -64,10 +64,10 @@ import com.asmr.player.ui.common.cover.DiscPlaceholder
 import com.asmr.player.ui.common.list.rememberCalmScrollableFlingBehavior
 import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.util.DlsiteAntiHotlink
+import com.asmr.player.util.summarizeCloudSyncCandidateCoverSource
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 internal const val CLOUD_SYNC_SELECTION_DIALOG_TAG = "cloud_sync_selection_dialog"
 internal const val CLOUD_SYNC_SELECTION_PROGRESS_TAG = "cloud_sync_selection_progress"
@@ -466,14 +466,4 @@ internal fun normalizeCloudSyncCandidateRawCoverUrl(raw: String): String {
         trimmed.startsWith("/") -> "https://www.dlsite.com$trimmed"
         else -> trimmed
     }
-}
-
-private fun summarizeCloudSyncCandidateCoverSource(label: String, url: String): String {
-    val parsed = url.toHttpUrlOrNull()
-    val summary = if (parsed != null) {
-        "${parsed.host}${parsed.encodedPath}"
-    } else {
-        url.take(160)
-    }
-    return "$label:$summary"
 }

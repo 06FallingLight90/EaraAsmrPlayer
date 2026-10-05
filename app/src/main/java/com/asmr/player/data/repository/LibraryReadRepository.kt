@@ -2,8 +2,13 @@ package com.asmr.player.data.repository
 
 import androidx.paging.PagingSource
 import androidx.sqlite.db.SupportSQLiteQuery
+import android.content.Context
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.dao.AlbumTagsCsv
+import com.asmr.player.data.local.datastore.LibraryPreferencesStore
+import com.asmr.player.data.local.datastore.PersistedLibraryFilters
+import com.asmr.player.domain.model.LibraryFilterPreset
+import com.asmr.player.domain.model.LibrarySort
 import com.asmr.player.domain.model.LibraryTrackAlbumHeaderRow
 import com.asmr.player.domain.model.LibraryTrackRow
 import com.asmr.player.domain.model.TagWithCount
@@ -13,8 +18,8 @@ import com.asmr.player.data.local.db.entities.DownloadTaskEntity
 import com.asmr.player.data.local.db.entities.OnlineSavedResourceEntity
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.domain.model.LibraryQuerySpec
-import com.asmr.player.domain.model.LibrarySort
 import kotlinx.coroutines.flow.Flow
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,7 +31,16 @@ import javax.inject.Singleton
 @Singleton
 class LibraryReadRepository @Inject constructor(
     private val database: AppDatabase,
+    @ApplicationContext private val context: Context,
 ) {
+    /** R3-B5a：预设/排序/过滤持久化读出口（原 VM 手动构造 LibraryPreferencesStore 的读侧透传）。 */
+    private val preferencesStore = LibraryPreferencesStore(context)
+
+    val libraryFilterPresets: Flow<List<LibraryFilterPreset>> get() = preferencesStore.presets
+
+    val librarySort: Flow<LibrarySort> get() = preferencesStore.sort
+
+    val libraryFilters: Flow<PersistedLibraryFilters> get() = preferencesStore.filters
     // ---------- 流（原 VM StateFlow 直出的 DAO 段逐字下沉） ----------
 
     fun observeTagsWithCounts(userSource: Int): Flow<List<TagWithCount>> = database.tagDao().getTagsWithCounts(userSource)
@@ -56,6 +70,16 @@ class LibraryReadRepository @Inject constructor(
 
     fun libraryTrackAlbumHeadersPaged(query: SupportSQLiteQuery): PagingSource<Int, LibraryTrackAlbumHeaderRow> =
         database.trackDao().queryLibraryTrackAlbumHeadersPaged(query)
+
+    /** R3-B5a：spec 出口——LibraryTrackQueryBuilder 随迁 data，ui 侧不再构建 Room SQL。 */
+    fun libraryTrackAlbumHeadersPaged(spec: LibraryQuerySpec): PagingSource<Int, LibraryTrackAlbumHeaderRow> =
+        libraryTrackAlbumHeadersPaged(LibraryTrackQueryBuilder.buildAlbumHeaders(spec))
+
+    fun observeLibraryTracks(spec: LibraryQuerySpec): Flow<List<LibraryTrackRow>> =
+        observeLibraryTracks(LibraryTrackQueryBuilder.build(spec))
+
+    fun observeLibraryTracksForAlbum(spec: LibraryQuerySpec, albumId: Long): Flow<List<LibraryTrackRow>> =
+        observeLibraryTracks(LibraryTrackQueryBuilder.buildForAlbum(spec, albumId))
 
     // ---------- 一次性查询 ----------
 

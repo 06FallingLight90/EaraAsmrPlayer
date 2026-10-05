@@ -1,4 +1,4 @@
-package com.asmr.player.ui.library
+package com.asmr.player.data.repository
 
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteQuery

@@ -25,6 +25,13 @@ import com.asmr.player.util.isOnlineTrackPath
 import com.asmr.player.util.isVirtualAlbumPath
 import com.asmr.player.util.parseAlbumTags
 import com.google.gson.Gson
+import android.content.Context
+import com.asmr.player.data.local.datastore.LibraryPreferencesStore
+import com.asmr.player.data.local.datastore.PersistedLibraryFilters
+import com.asmr.player.domain.model.LibraryFilterPreset
+import com.asmr.player.domain.model.LibraryQuerySpec
+import com.asmr.player.domain.model.LibrarySort
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -39,7 +46,19 @@ import javax.inject.Singleton
 @Singleton
 class LibraryWriteRepository @Inject constructor(
     private val database: AppDatabase,
+    @ApplicationContext private val context: Context,
 ) {
+    /** R3-B5a：预设/排序/过滤持久化写出口（原 VM 手动构造 LibraryPreferencesStore 的写侧透传）。 */
+    private val preferencesStore = LibraryPreferencesStore(context)
+
+    suspend fun setLibrarySort(sort: LibrarySort) = preferencesStore.setSort(sort)
+
+    suspend fun setLibraryFilters(filters: PersistedLibraryFilters) = preferencesStore.setFilters(filters)
+
+    suspend fun saveLibraryPreset(name: String, spec: LibraryQuerySpec): LibraryFilterPreset =
+        preferencesStore.savePreset(name, spec)
+
+    suspend fun deleteLibraryPreset(id: String) = preferencesStore.deletePreset(id)
     /** 事务内整替专辑 USER 标签：先删后插，tag 行按归一名复用（IGNORE 冲突策略），其它源不动。 */
     suspend fun replaceAlbumUserTags(albumId: Long, tags: List<Pair<String, String>>) {
         val tagDao = database.tagDao()

@@ -43,7 +43,7 @@ class LibraryWriteRepositoryTest {
             RuntimeEnvironment.getApplication(),
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
-        repo = LibraryWriteRepository(db)
+        repo = LibraryWriteRepository(db, RuntimeEnvironment.getApplication())
     }
 
     @After

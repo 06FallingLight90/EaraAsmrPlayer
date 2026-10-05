@@ -12,7 +12,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import androidx.paging.map
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -134,7 +133,6 @@ class LibraryViewModel @Inject constructor(
     }
 
     private val scanRootsStore = ScanRootsStore(context)
-    private val preferencesStore = LibraryPreferencesStore(context)
     private val _scanRoots = MutableStateFlow<Set<String>>(emptySet())
     val scanRoots: StateFlow<List<String>> = _scanRoots
         .map { it.toList().sorted() }
@@ -189,7 +187,7 @@ class LibraryViewModel @Inject constructor(
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val filterPresets: StateFlow<List<LibraryFilterPreset>> = preferencesStore.presets
+    val filterPresets: StateFlow<List<LibraryFilterPreset>> = libraryReadRepository.libraryFilterPresets
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val hasActiveFilters: StateFlow<Boolean> = _querySpec
@@ -289,7 +287,7 @@ class LibraryViewModel @Inject constructor(
         .flatMapLatest { spec ->
             Pager(
                 config = PagingConfig(pageSize = 40, prefetchDistance = 10, enablePlaceholders = false),
-                pagingSourceFactory = { libraryReadRepository.libraryTrackAlbumHeadersPaged(LibraryTrackQueryBuilder.buildAlbumHeaders(spec)) }
+                pagingSourceFactory = { libraryReadRepository.libraryTrackAlbumHeadersPaged(spec) }
             ).flow
         }
         .cachedIn(viewModelScope)
@@ -352,7 +350,7 @@ class LibraryViewModel @Inject constructor(
                 flowOf(emptyMap())
             } else {
                 val flows = normalized.map { albumId ->
-                    libraryReadRepository.observeLibraryTracks(LibraryTrackQueryBuilder.buildForAlbum(spec, albumId))
+                    libraryReadRepository.observeLibraryTracksForAlbum(spec, albumId)
                         .map { rows -> albumId to rows }
                 }
                 combine(flows) { pairs -> pairs.toMap() }
@@ -388,7 +386,7 @@ class LibraryViewModel @Inject constructor(
             if (current.sort == sort) current else current.copy(sort = sort)
         }
         viewModelScope.launch(Dispatchers.IO) {
-            preferencesStore.setSort(sort)
+            libraryWriteRepository.setLibrarySort(sort)
         }
     }
 
@@ -406,7 +404,7 @@ class LibraryViewModel @Inject constructor(
             sanitized.applyTo(current)
         }
         viewModelScope.launch(Dispatchers.IO) {
-            preferencesStore.setFilters(sanitized)
+            libraryWriteRepository.setLibraryFilters(sanitized)
         }
     }
 
@@ -450,25 +448,25 @@ class LibraryViewModel @Inject constructor(
         val trimmed = name.trim()
         if (trimmed.isBlank()) return
         viewModelScope.launch(Dispatchers.IO) {
-            preferencesStore.savePreset(trimmed, spec)
+            libraryWriteRepository.saveLibraryPreset(trimmed, spec)
         }
     }
 
     fun deletePreset(id: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            preferencesStore.deletePreset(id)
+            libraryWriteRepository.deleteLibraryPreset(id)
         }
     }
 
     private suspend fun restoreLibraryPreferences() {
-        val storedSort = runCatching { preferencesStore.sort.first() }.getOrDefault(LibrarySort.AddedDesc)
-        val storedFilters = runCatching { preferencesStore.filters.first() }.getOrDefault(PersistedLibraryFilters.Empty)
+        val storedSort = runCatching { libraryReadRepository.librarySort.first() }.getOrDefault(LibrarySort.AddedDesc)
+        val storedFilters = runCatching { libraryReadRepository.libraryFilters.first() }.getOrDefault(PersistedLibraryFilters.Empty)
         val sanitized = sanitizeFiltersAgainstDatabase(storedFilters)
         _querySpec.update { current ->
             sanitized.applyTo(current.copy(sort = storedSort))
         }
         if (sanitized != storedFilters.normalized()) {
-            preferencesStore.setFilters(sanitized)
+            libraryWriteRepository.setLibraryFilters(sanitized)
         }
     }
 
@@ -529,7 +527,7 @@ class LibraryViewModel @Inject constructor(
                     excludeTagIds = currentFilters.excludeTagIds - tagId
                 )
                 _querySpec.update { current -> updatedFilters.applyTo(current) }
-                preferencesStore.setFilters(updatedFilters)
+                libraryWriteRepository.setLibraryFilters(updatedFilters)
             }
             albumIds.forEach { albumId ->
                 val entity = libraryReadRepository.getAlbumById(albumId) ?: return@forEach

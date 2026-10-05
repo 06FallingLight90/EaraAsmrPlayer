@@ -1,4 +1,4 @@
-package com.asmr.player.ui.library
+package com.asmr.player.data.local.datastore
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -6,9 +6,11 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.asmr.player.domain.model.LibraryFilterPreset
 import com.asmr.player.domain.model.LibraryQuerySpec
 import com.asmr.player.domain.model.LibrarySort
 import com.asmr.player.domain.model.LibrarySourceFilter
+import com.asmr.player.domain.model.PersistedLibraryFilters
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
@@ -16,77 +18,6 @@ import kotlinx.coroutines.flow.map
 import java.util.UUID
 
 internal val Context.libraryDataStore by preferencesDataStore(name = "library")
-
-data class LibraryFilterPreset(
-    val id: String,
-    val name: String,
-    val spec: LibraryQuerySpec
-)
-
-data class PersistedLibraryFilters(
-    val includeTagIds: Set<Long> = emptySet(),
-    val excludeTagIds: Set<Long> = emptySet(),
-    val circles: Set<String> = emptySet(),
-    val cvs: Set<String> = emptySet(),
-    val source: LibrarySourceFilter? = null
-) {
-    val hasActiveFilters: Boolean
-        get() = toQuerySpec().hasActiveFilters
-
-    fun toQuerySpec(): LibraryQuerySpec {
-        return LibraryQuerySpec(
-            includeTagIds = includeTagIds,
-            excludeTagIds = excludeTagIds,
-            circles = circles,
-            cvs = cvs,
-            source = source.takeUnless { it == LibrarySourceFilter.Both }
-        )
-    }
-
-    fun applyTo(spec: LibraryQuerySpec): LibraryQuerySpec {
-        return spec.withFiltersFrom(toQuerySpec())
-    }
-
-    fun normalized(validTagIds: Set<Long>? = null): PersistedLibraryFilters {
-        fun cleanTags(ids: Set<Long>): Set<Long> {
-            return ids
-                .asSequence()
-                .filter { it > 0L }
-                .filter { validTagIds == null || validTagIds.contains(it) }
-                .toCollection(linkedSetOf())
-        }
-
-        fun cleanText(values: Set<String>): Set<String> {
-            return values
-                .asSequence()
-                .map { it.trim() }
-                .filter { it.isNotBlank() }
-                .toCollection(linkedSetOf())
-        }
-
-        return PersistedLibraryFilters(
-            includeTagIds = cleanTags(includeTagIds),
-            excludeTagIds = cleanTags(excludeTagIds),
-            circles = cleanText(circles),
-            cvs = cleanText(cvs),
-            source = source.takeUnless { it == LibrarySourceFilter.Both }
-        )
-    }
-
-    companion object {
-        val Empty = PersistedLibraryFilters()
-
-        fun fromSpec(spec: LibraryQuerySpec): PersistedLibraryFilters {
-            return PersistedLibraryFilters(
-                includeTagIds = spec.includeTagIds,
-                excludeTagIds = spec.excludeTagIds,
-                circles = spec.circles,
-                cvs = spec.cvs,
-                source = spec.source
-            ).normalized()
-        }
-    }
-}
 
 private data class PersistedLibraryFiltersWire(
     val includeTagIds: List<Long>? = null,
