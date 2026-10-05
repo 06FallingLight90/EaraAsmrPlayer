@@ -1,8 +1,8 @@
-# R3 阶段 C 进度留档（2026-10-05：**C1 全部收官**，VM 外壳 463 行退出 size pin）
+# R3 阶段 C 进度留档（2026-10-05：C1 + C3 完成，VM 463 行 / Repo 门面 238 行）
 
-> 状态：阶段 B 已闭环（tag `refactor-r3/phase-B`，CI 双绿已由用户确认）；阶段 C 执行中，C1 六 holder 分治完成。
-> 基线：`refactor/architecture-cleanup`，阶段 B tag `refactor-r3/phase-B` 之后 8 个提交。
-> 实机走查（B 阶段遗留 + C 阶段六族）仍挂起待设备。
+> 状态：阶段 B 已闭环（tag `refactor-r3/phase-B`）；阶段 C 执行中——C1 六 holder 分治完成、C3 写仓拆族完成。
+> 基线：`refactor/architecture-cleanup`，阶段 B tag 之后 10 个提交（C1a..C1d、docs ×2、C3）。
+> 实机走查（B 阶段遗留 + C 阶段六族/写仓拆族）仍挂起待设备。
 
 ## 1. 已提交进度
 
@@ -15,6 +15,7 @@
 | `31dc76d` | C1c-a | 扫描底层下沉 LibraryScanStateHolder（ui/library 同包）：封面挑选/CacheTreeFileType 树缓存叶/computePathsStamp/extractWorkNo/legacyOnlineSavedAlbumDir/backfill/scanFromDownloadedDir/scanTracksAndSubtitlesFromFileAlbum/scanFromDocumentTree/scanSingleAlbumFromDocumentUri/prune 族 4 个/WorkManager 入队/resolveAndMergeAlbumForRj 逐字搬移；SafTreeSupport 委托随迁消除；**交接项①完成**（deleteHolder 的扫描两函数引用参数换 scanHolder 注入）；refreshAlbumAudioAggregate VM 版删除（双持收敛）；import baseline：VM work.* 2 死条目删、holder 新增 4 条存量（work ×2 + db entities ×2）；VM 1846→1140 |
 | `89c2355` | C1c-b | 扫描根管理 + 三批量入口迁入 scanHolder：addScanRoot/isSubdirectory/removeScanRoot/removeScanRootAndDeleteAlbums/scanAllRoots/scanCurrentDownloadDestinationAsImport/scanSingleRoot + scanRootsStore/_scanRoots/scanRoots 流/scanMutex 所有权随迁；VM init 三处改经 holder（restoreScanRootsFromStore/getRootsFromStore/scanAllRoots）；**LibraryViewModel 836 < 1500 退出 size pin**（baseline 8→7 条）；VM 1140→836 |
 | `d6533b4` | C1d | 云同步族迁入 LibraryCloudSyncStateHolder（ui/library 同包）：syncMetadata/syncMetadataForRoot/syncAlbumMetadata/runBatchCloudSync/syncAlbumMetadataInternal/resolveAlbumCloudSync/resolveSelectedAlbumCloudSync/applyResolvedCloudSync/continueSyncAlbumMetadataAfterSelection/reportSyncAlbumMetadataFailure/ensureAlbumCoverSaved 逐字搬移；**applyResolvedCloudSync 的 title 覆盖语义原样随迁（与 repo 版 title 保留规则不可混用）；ensureAlbumCoverSaved 受"双实现只记录不改动"决策保护**；upsertAlbumFtsIndex/upsertAlbumTagsFromCsv VM 委托随迁消除（**交接项②完成**）；import baseline：VM Request 死条目删、dlsite 3 条换键 holder、holder 新增 okhttp3 ×2 + AlbumEntity；VM 836→**463** |
+| `206bafd` | C3 | LibraryWriteRepository 拆族（**1069→238 门面**）：新建 4 个 internal support（同包 data/repository，实现逐字搬移、消费者零改动）——LibraryTagWriteSupport（标签/FTS/CSV/播种）、LibraryDeleteWriteSupport（删专辑/音轨族/下载任务/缺失整册清除）、LibraryScanWriteSupport（聚合/回填/目录树缓存/prune 族 4/扫描同步/upsertScanned/rescan，跨族调用改显式依赖 deleteWrite./tagWrite.，事务体逐字不变）、LibraryOnlineSaveSupport（saveOnlineSelectedToLibrary）；门面保留全部签名与嵌套数据投影类型（Gson 载荷 JSON 不变）；行为档案 ⚠️ 注释逐字随迁 |
 
 ### C1b-ii 附带清账（调用点清单安全网）
 
@@ -32,11 +33,10 @@
 
 ## 3. 下一任务队列（计划 §8.4 剩余）
 
-1. **C3**：LibraryWriteRepository 1050 → 拆族（TagWrite / DeleteWrite / ScanWrite / OnlineSave）。
-2. **C4**：God 文件区块化（AlbumDetailScreen 1518 / DownloadsScreen 2281 / SearchScreen 2186 / AlbumDetailDlsiteTabs 1932 / LibraryScreen 1582 / SettingsScreen 1270 / EqualizerPanel 1190）。
-3. **C7**：service 层拆解（PlaybackService 1471 / SubtitleTaskService 1429 / DownloadManager 1122）。
-4. **C8**（条件式重写，前置 AlbumDetailViewModelTest）/ **C9**（搜索重写，前置四分支 seam 测试）。
-5. **C5** ratchet 分级收紧（>1500 清零 → 1000-1500 区间 14 文件 → 降 SIZE_LIMIT）→ **C6** 结构收尾 → 门禁（全量测试双绿 + 子代理审查 + 实机走查）→ tag `refactor-r3/phase-C`。
+1. **C4**：God 文件区块化（AlbumDetailScreen 1518 / DownloadsScreen 2281 / SearchScreen 2186 / AlbumDetailDlsiteTabs 1932 / LibraryScreen 1582 / SettingsScreen 1270 / EqualizerPanel 1190）——单巨型 Composable 拆子 composable + 状态对象，每文件一提交；SearchScreen 的完整重写归 C9。
+2. **C7**：service 层拆解（PlaybackService 1471 / SubtitleTaskService 1429 / DownloadManager 1122）。
+3. **C8**（条件式重写，前置 AlbumDetailViewModelTest + 行为档案）/ **C9**（搜索重写，前置四分支 seam 测试）。
+4. **C5** ratchet 分级收紧（>1500 清零 → 1000-1500 区间 14 文件 → 降 SIZE_LIMIT）→ **C6** 结构收尾 → 门禁（全量测试双绿 + 子代理审查 + 实机走查）→ tag `refactor-r3/phase-C`。
 
 ## 4. 阶段 C 踩坑（增量）
 
