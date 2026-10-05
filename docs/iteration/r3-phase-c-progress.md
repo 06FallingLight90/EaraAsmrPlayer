@@ -1,7 +1,7 @@
-# R3 阶段 C 进度留档（2026-10-05：C1 + C3 完成，VM 463 行 / Repo 门面 238 行）
+# R3 阶段 C 进度留档（2026-10-05：C1 + C3 + C4-1/C4-2 完成，VM 463 行 / Repo 门面 238 行）
 
-> 状态：阶段 B 已闭环（tag `refactor-r3/phase-B`）；阶段 C 执行中——C1 六 holder 分治完成、C3 写仓拆族完成。
-> 基线：`refactor/architecture-cleanup`，阶段 B tag 之后 10 个提交（C1a..C1d、docs ×2、C3）。
+> 状态：阶段 B 已闭环（tag `refactor-r3/phase-B`）；阶段 C 执行中——C1 六 holder 分治、C3 写仓拆族、C4-1/C4-2 God 文件区块化完成（7 文件中 2 个）。
+> 基线：`refactor/architecture-cleanup`，阶段 B tag 之后 12 个提交（C1a..C1d、docs ×2、C3、C4-1、C4-2）。
 > 实机走查（B 阶段遗留 + C 阶段六族/写仓拆族）仍挂起待设备。
 
 ## 1. 已提交进度
@@ -16,6 +16,8 @@
 | `89c2355` | C1c-b | 扫描根管理 + 三批量入口迁入 scanHolder：addScanRoot/isSubdirectory/removeScanRoot/removeScanRootAndDeleteAlbums/scanAllRoots/scanCurrentDownloadDestinationAsImport/scanSingleRoot + scanRootsStore/_scanRoots/scanRoots 流/scanMutex 所有权随迁；VM init 三处改经 holder（restoreScanRootsFromStore/getRootsFromStore/scanAllRoots）；**LibraryViewModel 836 < 1500 退出 size pin**（baseline 8→7 条）；VM 1140→836 |
 | `d6533b4` | C1d | 云同步族迁入 LibraryCloudSyncStateHolder（ui/library 同包）：syncMetadata/syncMetadataForRoot/syncAlbumMetadata/runBatchCloudSync/syncAlbumMetadataInternal/resolveAlbumCloudSync/resolveSelectedAlbumCloudSync/applyResolvedCloudSync/continueSyncAlbumMetadataAfterSelection/reportSyncAlbumMetadataFailure/ensureAlbumCoverSaved 逐字搬移；**applyResolvedCloudSync 的 title 覆盖语义原样随迁（与 repo 版 title 保留规则不可混用）；ensureAlbumCoverSaved 受"双实现只记录不改动"决策保护**；upsertAlbumFtsIndex/upsertAlbumTagsFromCsv VM 委托随迁消除（**交接项②完成**）；import baseline：VM Request 死条目删、dlsite 3 条换键 holder、holder 新增 okhttp3 ×2 + AlbumEntity；VM 836→**463** |
 | `206bafd` | C3 | LibraryWriteRepository 拆族（**1069→238 门面**）：新建 4 个 internal support（同包 data/repository，实现逐字搬移、消费者零改动）——LibraryTagWriteSupport（标签/FTS/CSV/播种）、LibraryDeleteWriteSupport（删专辑/音轨族/下载任务/缺失整册清除）、LibraryScanWriteSupport（聚合/回填/目录树缓存/prune 族 4/扫描同步/upsertScanned/rescan，跨族调用改显式依赖 deleteWrite./tagWrite.，事务体逐字不变）、LibraryOnlineSaveSupport（saveOnlineSelectedToLibrary）；门面保留全部签名与嵌套数据投影类型（Gson 载荷 JSON 不变）；行为档案 ⚠️ 注释逐字随迁 |
+| `8390a72` | C4-1 | AlbumDetailDirectorySupport 区块化拆族（**2698 行单文件 → 7 同包主题文件** ui/library/albumdetail，全部 <1500 无需 pin）：DirectoryBrowserModels 308 / DirectorySelectionSupport 202 / LocalTreeBrowserSupport 247 / RemoteTreeBrowserSupport 475 / DirectoryFileTypeStyling 74 / DirectoryBrowserRows 642 / DirectoryBrowserPanel 744；顺带删 ~45 个 stale import；import baseline 205→200（删 6 失效条 + 增 RemoteTreeBrowserSupport→AsmrOneTrackNodeResponse 1 条）；size baseline 仅移除 DirectorySupport pin |
+| `5230f08` | C4-2 | DownloadsScreen 区块化拆族（**2281 行单文件 → 4 同包主题文件** ui/downloads，主文件 505）：DownloadTranslationSection 783（翻译内容区+行 Composable+状态辅助群）/ DownloadTaskCards 580（任务卡+树展开+行+汇总）/ DownloadTaskGroupUi 251（卡头共享原语 TaskGroupHeader 族+StableProgressSlot+CompactProgressBar）/ SwipeRevealActions 302（滑动容器+Controller）；可见性放宽 private→internal 共 10 处（同包跨文件所需）；TaskProgressMeta 随迁归位卡文件（**main/test 零引用疑似死码，留 devnote 待清**）；同包测试 5 文件零改动；size baseline 删 DownloadsScreen pin（6→5 条）；import baseline 无变化 |
 
 ### C1b-ii 附带清账（调用点清单安全网）
 
@@ -33,7 +35,7 @@
 
 ## 3. 下一任务队列（计划 §8.4 剩余）
 
-1. **C4**：God 文件区块化（AlbumDetailScreen 1518 / DownloadsScreen 2281 / SearchScreen 2186 / AlbumDetailDlsiteTabs 1932 / LibraryScreen 1582 / SettingsScreen 1270 / EqualizerPanel 1190）——单巨型 Composable 拆子 composable + 状态对象，每文件一提交；SearchScreen 的完整重写归 C9。
+1. **C4**：God 文件区块化（AlbumDetailScreen 1518 / ~~DownloadsScreen 2281~~✅C4-2 / SearchScreen 2186 / AlbumDetailDlsiteTabs 1932 / LibraryScreen 1582 / SettingsScreen 1270 / EqualizerPanel 1190）——单巨型 Composable 拆子 composable + 状态对象，每文件一提交；**C4-1（AlbumDetailDirectorySupport 2698）已先期完成**；SearchScreen 的完整重写归 C9。
 2. **C7**：service 层拆解（PlaybackService 1471 / SubtitleTaskService 1429 / DownloadManager 1122）。
 3. **C8**（条件式重写，前置 AlbumDetailViewModelTest + 行为档案）/ **C9**（搜索重写，前置四分支 seam 测试）。
 4. **C5** ratchet 分级收紧（>1500 清零 → 1000-1500 区间 14 文件 → 降 SIZE_LIMIT）→ **C6** 结构收尾 → 门禁（全量测试双绿 + 子代理审查 + 实机走查）→ tag `refactor-r3/phase-C`。
