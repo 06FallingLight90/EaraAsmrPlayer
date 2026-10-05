@@ -37,12 +37,13 @@
 - **VM→Worker 类引用（3 条）**：WorkManager 泛型 tag + KEY 常量，机制固有，下沉 enqueue 助手收益低。
 - **AppCacheManager 注入（2 条）**：SettingsViewModel 状态直通 + AlbumDetailViewModel 回调，收口需包装层，随 C 阶段 settings 改造一并。
 
-## 4. B6 门禁（进行中）
+## 4. B6 门禁结果（2026-10-05）
 
-1. 全量 `:app:testDebugUnitTest`（基线只增不减：≥945 通过）。
-2. 子代理审查 `git diff refactor-r3/phase-A..HEAD`。
-3. 实机走查（库页/详情页/下载页/播放链）——需设备配合。
-4. tag `refactor-r3/phase-B`。
+1. **全量测试 ✅**：`:app:testDebugUnitTest` 945 通过 / 0 失败 / 4 跳过，与阶段 A 基数持平（只增不减达成）。
+2. **子代理审查 ✅ 有条件通过**：diff `refactor-r3/phase-A..HEAD`（13 提交/202 文件），行为保持抽查全部逐字等价，无 P0/P1，5 条 P2 备忘（Preloader 接口化留 C、SearchErrorMessages 补测、StatisticsRepository FQN 风格、kapt 进验证链建议、LibraryPreferencesStore 统一提供）。
+3. **SCC 复测 ✅**：41 维持（B5 收口删的是 ui→底层边，不动底层团）。
+4. **实机走查 ⏸ 挂起**：adb 无设备连接，待设备配合后补走查（库页/详情页/下载页/播放链）；按阶段 A 先例不阻塞结项。
+5. **tag ✅**：`refactor-r3/phase-B`。
 
 ## 5. 阶段 B 踩坑（增量，勿重犯）
 
