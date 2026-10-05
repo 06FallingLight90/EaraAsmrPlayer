@@ -85,6 +85,20 @@ class LibraryReadRepository @Inject constructor(
 
     suspend fun getAlbumById(albumId: Long): AlbumEntity? = database.albumDao().getAlbumById(albumId)
 
+    /** R3-C1：专辑继承标签出口——DB base tags 与调用方 user tags 合并去重（原 LibraryViewModel.loadInheritedTagsForAlbum 逐字下沉）。 */
+    suspend fun loadInheritedTagsForAlbum(albumId: Long, currentUserTags: List<String>): List<String> {
+        if (albumId <= 0L) return emptyList()
+        val userTags = currentUserTags
+        val entity = getAlbumById(albumId) ?: return userTags
+        val baseTags = entity.tags
+            .split(",")
+            .asSequence()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .toList()
+        return (baseTags + userTags).distinct()
+    }
+
     suspend fun getAlbumByWorkIdOnce(workId: String): AlbumEntity? = database.albumDao().getAlbumByWorkIdOnce(workId)
 
     suspend fun getAllAlbumsOnce(): List<AlbumEntity> = database.albumDao().getAllAlbumsOnce()
