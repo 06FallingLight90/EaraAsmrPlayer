@@ -84,8 +84,6 @@ import javax.inject.Named
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import com.asmr.player.ui.library.albumdetail.LocalTreeDeletionTarget
-import com.asmr.player.ui.library.albumdetail.localTreePathMatchesTarget
-import com.asmr.player.ui.library.albumdetail.normalizeLocalTreeRelativePath
 
 sealed class LibraryUiState {
     object Loading : LibraryUiState()
@@ -138,6 +136,20 @@ class LibraryViewModel @Inject constructor(
 
     /** R3-C1b-ii：任务协调 State Holder（单专辑任务注册表/批量任务门/同步状态/批量进度/云同步选择队列）。 */
     private val taskCoordinator = LibraryTaskCoordinator(messageManager)
+
+    /** R3-C1b-ii：删除族 State Holder（rescanAlbum/deleteAlbum/deleteAlbumTreeEntry/removeTrackFromAlbum）。 */
+    private val deleteHolder = LibraryDeleteStateHolder(
+        scope = viewModelScope,
+        context = context,
+        readRepository = libraryReadRepository,
+        writeRepository = libraryWriteRepository,
+        downloadQueueRepository = downloadQueueRepository,
+        syncCoordinator = syncCoordinator,
+        taskCoordinator = taskCoordinator,
+        messageManager = messageManager,
+        scanSingleAlbumFromDocumentUri = ::scanSingleAlbumFromDocumentUri,
+        scanTracksAndSubtitlesFromFileAlbum = ::scanTracksAndSubtitlesFromFileAlbum,
+    )
     private val _scanRoots = MutableStateFlow<Set<String>>(emptySet())
     val scanRoots: StateFlow<List<String>> = _scanRoots
         .map { it.toList().sorted() }
@@ -1230,253 +1242,24 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun rescanAlbum(album: Album) {
-        val localPaths = album.getAllLocalPaths()
-        if (localPaths.isEmpty()) return
-        if (!taskCoordinator.tryRegisterAlbumJob(album.id, "本地同步")) return
-        val job = viewModelScope.launch {
-            val ownerJob = currentCoroutineContext()[Job]
-            val token = syncCoordinator.tryBegin() ?: run {
-                taskCoordinator.showSyncBusy("本地同步")
-                taskCoordinator.albumJobs.remove(album.id, ownerJob)
-                return@launch
-            }
-            taskCoordinator.syncStatus.value += (album.id to SyncStatus.Syncing)
-            try {
-                var removed = false
-                withContext(Dispatchers.IO) {
-                    currentCoroutineContext().ensureActive()
-                    runCatching { libraryWriteRepository.clearLocalTreeCache(album.id) }
+    // R3-C1b-ii：删除族实现迁入 LibraryDeleteStateHolder（rescanAlbum 对扫描底层的依赖经构造引用过渡，C1c 换扫描 holder 注入），VM 保留 UI 转发。
 
-                    var scannedAny = false
-                    localPaths.forEach { path ->
-                        currentCoroutineContext().ensureActive()
-                        val p = path.trim()
-                        if (p.isBlank()) return@forEach
+    fun rescanAlbum(album: Album) = deleteHolder.rescanAlbum(album)
 
-                        if (p.startsWith("content://")) {
-                            val uri = runCatching { Uri.parse(p) }.getOrNull()
-                            val docId = uri?.let { runCatching { DocumentsContract.getDocumentId(it) }.getOrNull() }
-                            val treeDocId = uri?.let { runCatching { DocumentsContract.getTreeDocumentId(it) }.getOrNull() }
-                            val treeUri = if (uri != null && !treeDocId.isNullOrBlank()) {
-                                DocumentsContract.buildTreeDocumentUri(uri.authority, treeDocId)
-                            } else null
-                            val exists = treeUri != null && !docId.isNullOrBlank() && documentExists(treeUri, docId)
-                            if (exists) {
-                                scanSingleAlbumFromDocumentUri(album.id, p)
-                                scannedAny = true
-                            }
-                        } else {
-                            val root = File(p)
-                            val exists = root.exists()
-                            val isDirectory = root.isDirectory
-                            if (exists && isDirectory) {
-                                scanTracksAndSubtitlesFromFileAlbum(album.id, root)
-                                scannedAny = true
-                            }
-                        }
-                    }
-
-                    if (!scannedAny) {
-                        val entity = libraryReadRepository.getAlbumById(album.id) ?: return@withContext
-                        val tracks = libraryReadRepository.getTracksForAlbumOnce(entity.id)
-                        val hasOnline = isVirtualAlbumPath(entity.path) || tracks.any { isOnlineTrackPath(it.path) }
-                        if (!hasOnline) {
-                            libraryWriteRepository.deleteAlbumTracksAndSubtitles(entity.id)
-                            libraryWriteRepository.deleteAlbumEntity(entity)
-                            removed = true
-                        } else {
-                            val prefixes = localPaths.map { it.trim() }.filter { it.isNotBlank() }
-                            val toRemove = tracks.filter { t ->
-                                !isOnlineTrackPath(t.path) && prefixes.any { pfx -> t.path.startsWith(pfx) }
-                            }.map { it.id }
-                            if (toRemove.isNotEmpty()) {
-                                libraryWriteRepository.deleteTracksWithSubtitles(toRemove)
-                            }
-
-                            val updatedPath = if (prefixes.any { pfx -> entity.path.startsWith(pfx) }) {
-                                buildOnlineAlbumPath(entity) ?: entity.path
-                            } else {
-                                entity.path
-                            }
-                            val updated = entity.copy(
-                                path = updatedPath,
-                                localPath = entity.localPath?.takeIf { lp -> prefixes.none { pfx -> lp.startsWith(pfx) } },
-                                downloadPath = entity.downloadPath?.takeIf { dp -> prefixes.none { pfx -> dp.startsWith(pfx) } },
-                                coverPath = entity.coverPath.takeIf { cp -> prefixes.none { pfx -> cp.startsWith(pfx) } }.orEmpty()
-                            )
-                            libraryWriteRepository.updateAlbum(updated)
-                            upsertAlbumFtsIndex(updated.id, updated)
-                        }
-                    }
-                }
-                taskCoordinator.syncStatus.value -= album.id
-                if (removed) {
-                    messageManager.showInfo("目录不存在，已从本地库移除")
-                } else {
-                    messageManager.showSuccess("重扫完成")
-                }
-            } catch (e: CancellationException) {
-                taskCoordinator.syncStatus.value -= album.id
-                messageManager.showInfo("已取消重扫")
-            } catch (e: Exception) {
-                Log.e(TAG, "rescanAlbum failed: ${album.id}", e)
-                taskCoordinator.syncStatus.value += (album.id to SyncStatus.Error(e.message ?: "重扫失败"))
-                messageManager.showError("重扫失败：${e.message}")
-                delay(3000)
-                taskCoordinator.syncStatus.value -= album.id
-            } finally {
-                taskCoordinator.albumJobs.remove(album.id, ownerJob)
-                syncCoordinator.end(token)
-            }
-        }
-        taskCoordinator.albumJobs[album.id] = job
-    }
-    fun deleteAlbum(album: Album) {
-        viewModelScope.launch(Dispatchers.IO) {
-            if (album.id <= 0L) return@launch
-            if (taskCoordinator.isBulkTaskRunning()) {
-                messageManager.showInfo("正在执行批量任务，请先取消后再删除")
-                return@launch
-            }
-
-            taskCoordinator.albumJobs.remove(album.id)?.cancel()
-            taskCoordinator.syncStatus.value -= album.id
-
-            try {
-                val entity = libraryReadRepository.getAlbumById(album.id) ?: return@launch
-                val downloadRoot = entity.downloadPath.orEmpty()
-
-                libraryWriteRepository.deleteAlbumWithContent(album.id, entity)
-
-                if (downloadRoot.isNotBlank()) {
-                    val task = runCatching { libraryReadRepository.getDownloadTaskByRootDir(downloadRoot) }.getOrNull()
-                    if (task != null) {
-                        downloadQueueRepository.cancelWorksByTag(task.taskKey)
-                        libraryWriteRepository.deleteDownloadTaskWithItems(task.id)
-                    }
-                    deletePathSafely(downloadRoot)
-                }
-
-                messageManager.showSuccess("已删除专辑")
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e("LibraryViewModel", "deleteAlbum failed: ${album.id}", e)
-                messageManager.showError("删除失败：${e.message ?: "未知错误"}")
-            }
-        }
-    }
+    fun deleteAlbum(album: Album) = deleteHolder.deleteAlbum(album)
 
     internal fun deleteAlbumTreeEntry(
         album: Album,
         target: LocalTreeDeletionTarget,
         onComplete: (Boolean) -> Unit = {},
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val relativePath = normalizeLocalTreeRelativePath(target.relativePath)
-            if (album.id <= 0L || relativePath == null) {
-                messageManager.showError("删除失败：目录项路径无效")
-                withContext(Dispatchers.Main.immediate) { onComplete(false) }
-                return@launch
-            }
+    ) = deleteHolder.deleteAlbumTreeEntry(album, target, onComplete)
 
-            try {
-                val albumRoots = album.getAllLocalPaths()
-                val physicalDeletionSucceeded = when {
-                    !target.hasLocalContent -> true
-                    target.isDirectory -> deleteLocalTreeDirectories(albumRoots, relativePath)
-                    else -> deleteLocalTreeFile(albumRoots, target.absolutePath.orEmpty())
-                }
-                check(physicalDeletionSucceeded) {
-                    if (target.isDirectory) "无法删除目录，请检查存储权限" else "无法删除文件，请检查存储权限"
-                }
+    fun removeTrackFromAlbum(trackId: Long) = deleteHolder.removeTrackFromAlbum(trackId)
 
-                val verifiedTrackIds = target.trackIds
-                    .asSequence()
-                    .filter { it > 0L }
-                    .distinct()
-                    .toList()
-                    .takeIf { it.isNotEmpty() }
-                    ?.let { ids ->
-                        libraryReadRepository.getTracksByIdsOnce(ids)
-                            .filter { it.albumId == album.id }
-                            .map { it.id }
-                    }
-                    .orEmpty()
-                val resourceIds = libraryReadRepository.getOnlineSavedResourcesForAlbum(album.id)
-                    .filter { resource ->
-                        localTreePathMatchesTarget(
-                            candidatePath = resource.relativePath,
-                            targetPath = relativePath,
-                            targetIsDirectory = target.isDirectory,
-                        )
-                    }
-                    .map { it.id }
-
-                libraryWriteRepository.deleteVerifiedTracksAndResources(album.id, verifiedTrackIds, resourceIds)
-                if (verifiedTrackIds.isNotEmpty()) {
-                    refreshAlbumAudioAggregate(album.id)
-                }
-
-                messageManager.showSuccess(if (target.isDirectory) "已删除目录" else "已删除文件")
-                withContext(Dispatchers.Main.immediate) { onComplete(true) }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                Log.e(TAG, "deleteAlbumTreeEntry failed: ${target.relativePath}", error)
-                messageManager.showError("删除失败：${error.message ?: "未知错误"}")
-                withContext(Dispatchers.Main.immediate) { onComplete(false) }
-            }
-        }
-    }
-
-    fun removeTrackFromAlbum(trackId: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val track = libraryReadRepository.getTrackByIdOnce(trackId) ?: return@launch
-            val album = libraryReadRepository.getAlbumById(track.albumId)
-            val path = track.path.trim()
-
-            val deletedFile = if (path.startsWith("http", ignoreCase = true) || path.startsWith("content://", ignoreCase = true)) {
-                false
-            } else {
-                val base = context.getExternalFilesDir(null)
-                val allowedRoots = listOfNotNull(
-                    album?.downloadPath?.takeIf { it.isNotBlank() }?.let { File(it) },
-                    base
-                )
-                    .mapNotNull { runCatching { it.canonicalFile }.getOrNull() ?: it.absoluteFile }
-                val target = runCatching { File(path).canonicalFile }.getOrNull() ?: File(path).absoluteFile
-                val isInAllowed = allowedRoots.any { root -> isCanonicalDescendant(target, root) }
-                if (isInAllowed) deletePathSafely(target.absolutePath) else false
-            }
-
-            libraryWriteRepository.deleteTrackCompletely(trackId, track.albumId)
-
-            refreshAlbumAudioAggregate(track.albumId)
-
-            if (deletedFile) {
-                messageManager.showSuccess("已删除文件并移除")
-            } else {
-                messageManager.showSuccess("已从专辑移除")
-            }
-        }
-    }
-
-    // R3-C1b：SAF 树/删除 helper 实现下沉 data/local/tree/SafTreeSupport（扫描+删除两族共用），VM 保留签名兼容委托。
-
-    private fun deletePathSafely(path: String): Boolean = SafTreeSupport.deletePathSafely(context, path)
-
-    private fun deleteLocalTreeFile(albumRoots: List<String>, absolutePath: String): Boolean =
-        SafTreeSupport.deleteLocalTreeFile(context, albumRoots, absolutePath)
-
-    private fun deleteLocalTreeDirectories(albumRoots: List<String>, relativePath: String): Boolean =
-        SafTreeSupport.deleteLocalTreeDirectories(context, albumRoots, relativePath)
-
-    private fun resolveTreeDocumentUri(rootUriString: String, relativePath: String): Result<Uri?> =
-        SafTreeSupport.resolveTreeDocumentUri(context, rootUriString, relativePath)
-
-    private fun isCanonicalDescendant(target: File, root: File): Boolean = SafTreeSupport.isCanonicalDescendant(target, root)
+    // R3-C1b：SAF 树/删除 helper 实现下沉 data/local/tree/SafTreeSupport。
+    // R3-C1b-ii：删除侧委托（deletePathSafely/deleteLocalTreeFile/deleteLocalTreeDirectories/
+    // isCanonicalDescendant）随删除族迁 holder 后直调 SafTreeSupport，VM 委托消除；
+    // resolveTreeDocumentUri 为零引用死委托一并清除（调用点清单：全仓 grep 仅定义处）。
 
     private fun extractWorkNo(input: String): String {
         return DlsiteWorkNo.extractWorkNo(input)
@@ -2041,10 +1824,6 @@ class LibraryViewModel @Inject constructor(
         localPath = localPath,
         downloadPath = downloadPath,
     )
-
-    private suspend fun deleteAlbumEntity(entity: AlbumEntity) {
-        libraryWriteRepository.deleteAlbumEntity(entity)
-    }
 
     // R3-C1b：SAF 扫描 helper 同步下沉 SafTreeSupport（DocNode → data.local.tree.SafDocNode）。
 
