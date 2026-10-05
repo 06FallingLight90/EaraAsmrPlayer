@@ -1,57 +1,14 @@
 package com.asmr.player.ui.library
 
-import com.asmr.player.ui.translation.translatedPageText
 
-import android.content.Intent
-import android.graphics.PathMeasure as AndroidPathMeasure
-import android.graphics.RenderEffect
-import android.graphics.Shader
-import android.net.Uri
-import android.os.Build
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.unit.Velocity
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.GenericShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
@@ -59,130 +16,47 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.asAndroidPath
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.layer.GraphicsLayer
-import androidx.compose.ui.graphics.layer.CompositingStrategy as LayerCompositingStrategy
-import androidx.compose.ui.graphics.layer.drawLayer
-import androidx.compose.ui.graphics.painter.BitmapPainter
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.state.ToggleableState
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
-import com.asmr.player.data.local.db.AppDatabaseProvider
-import com.asmr.player.data.local.db.entities.LocalTreeCacheEntity
 import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
 import com.asmr.player.data.remote.scraper.DLSITE_DOMAIN
 import com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 import com.asmr.player.data.remote.scraper.storeSegment
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
-import com.asmr.player.playback.MediaItemFactory
-import com.asmr.player.ui.common.audio.HorizontalStereoSpectrum
 import com.asmr.player.ui.common.core.isCompactWidth
-import com.asmr.player.util.CacheImageModel
 import com.asmr.player.data.remote.dlsite.DlsiteLanguageEdition
-import com.asmr.player.util.DlsiteAntiHotlink
-import com.asmr.player.util.SmartSortKey
-import android.webkit.CookieManager
-import android.webkit.URLUtil
-import android.webkit.WebChromeClient
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.compose.material.icons.automirrored.rounded.Label
-import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
-import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
-import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import java.io.File
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.BlurredEdgeTreatment
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.zIndex
-import com.asmr.player.data.lyrics.deriveLyricsRelativePathNoExt
-import com.asmr.player.ui.common.audio.SubtitleStamp
-import com.asmr.player.ui.common.cover.DiscPlaceholder
-import com.asmr.player.ui.common.cover.AsmrAsyncImage
-import com.asmr.player.ui.common.cover.AsmrImageLoadingPlaceholder
 import com.asmr.player.ui.common.cover.EaraLogoLoadingIndicator
-import com.asmr.player.ui.common.cover.NoImageLoadingIndicator
-import com.asmr.player.ui.common.cover.ImagePreviewDialog
 import com.asmr.player.ui.common.cover.ImagePreviewRequest
-import com.asmr.player.ui.common.list.LocalBottomOverlayPadding
 import com.asmr.player.ui.common.core.consumeTapThrough
 import com.asmr.player.ui.groups.AlbumGroupsViewModel
-import com.asmr.player.ui.common.dialog.RoundedTopSheet
-import com.asmr.player.ui.groups.AlbumGroupPickerScreen
-import com.asmr.player.ui.playlists.PlaylistPickerScreen
 import com.asmr.player.ui.playlists.PlaylistsViewModel
 import com.asmr.player.ui.common.core.SearchBlockedKeywordsViewModel
 import com.asmr.player.ui.theme.AsmrTheme
-import com.asmr.player.ui.theme.AsmrPlayerTheme
 import com.asmr.player.ui.theme.dynamicPageContainerColor
-import com.asmr.player.util.Formatting
-import com.asmr.player.util.MessageManager
-import com.asmr.player.domain.model.RemoteSubtitleSource
 import java.util.UUID
-import kotlin.math.abs
 import kotlin.math.roundToInt
 import com.asmr.player.ui.library.albumdetail.AlbumDetailHeroBackground
-import com.asmr.player.ui.library.albumdetail.AlbumDetailHeroBounceBackSpec
 import com.asmr.player.ui.library.albumdetail.AlbumDetailHeroContentGap
 import com.asmr.player.ui.library.albumdetail.AlbumDetailHeroMotionState
 import com.asmr.player.ui.library.albumdetail.AlbumDetailHorizontalPadding
@@ -212,31 +86,19 @@ import com.asmr.player.ui.library.albumdetail.AlbumLandscapeSurfaceBorderWidth
 import com.asmr.player.ui.library.albumdetail.albumLandscapeSurfaceHeight
 import com.asmr.player.ui.library.albumdetail.AlbumLocalBreadcrumbTabV2
 import com.asmr.player.ui.library.albumdetail.asmrOneDirectoryTreeStateKey
-import com.asmr.player.ui.library.albumdetail.AsmrOneDownloadDialog
 import com.asmr.player.ui.library.albumdetail.AsmrTreeUiEntry
 import com.asmr.player.ui.library.albumdetail.buildDlsiteTrialDownloadTree
 import com.asmr.player.ui.library.albumdetail.canUseAsmrOneOnlineTreeActions
-import com.asmr.player.ui.library.albumdetail.FilePreviewDialog
 import com.asmr.player.ui.library.albumdetail.IncrementalAlbumAction
 import com.asmr.player.ui.library.albumdetail.LocalTreeUiEntry
 import com.asmr.player.ui.library.albumdetail.OnlineDownloadSource
-import com.asmr.player.ui.library.albumdetail.OnlineSaveDialog
 import com.asmr.player.ui.library.albumdetail.PendingOnlineSaveSelection
 import com.asmr.player.ui.library.albumdetail.PlaylistAddTarget
 import com.asmr.player.ui.library.albumdetail.readDlsitePlayAuthSnapshot
 import com.asmr.player.ui.library.albumdetail.rememberAlbumLandscapeContentShape
 import com.asmr.player.ui.library.albumdetail.resolveAlbumDetailRj
 import com.asmr.player.ui.library.albumdetail.shouldUseAlbumDetailLandscapeLayout
-import com.asmr.player.ui.library.albumdetail.AlbumDetailHeroFlingApproachMillis
-import com.asmr.player.ui.library.albumdetail.AlbumDetailHeroFlingOvershootMaxPortion
-import com.asmr.player.ui.library.albumdetail.AlbumDetailHeroFlingOvershootPortion
-import com.asmr.player.ui.library.albumdetail.AlbumDetailHeroFlingSettleMillis
-import com.asmr.player.ui.library.albumdetail.AlbumDetailHeroFlingVelocityMax
-import com.asmr.player.ui.library.albumdetail.AlbumDetailHeroFlingVelocityMin
-import com.asmr.player.ui.library.albumdetail.AlbumDetailHeroOvershootReleaseMultiplier
-import com.asmr.player.ui.library.albumdetail.AlbumDetailHeroOvershootResistance
 import com.asmr.player.ui.library.albumdetail.AlbumDetailInitialIntroDurationMs
-import com.asmr.player.ui.common.dialog.TagAssignDialog
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -286,17 +148,27 @@ fun AlbumDetailScreen(
     var isInitialRouteReady by remember(screenKey) {
         mutableStateOf(viewModel.hasCachedAlbum(albumId, rjCode))
     }
-    var showAsmrDownloadDialog by remember { mutableStateOf(false) }
-    var showOnlineSaveDialog by remember { mutableStateOf(false) }
-    var pendingOnlineSaveSelection by remember { mutableStateOf<PendingOnlineSaveSelection?>(null) }
-    var batchPlaylistItems by remember { mutableStateOf<List<MediaItem>?>(null) }
-    var groupPickerAlbumId by remember { mutableStateOf<Long?>(null) }
-    var downloadSource by remember { mutableStateOf(OnlineDownloadSource.AsmrOne) }
-    var onlineSaveSource by remember { mutableStateOf(OnlineDownloadSource.AsmrOne) }
-    var downloadDisabledPaths by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var saveDisabledPaths by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val showAsmrDownloadDialogState = remember { mutableStateOf(false) }
+    var showAsmrDownloadDialog by showAsmrDownloadDialogState
+    val showOnlineSaveDialogState = remember { mutableStateOf(false) }
+    var showOnlineSaveDialog by showOnlineSaveDialogState
+    val pendingOnlineSaveSelectionState = remember { mutableStateOf<PendingOnlineSaveSelection?>(null) }
+    var pendingOnlineSaveSelection by pendingOnlineSaveSelectionState
+    val batchPlaylistItemsState = remember { mutableStateOf<List<MediaItem>?>(null) }
+    var batchPlaylistItems by batchPlaylistItemsState
+    val groupPickerAlbumIdState = remember { mutableStateOf<Long?>(null) }
+    var groupPickerAlbumId by groupPickerAlbumIdState
+    val downloadSourceState = remember { mutableStateOf(OnlineDownloadSource.AsmrOne) }
+    var downloadSource by downloadSourceState
+    val onlineSaveSourceState = remember { mutableStateOf(OnlineDownloadSource.AsmrOne) }
+    var onlineSaveSource by onlineSaveSourceState
+    val downloadDisabledPathsState = remember { mutableStateOf<Set<String>>(emptySet()) }
+    var downloadDisabledPaths by downloadDisabledPathsState
+    val saveDisabledPathsState = remember { mutableStateOf<Set<String>>(emptySet()) }
+    var saveDisabledPaths by saveDisabledPathsState
     var incrementalPreparationJob by remember { mutableStateOf<Job?>(null) }
-    var metaActionKeyword by rememberSaveable { mutableStateOf<String?>(null) }
+    val metaActionKeywordState = rememberSaveable { mutableStateOf<String?>(null) }
+    var metaActionKeyword by metaActionKeywordState
 
     fun openMetaActions(value: String) {
         val keyword = value.trim()
@@ -451,11 +323,16 @@ fun AlbumDetailScreen(
                     }
                     val shouldPlayInitialAnimations = !viewModel.isInitialIntroSettled()
                     val shouldAnimateHeaderIntro = true
-                    var showTagManager by remember { mutableStateOf(false) }
-                    var tagManageTrack by remember { mutableStateOf<Track?>(null) }
-                    var localPreviewFile by remember { mutableStateOf<LocalTreeUiEntry.File?>(null) }
-                    var onlinePreviewFile by remember { mutableStateOf<AsmrTreeUiEntry.File?>(null) }
-                    var imagePreviewRequest by remember { mutableStateOf<ImagePreviewRequest?>(null) }
+                    val showTagManagerState = remember { mutableStateOf(false) }
+                    var showTagManager by showTagManagerState
+                    val tagManageTrackState = remember { mutableStateOf<Track?>(null) }
+                    var tagManageTrack by tagManageTrackState
+                    val localPreviewFileState = remember { mutableStateOf<LocalTreeUiEntry.File?>(null) }
+                    var localPreviewFile by localPreviewFileState
+                    val onlinePreviewFileState = remember { mutableStateOf<AsmrTreeUiEntry.File?>(null) }
+                    var onlinePreviewFile by onlinePreviewFileState
+                    val imagePreviewRequestState = remember { mutableStateOf<ImagePreviewRequest?>(null) }
+                    var imagePreviewRequest by imagePreviewRequestState
                     var landscapeActiveListState by remember(screenKey, useLandscapeArtworkTide) {
                         mutableStateOf<LazyListState?>(null)
                     }
@@ -549,164 +426,12 @@ fun AlbumDetailScreen(
                         DisposableEffect(heroMotion) {
                             onDispose { heroMotion.cancelVisualOvershootAnimation() }
                         }
-                        val heroNestedScroll = remember(
-                            heroCollapseMaxPx,
-                            heroVisualOvershootMaxPx,
-                            heroMotion,
-                            scope
-                        ) {
-                            object : NestedScrollConnection {
-                                private fun settleVisualOvershoot(initialVelocity: Float = 0f): Boolean {
-                                    val start = heroMotion.visualOvershootPx
-                                    if (abs(start) < 0.5f) return false
-                                    heroMotion.cancelVisualOvershootAnimation()
-                                    heroMotion.visualOvershootJob = scope.launch {
-                                        animate(
-                                            initialValue = start,
-                                            targetValue = 0f,
-                                            initialVelocity = initialVelocity,
-                                            animationSpec = AlbumDetailHeroBounceBackSpec
-                                        ) { value, _ ->
-                                            heroMotion.visualOvershootPx = value
-                                        }
-                                    }
-                                    return true
-                                }
-
-                                private fun dragOvershootDelta(delta: Float): Float {
-                                    val progress = (-heroMotion.visualOvershootPx / heroVisualOvershootMaxPx)
-                                        .coerceIn(0f, 1f)
-                                    val resistance = AlbumDetailHeroOvershootResistance * (1f - progress * progress * 0.62f)
-                                    return delta * resistance
-                                }
-
-                                private fun applyCollapseDelta(delta: Float): Float {
-                                    if (delta == 0f) return 0f
-                                    heroMotion.cancelVisualOvershootAnimation()
-                                    val current = heroMotion.collapsePx.coerceIn(0f, heroCollapseMaxPx)
-                                    var remaining = delta
-                                    var consumed = 0f
-
-                                    if (remaining > 0f && heroMotion.visualOvershootPx < 0f) {
-                                        val visualRelease = (remaining * AlbumDetailHeroOvershootReleaseMultiplier)
-                                            .coerceAtMost(-heroMotion.visualOvershootPx)
-                                        if (visualRelease > 0f) {
-                                            heroMotion.visualOvershootPx += visualRelease
-                                            remaining -= visualRelease / AlbumDetailHeroOvershootReleaseMultiplier
-                                            consumed += visualRelease / AlbumDetailHeroOvershootReleaseMultiplier
-                                        }
-                                    }
-
-                                    if (remaining != 0f) {
-                                        val collapseTarget = (current + remaining).coerceIn(0f, heroCollapseMaxPx)
-                                        val collapseApplied = collapseTarget - current
-                                        if (collapseApplied != 0f) {
-                                            heroMotion.collapsePx = collapseTarget
-                                            remaining -= collapseApplied
-                                            consumed += collapseApplied
-                                        }
-                                    }
-
-                                    if (remaining < 0f && heroVisualOvershootMaxPx > 0f) {
-                                        val visualDelta = dragOvershootDelta(remaining)
-                                        val visualTarget = (heroMotion.visualOvershootPx + visualDelta)
-                                            .coerceIn(-heroVisualOvershootMaxPx, 0f)
-                                        heroMotion.visualOvershootPx = visualTarget
-                                        consumed += remaining
-                                    }
-
-                                    return consumed
-                                }
-
-                                private fun flingOvershootTarget(velocityY: Float): Float {
-                                    if (velocityY <= AlbumDetailHeroFlingVelocityMin) return 0f
-                                    val velocityProgress = ((velocityY - AlbumDetailHeroFlingVelocityMin) /
-                                        (AlbumDetailHeroFlingVelocityMax - AlbumDetailHeroFlingVelocityMin))
-                                        .coerceIn(0f, 1f)
-                                    val eased = velocityProgress * velocityProgress
-                                    val target = heroVisualOvershootMaxPx * AlbumDetailHeroFlingOvershootPortion * eased
-                                    val cappedTarget = target.coerceAtMost(
-                                        heroVisualOvershootMaxPx * AlbumDetailHeroFlingOvershootMaxPortion
-                                    )
-                                    return -cappedTarget
-                                }
-
-                                private fun absorbFlingOvershoot(velocityY: Float): Boolean {
-                                    val target = flingOvershootTarget(velocityY)
-                                    if (target >= -0.5f) return settleVisualOvershoot()
-                                    heroMotion.cancelVisualOvershootAnimation()
-                                    heroMotion.visualOvershootJob = scope.launch {
-                                        if (target < heroMotion.visualOvershootPx) {
-                                            animate(
-                                                initialValue = heroMotion.visualOvershootPx,
-                                                targetValue = target,
-                                                animationSpec = tween(
-                                                    durationMillis = AlbumDetailHeroFlingApproachMillis,
-                                                    easing = FastOutSlowInEasing
-                                                )
-                                            ) { value, _ -> heroMotion.visualOvershootPx = value }
-                                        }
-                                        animate(
-                                            initialValue = heroMotion.visualOvershootPx,
-                                            targetValue = 0f,
-                                            animationSpec = tween(
-                                                durationMillis = AlbumDetailHeroFlingSettleMillis,
-                                                easing = FastOutSlowInEasing
-                                            )
-                                        ) { value, _ -> heroMotion.visualOvershootPx = value }
-                                    }
-                                    return true
-                                }
-
-                                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                                    val dy = available.y
-                                    // 向上浏览（手指上滑，dy<0）：先把滚动用于折叠 hero，再交给列表。
-                                    if (dy < 0f && (
-                                            heroMotion.collapsePx < heroCollapseMaxPx ||
-                                                heroMotion.visualOvershootPx < 0f
-                                            )
-                                    ) {
-                                        val applied = applyCollapseDelta(-dy)
-                                        val consumed = if (applied != 0f) -applied else dy
-                                        return Offset(0f, consumed)
-                                    }
-                                    return Offset.Zero
-                                }
-
-                                override fun onPostScroll(
-                                    consumed: Offset,
-                                    available: Offset,
-                                    source: NestedScrollSource
-                                ): Offset {
-                                    val dy = available.y
-                                    // 列表已到顶仍有下滑剩余（dy>0）：把剩余滚动用于展开 hero。
-                                    if (dy > 0f && (
-                                            heroMotion.collapsePx > 0f ||
-                                                heroMotion.visualOvershootPx > -heroVisualOvershootMaxPx
-                                            )
-                                    ) {
-                                        val applied = applyCollapseDelta(-dy)
-                                        val released = if (applied != 0f) -applied else dy
-                                        return Offset(0f, released)
-                                    }
-                                    return Offset.Zero
-                                }
-
-                                override suspend fun onPreFling(available: Velocity): Velocity {
-                                    settleVisualOvershoot()
-                                    return Velocity.Zero
-                                }
-
-                                override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                                    if (available.y > 0f && heroMotion.collapsePx <= 0.5f) {
-                                        absorbFlingOvershoot(available.y)
-                                    } else {
-                                        settleVisualOvershoot()
-                                    }
-                                    return Velocity.Zero
-                                }
-                            }
-                        }
+                        val heroNestedScroll = rememberAlbumDetailHeroNestedScrollConnection(
+                            heroMotion = heroMotion,
+                            scope = scope,
+                            heroCollapseMaxPx = heroCollapseMaxPx,
+                            heroVisualOvershootMaxPx = heroVisualOvershootMaxPx
+                        )
 
                         fun headerAlbumForTab(tab: Int): Album {
                             return if (tab == 0) (model.localAlbum ?: album) else album
@@ -1322,176 +1047,37 @@ fun AlbumDetailScreen(
                     }
                 }
 
-                val canSaveOnline = if (selectedTab == 0) {
-                    hasValidLocalRj && localOnlineSource != null
-                } else {
-                    canUseAsmrOneOnlineTreeActions(
-                        selectedTab = selectedTab,
-                        hasAsmrOneTree = asmrOneTree.isNotEmpty()
-                    )
-                }
-                if (showAsmrDownloadDialog) {
-                    val downloadTree = when (downloadSource) {
-                        OnlineDownloadSource.AsmrOne -> asmrOneTree
-                        OnlineDownloadSource.DlsitePlay -> model.dlsitePlayTree
-                        OnlineDownloadSource.DlsiteTrial -> trialDownloadTree
-                    }
-                    AsmrOneDownloadDialog(
-                        albumTitle = album.title,
-                        trackTree = downloadTree,
-                        disabledPaths = downloadDisabledPaths,
-                        onDismiss = { showAsmrDownloadDialog = false },
-                        onConfirm = { selected ->
-                            when (downloadSource) {
-                                OnlineDownloadSource.AsmrOne -> viewModel.downloadAsmrOneSelected(selected)
-                                OnlineDownloadSource.DlsitePlay -> viewModel.downloadDlsitePlaySelected(selected)
-                                OnlineDownloadSource.DlsiteTrial -> viewModel.downloadDlsiteTrialSelected(selected)
-                            }
-                            showAsmrDownloadDialog = false
-                        }
-                    )
-                }
-
-                if (showOnlineSaveDialog && canSaveOnline) {
-                    val saveTree = when (onlineSaveSource) {
-                        OnlineDownloadSource.DlsitePlay -> model.dlsitePlayTree
-                        else -> asmrOneTree
-                    }
-                    OnlineSaveDialog(
-                        albumTitle = album.title,
-                        trackTree = saveTree,
-                        disabledPaths = saveDisabledPaths,
-                        onDismiss = { showOnlineSaveDialog = false },
-                        onConfirm = { selected ->
-                            pendingOnlineSaveSelection = PendingOnlineSaveSelection(
-                                paths = selected,
-                                useDlsitePlayTree = onlineSaveSource == OnlineDownloadSource.DlsitePlay
-                            )
-                            showOnlineSaveDialog = false
-                        }
-                    )
-                }
-
-                groupPickerAlbumId?.let { targetAlbumId ->
-                    RoundedTopSheet(
-                        onDismissRequest = { groupPickerAlbumId = null },
-                        color = MaterialTheme.colorScheme.background,
-                        contentColor = colorScheme.textPrimary
-                    ) {
-                        AlbumGroupPickerScreen(
-                            windowSizeClass = windowSizeClass,
-                            albumId = targetAlbumId,
-                            onBack = { groupPickerAlbumId = null },
-                            embeddedInDialog = true
-                        )
-                    }
-                }
-
-                batchPlaylistItems?.let { items ->
-                    RoundedTopSheet(
-                        onDismissRequest = { batchPlaylistItems = null },
-                        color = MaterialTheme.colorScheme.background,
-                        contentColor = colorScheme.textPrimary
-                    ) {
-                        PlaylistPickerScreen(
-                            windowSizeClass = windowSizeClass,
-                            items = items,
-                            onBack = { batchPlaylistItems = null },
-                            embeddedInDialog = true
-                        )
-                    }
-                }
-
-                if (localPreviewFile != null) {
-                    FilePreviewDialog(
-                        title = localPreviewFile!!.title,
-                        absolutePath = localPreviewFile!!.absolutePath,
-                        fileType = localPreviewFile!!.fileType,
-                        messageManager = viewModel.messageManager,
-                        loadOnlineText = viewModel::loadOnlineTextPreview,
-                        onDismiss = { localPreviewFile = null }
-                    )
-                }
-
-                if (onlinePreviewFile != null) {
-                    FilePreviewDialog(
-                        title = onlinePreviewFile!!.title,
-                        absolutePath = onlinePreviewFile!!.url ?: "",
-                        fileType = onlinePreviewFile!!.fileType,
-                        messageManager = viewModel.messageManager,
-                        loadOnlineText = viewModel::loadOnlineTextPreview,
-                        onDismiss = { onlinePreviewFile = null }
-                    )
-                }
-
-                imagePreviewRequest?.let { request ->
-                    ImagePreviewDialog(
-                        request = request,
-                        messageManager = viewModel.messageManager,
-                        onDismiss = { imagePreviewRequest = null }
-                    )
-                }
-
-                metaActionKeyword?.let { keyword ->
-                    val searchBlockedKeywords by blockedKeywordsViewModel.searchBlockedKeywords.collectAsStateWithLifecycle()
-                    AlbumMetaActionDialog(
-                        keyword = keyword,
-                        onDismissRequest = { metaActionKeyword = null },
-                        onSearch = onSearchKeyword,
-                        onCreatePlaylist = playlistsViewModel::createPlaylist,
-                        onCreateGroup = albumGroupsViewModel::createGroup,
-                        onAddBlockedKeyword = { value ->
-                            val normalized = value.trim()
-                            if (normalized.isNotBlank()) {
-                                val exists = searchBlockedKeywords.any {
-                                    it.equals(normalized, ignoreCase = true)
-                                }
-                                blockedKeywordsViewModel.addSearchBlockedKeyword(normalized)
-                                if (exists) {
-                                    viewModel.messageManager.showInfo("屏蔽词已存在：$normalized")
-                                } else {
-                                    viewModel.messageManager.showSuccess("已添加屏蔽词：$normalized")
-                                }
-                            }
-                        },
-                    )
-                }
-
-                val track = tagManageTrack
-                if ((track != null && track.id > 0L) || showTagManager) {
-                    val availableTags by viewModel.availableTags.collectAsStateWithLifecycle()
-                    val userTagsByTrackId by viewModel.userTagsByTrackId.collectAsStateWithLifecycle()
-                    if (track != null && track.id > 0L) {
-                        TagAssignDialog(
-                            title = track.title,
-                            inheritedTags = album.tags,
-                            userTags = userTagsByTrackId[track.id].orEmpty(),
-                            allTags = availableTags,
-                            onApplyUserTags = { list ->
-                                viewModel.setUserTagsForTrack(track.id, list)
-                                tagManageTrack = null
-                            },
-                            onDismiss = { tagManageTrack = null },
-                            onOpenTagManager = { showTagManager = true }
-                        )
-                    }
-
-                    if (showTagManager) {
-                        Dialog(
-                            onDismissRequest = { showTagManager = false },
-                            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
-                        ) {
-                            Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                                TagManagerSheet(
-                                    tags = availableTags,
-                                    onRename = { tagId, newName -> libraryViewModel.renameUserTag(tagId, newName) },
-                                    onDelete = { tagId -> libraryViewModel.deleteUserTag(tagId) },
-                                    onClose = { showTagManager = false }
-                                )
-                            }
-                        }
-                    }
-                }
+                AlbumDetailDialogHosts(
+                    viewModel = viewModel,
+                    libraryViewModel = libraryViewModel,
+                    playlistsViewModel = playlistsViewModel,
+                    albumGroupsViewModel = albumGroupsViewModel,
+                    blockedKeywordsViewModel = blockedKeywordsViewModel,
+                    windowSizeClass = windowSizeClass,
+                    album = album,
+                    asmrOneTree = asmrOneTree,
+                    dlsitePlayTree = model.dlsitePlayTree,
+                    trialDownloadTree = trialDownloadTree,
+                    selectedTab = selectedTab,
+                    hasValidLocalRj = hasValidLocalRj,
+                    localOnlineSource = localOnlineSource,
+                    onSearchKeyword = onSearchKeyword,
+                    showAsmrDownloadDialogState = showAsmrDownloadDialogState,
+                    showOnlineSaveDialogState = showOnlineSaveDialogState,
+                    pendingOnlineSaveSelectionState = pendingOnlineSaveSelectionState,
+                    batchPlaylistItemsState = batchPlaylistItemsState,
+                    groupPickerAlbumIdState = groupPickerAlbumIdState,
+                    downloadSourceState = downloadSourceState,
+                    onlineSaveSourceState = onlineSaveSourceState,
+                    downloadDisabledPathsState = downloadDisabledPathsState,
+                    saveDisabledPathsState = saveDisabledPathsState,
+                    metaActionKeywordState = metaActionKeywordState,
+                    tagManageTrackState = tagManageTrackState,
+                    showTagManagerState = showTagManagerState,
+                    localPreviewFileState = localPreviewFileState,
+                    onlinePreviewFileState = onlinePreviewFileState,
+                    imagePreviewRequestState = imagePreviewRequestState
+                )
             }
                 is AlbumDetailUiState.Error -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

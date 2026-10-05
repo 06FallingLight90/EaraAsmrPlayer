@@ -30,15 +30,12 @@ app/src/main/java/com/asmr/player/ui/hotlistening/HotListeningScreen.kt com.asmr
 app/src/main/java/com/asmr/player/ui/hotlistening/HotListeningScreen.kt com.asmr.player.ui.library.AlbumMetaActionDialog
 app/src/main/java/com/asmr/player/ui/hotlistening/HotListeningScreen.kt com.asmr.player.ui.library.rememberAlbumMetaCopyAction
 app/src/main/java/com/asmr/player/ui/hotlistening/HotListeningScreen.kt com.asmr.player.ui.playlists.PlaylistsViewModel
-app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.data.local.db.AppDatabaseProvider
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.data.remote.dlsite.DlsiteLanguageEdition
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.data.remote.scraper.DLSITE_DOMAIN
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.data.remote.scraper.storeSegment
-app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.ui.groups.AlbumGroupPickerScreen
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.ui.groups.AlbumGroupsViewModel
-app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.ui.playlists.PlaylistPickerScreen
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.ui.playlists.PlaylistsViewModel
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.remote.ONLINE_DIRECTORY_REQUEST_TIMEOUT_MS
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.remote.api.AsmrOneAvailabilityApi
@@ -149,7 +146,6 @@ app/src/main/java/com/asmr/player/ui/calendar/ListeningCalendarViewModel.kt com.
 app/src/main/java/com/asmr/player/ui/calendar/ListeningCalendarViewModel.kt com.asmr.player.data.local.db.entities.ListeningSessionEntity
 app/src/main/java/com/asmr/player/ui/groups/AlbumGroupsScreen.kt com.asmr.player.data.local.db.entities.AlbumGroupEntity
 app/src/main/java/com/asmr/player/ui/groups/AlbumGroupsViewModel.kt com.asmr.player.data.local.db.entities.AlbumGroupEntity
-app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt com.asmr.player.data.local.db.entities.LocalTreeCacheEntity
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.cache.AppCacheManager
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.local.db.entities.AlbumEntity
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt com.asmr.player.data.local.db.entities.TrackEntity
@@ -199,3 +195,9 @@ app/src/main/java/com/asmr/player/main/MainContainerRuntime.kt com.asmr.player.s
 app/src/main/java/com/asmr/player/main/MainOverlayUi.kt com.asmr.player.service.PlaybackService
 app/src/main/java/com/asmr/player/main/MainPrimaryPagerUi.kt com.asmr.player.service.PlaybackService
 app/src/main/java/com/asmr/player/main/MainTopBarUi.kt com.asmr.player.service.PlaybackService
+
+app/src/main/java/com/asmr/player/ui/library/AlbumDetailDialogHosts.kt com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
+app/src/main/java/com/asmr/player/ui/library/AlbumDetailDialogHosts.kt com.asmr.player.ui.groups.AlbumGroupPickerScreen
+app/src/main/java/com/asmr/player/ui/library/AlbumDetailDialogHosts.kt com.asmr.player.ui.groups.AlbumGroupsViewModel
+app/src/main/java/com/asmr/player/ui/library/AlbumDetailDialogHosts.kt com.asmr.player.ui.playlists.PlaylistPickerScreen
+app/src/main/java/com/asmr/player/ui/library/AlbumDetailDialogHosts.kt com.asmr.player.ui.playlists.PlaylistsViewModel
