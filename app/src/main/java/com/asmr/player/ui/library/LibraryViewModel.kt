@@ -27,6 +27,8 @@ import com.asmr.player.data.local.library.LocalAlbumMergeService
 import com.asmr.player.data.local.library.buildOnlineAlbumPath
 import com.asmr.player.data.local.library.ensureLibraryAlbumDir
 import com.asmr.player.data.local.library.legacyOnlineSavedAlbumFolderName
+import com.asmr.player.data.local.tree.SafDocNode
+import com.asmr.player.data.local.tree.SafTreeSupport
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncCandidate
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncResolveResult
 import com.asmr.player.data.remote.dlsite.resolveCloudSyncWorkId
@@ -531,7 +533,7 @@ class LibraryViewModel @Inject constructor(
         return best
     }
 
-    private fun pickCoverNode(nodes: List<DocNode>, treeUri: Uri, albumDocumentId: String): String {
+    private fun pickCoverNode(nodes: List<SafDocNode>, treeUri: Uri, albumDocumentId: String): String {
         val named = nodes.firstOrNull { it.mimeType != DocumentsContract.Document.MIME_TYPE_DIR && it.displayName.startsWith("cover.", ignoreCase = true) && isImageName(it.displayName) }
         if (named != null) {
             return DocumentsContract.buildDocumentUriUsingTree(treeUri, named.documentId).toString()
@@ -1541,156 +1543,20 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    private fun deletePathSafely(path: String): Boolean {
-        if (path.isBlank()) return false
-        val externalBase = context.getExternalFilesDir(null)
-        val allowedRoots = listOfNotNull(
-            externalBase,
-            context.filesDir,
-            context.cacheDir
-        )
-            .mapNotNull { runCatching { it.canonicalFile }.getOrNull() ?: it.absoluteFile }
+    // R3-C1b：SAF 树/删除 helper 实现下沉 data/local/tree/SafTreeSupport（扫描+删除两族共用），VM 保留签名兼容委托。
 
-        val target = runCatching { File(path).canonicalFile }.getOrNull() ?: File(path).absoluteFile
-        val isAllowed = allowedRoots.any { root -> isCanonicalDescendant(target, root) }
-        if (!isAllowed) return false
-        if (!target.exists()) return false
+    private fun deletePathSafely(path: String): Boolean = SafTreeSupport.deletePathSafely(context, path)
 
-        return if (target.isDirectory) {
-            runCatching { target.deleteRecursively() }.getOrDefault(false)
-        } else {
-            runCatching { target.delete() }.getOrDefault(false)
-        }
-    }
+    private fun deleteLocalTreeFile(albumRoots: List<String>, absolutePath: String): Boolean =
+        SafTreeSupport.deleteLocalTreeFile(context, albumRoots, absolutePath)
 
-    private fun deleteLocalTreeFile(albumRoots: List<String>, absolutePath: String): Boolean {
-        val normalizedPath = absolutePath.trim()
-        if (normalizedPath.isBlank()) return false
-        if (normalizedPath.startsWith("content://", ignoreCase = true)) {
-            val targetUri = runCatching { Uri.parse(normalizedPath) }.getOrNull() ?: return false
-            val allowedAuthority = albumRoots.asSequence()
-                .filter { it.startsWith("content://", ignoreCase = true) }
-                .mapNotNull { runCatching { Uri.parse(it).authority }.getOrNull() }
-                .any { it == targetUri.authority }
-            if (!allowedAuthority) return false
-            return runCatching {
-                DocumentsContract.deleteDocument(context.contentResolver, targetUri)
-            }.getOrDefault(false)
-        }
-        if (normalizedPath.startsWith("http", ignoreCase = true) || normalizedPath.startsWith("web://", ignoreCase = true)) {
-            return false
-        }
+    private fun deleteLocalTreeDirectories(albumRoots: List<String>, relativePath: String): Boolean =
+        SafTreeSupport.deleteLocalTreeDirectories(context, albumRoots, relativePath)
 
-        val targetFile = runCatching { File(normalizedPath).canonicalFile }.getOrNull() ?: return false
-        val allowed = albumRoots.asSequence()
-            .filterNot { it.startsWith("content://", ignoreCase = true) }
-            .filterNot { it.startsWith("http", ignoreCase = true) || it.startsWith("web://", ignoreCase = true) }
-            .mapNotNull { root -> runCatching { File(root).canonicalFile }.getOrNull() }
-            .any { root -> isCanonicalDescendant(targetFile, root) }
-        if (!allowed) return false
-        if (!targetFile.exists()) return true
-        if (!targetFile.isFile) return false
-        return runCatching { targetFile.delete() }.getOrDefault(false)
-    }
+    private fun resolveTreeDocumentUri(rootUriString: String, relativePath: String): Result<Uri?> =
+        SafTreeSupport.resolveTreeDocumentUri(context, rootUriString, relativePath)
 
-    private fun deleteLocalTreeDirectories(albumRoots: List<String>, relativePath: String): Boolean {
-        var hasUsableRoot = false
-        var allDeleted = true
-        val fileTargets = linkedSetOf<File>()
-
-        albumRoots.distinct().forEach { rawRoot ->
-            when {
-                rawRoot.startsWith("content://", ignoreCase = true) -> {
-                    hasUsableRoot = true
-                    val resolved = resolveTreeDocumentUri(rawRoot, relativePath)
-                    if (resolved.isFailure) {
-                        allDeleted = false
-                    } else {
-                        resolved.getOrNull()?.let { targetUri ->
-                            val deleted = runCatching {
-                                DocumentsContract.deleteDocument(context.contentResolver, targetUri)
-                            }.getOrDefault(false)
-                            if (!deleted) allDeleted = false
-                        }
-                    }
-                }
-                rawRoot.startsWith("http", ignoreCase = true) || rawRoot.startsWith("web://", ignoreCase = true) -> Unit
-                rawRoot.isNotBlank() -> {
-                    val root = runCatching { File(rawRoot).canonicalFile }.getOrNull() ?: return@forEach
-                    val target = runCatching {
-                        File(root, relativePath.replace('/', File.separatorChar)).canonicalFile
-                    }.getOrNull() ?: return@forEach
-                    if (isCanonicalDescendant(target, root)) {
-                        hasUsableRoot = true
-                        if (target.exists()) fileTargets += target
-                    }
-                }
-            }
-        }
-
-        fileTargets
-            .sortedByDescending { it.path.length }
-            .forEach { target ->
-                if (!target.isDirectory || !runCatching { target.deleteRecursively() }.getOrDefault(false)) {
-                    allDeleted = false
-                }
-            }
-        return hasUsableRoot && allDeleted
-    }
-
-    private fun resolveTreeDocumentUri(rootUriString: String, relativePath: String): Result<Uri?> = runCatching {
-        val rootUri = Uri.parse(rootUriString)
-        val authority = requireNotNull(rootUri.authority) { "目录授权地址无效" }
-        val treeId = runCatching { DocumentsContract.getTreeDocumentId(rootUri) }.getOrDefault("")
-        var documentId = runCatching { DocumentsContract.getDocumentId(rootUri) }
-            .getOrDefault(treeId)
-            .ifBlank { treeId }
-        check(documentId.isNotBlank()) { "无法读取目录授权" }
-        val treeUri = if (treeId.isNotBlank()) {
-            DocumentsContract.buildTreeDocumentUri(authority, treeId)
-        } else {
-            rootUri
-        }
-
-        for (segment in relativePath.split('/')) {
-            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
-            val cursor = context.contentResolver.query(
-                childrenUri,
-                arrayOf(
-                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                    DocumentsContract.Document.COLUMN_MIME_TYPE,
-                ),
-                null,
-                null,
-                null,
-            ) ?: throw IllegalStateException("无法访问目录，请重新授权存储权限")
-            val childId = cursor.use {
-                val idIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
-                val nameIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-                val mimeIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE)
-                var match: String? = null
-                while (cursor.moveToNext()) {
-                    val name = cursor.getString(nameIndex)
-                    val mime = cursor.getString(mimeIndex)
-                    if (name == segment && mime == DocumentsContract.Document.MIME_TYPE_DIR) {
-                        match = cursor.getString(idIndex)
-                        break
-                    }
-                }
-                match
-            }
-            if (childId == null) return@runCatching null
-            documentId = childId
-        }
-        DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId)
-    }
-
-    private fun isCanonicalDescendant(target: File, root: File): Boolean {
-        if (target == root) return false
-        val rootPrefix = root.path.trimEnd(File.separatorChar) + File.separator
-        return target.path.startsWith(rootPrefix)
-    }
+    private fun isCanonicalDescendant(target: File, root: File): Boolean = SafTreeSupport.isCanonicalDescendant(target, root)
 
     private fun extractWorkNo(input: String): String {
         return DlsiteWorkNo.extractWorkNo(input)
@@ -2260,94 +2126,19 @@ class LibraryViewModel @Inject constructor(
         libraryWriteRepository.deleteAlbumEntity(entity)
     }
 
-    private data class DocNode(
-        val documentId: String,
-        val displayName: String,
-        val mimeType: String,
-        val sizeBytes: Long = 0L,
-        val relativePath: String = ""
-    )
+    // R3-C1b：SAF 扫描 helper 同步下沉 SafTreeSupport（DocNode → data.local.tree.SafDocNode）。
 
-    private fun queryChildren(treeUri: Uri, parentDocumentId: String, parentRelativePath: String = ""): List<DocNode> {
-        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocumentId)
-        val projection = arrayOf(
-            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-            DocumentsContract.Document.COLUMN_MIME_TYPE,
-            DocumentsContract.Document.COLUMN_SIZE
-        )
-        val result = mutableListOf<DocNode>()
-        val resolver = context.contentResolver
-        runCatching {
-            resolver.query(childrenUri, projection, null, null, null)?.use { cursor ->
-                val idIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
-                val nameIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-                val mimeIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE)
-                val sizeIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)
-                while (cursor.moveToNext()) {
-                    val id = cursor.getString(idIndex)
-                    val name = cursor.getString(nameIndex).orEmpty()
-                    val mime = cursor.getString(mimeIndex).orEmpty()
-                    val size = if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) cursor.getLong(sizeIndex) else 0L
-                    val relPath = if (parentRelativePath.isEmpty()) name else "$parentRelativePath/$name"
-                    result.add(DocNode(documentId = id, displayName = name, mimeType = mime, sizeBytes = size, relativePath = relPath))
-                }
-            }
-        }
-        return result
-    }
+    private fun queryChildren(treeUri: Uri, parentDocumentId: String, parentRelativePath: String = ""): List<SafDocNode> =
+        SafTreeSupport.queryChildren(context, treeUri, parentDocumentId, parentRelativePath)
 
-    private fun documentExists(treeUri: Uri, documentId: String): Boolean {
-        val resolver = context.contentResolver
-        val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId)
-        val projection = arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
-        return runCatching {
-            resolver.query(docUri, projection, null, null, null)?.use { cursor ->
-                cursor.moveToFirst()
-            } ?: false
-        }.getOrDefault(false)
-    }
+    private fun documentExists(treeUri: Uri, documentId: String): Boolean =
+        SafTreeSupport.documentExists(context, treeUri, documentId)
 
-    private fun walkTree(treeUri: Uri, rootDocumentId: String): List<DocNode> {
-        val result = mutableListOf<DocNode>()
-        val queue = ArrayDeque<DocNode>()
-        queryChildren(treeUri, rootDocumentId)
-            .filterNot { node ->
-                node.mimeType == DocumentsContract.Document.MIME_TYPE_DIR &&
-                    !isScannableLocalDirectoryName(node.displayName)
-            }
-            .forEach { queue.add(it) }
-        while (queue.isNotEmpty()) {
-            val node = queue.removeFirst()
-            result.add(node)
-            if (node.mimeType == DocumentsContract.Document.MIME_TYPE_DIR) {
-                queryChildren(treeUri, node.documentId, node.relativePath)
-                    .filterNot { child ->
-                        child.mimeType == DocumentsContract.Document.MIME_TYPE_DIR &&
-                            !isScannableLocalDirectoryName(child.displayName)
-                    }
-                    .forEach { queue.add(it) }
-            }
-        }
-        return result
-    }
+    private fun walkTree(treeUri: Uri, rootDocumentId: String): List<SafDocNode> =
+        SafTreeSupport.walkTree(context, treeUri, rootDocumentId)
 
-    private fun readSubtitleFromUri(treeUri: Uri, documentId: String, displayName: String): List<com.asmr.player.util.SubtitleEntry> {
-        val resolver = context.contentResolver
-        val subUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId)
-        val ext = displayName.substringAfterLast('.', "lrc").lowercase()
-        val tempFile = File(context.cacheDir, "sub_${System.currentTimeMillis()}.$ext")
-        return try {
-            runCatching {
-                resolver.openInputStream(subUri)?.use { input ->
-                    tempFile.outputStream().use { out -> input.copyTo(out) }
-                }
-            }
-            SubtitleParser.parse(tempFile.absolutePath)
-        } finally {
-            runCatching { tempFile.delete() }
-        }
-    }
+    private fun readSubtitleFromUri(treeUri: Uri, documentId: String, displayName: String): List<com.asmr.player.util.SubtitleEntry> =
+        SafTreeSupport.readSubtitleFromUri(context, treeUri, documentId, displayName)
 
     override fun onCleared() {
         cloudSyncSelectionQueue.cancelAll()
