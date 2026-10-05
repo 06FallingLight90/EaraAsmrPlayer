@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.SystemClock
-import android.provider.DocumentsContract
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,7 +19,6 @@ import com.asmr.player.domain.model.*
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.db.entities.titleForDisplay
 import com.asmr.player.data.local.library.LocalAlbumMergeService
-import com.asmr.player.data.local.library.buildOnlineAlbumPath
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncCandidate
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncResolveResult
 import com.asmr.player.data.remote.dlsite.resolveCloudSyncWorkId
@@ -33,12 +31,9 @@ import com.asmr.player.data.repository.OnlineContentRepository
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.playback.PlayerConnection
 import com.asmr.player.util.GlobalSyncState
-import com.asmr.player.util.ScanRootsStore
 import com.asmr.player.util.MessageManager
 import com.asmr.player.util.SyncCoordinator
-import com.asmr.player.util.isOnlineTrackPath
 import com.asmr.player.util.isScannableLocalDirectoryName
-import com.asmr.player.util.isVirtualAlbumPath
 import com.asmr.player.util.parseAlbumTags
 import com.asmr.player.util.centerCropSquare
 import com.asmr.player.BuildConfig
@@ -56,7 +51,6 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -114,13 +108,12 @@ class LibraryViewModel @Inject constructor(
         const val TAG = "LibraryViewModel"
     }
 
-    private val scanRootsStore = ScanRootsStore(context)
-
     /** R3-C1b-ii：任务协调 State Holder（单专辑任务注册表/批量任务门/同步状态/批量进度/云同步选择队列）。 */
     private val taskCoordinator = LibraryTaskCoordinator(messageManager)
 
     /** R3-C1c：扫描族 State Holder（封面/树缓存/SAF 遍历/字幕/下载目录与文档树扫描/孤儿清理 + 批量入口）。 */
     private val scanHolder = LibraryScanStateHolder(
+        scope = viewModelScope,
         context = context,
         readRepository = libraryReadRepository,
         writeRepository = libraryWriteRepository,
@@ -128,6 +121,8 @@ class LibraryViewModel @Inject constructor(
         localAlbumMergeService = localAlbumMergeService,
         playerConnection = playerConnection,
         taskCoordinator = taskCoordinator,
+        syncCoordinator = syncCoordinator,
+        messageManager = messageManager,
     )
 
     /** R3-C1b-ii：删除族 State Holder（rescanAlbum/deleteAlbum/deleteAlbumTreeEntry/removeTrackFromAlbum）。 */
@@ -142,18 +137,13 @@ class LibraryViewModel @Inject constructor(
         messageManager = messageManager,
         scanHolder = scanHolder,
     )
-    private val _scanRoots = MutableStateFlow<Set<String>>(emptySet())
-    val scanRoots: StateFlow<List<String>> = _scanRoots
-        .map { it.toList().sorted() }
-        .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val scanRoots: StateFlow<List<String>> get() = scanHolder.scanRoots
     val bulkProgress: StateFlow<BulkProgress?> = taskCoordinator.bulkProgress
     internal val cloudSyncSelectionDialogState: StateFlow<CloudSyncSelectionDialogState?> = taskCoordinator.cloudSyncSelectionQueue.dialogState
     val globalSyncState: StateFlow<GlobalSyncState?> = syncCoordinator.state
     val isGlobalSyncRunning: StateFlow<Boolean> = globalSyncState
         .map { it != null }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), globalSyncState.value != null)
-    private val scanMutex = Mutex()
     private val _expandedTrackAlbumIds = MutableStateFlow<Set<Long>>(emptySet())
     val expandedTrackAlbumIds: StateFlow<Set<Long>> = _expandedTrackAlbumIds.asStateFlow()
 
@@ -245,7 +235,7 @@ class LibraryViewModel @Inject constructor(
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            _scanRoots.value = runCatching { scanRootsStore.getRoots() }.getOrDefault(emptySet())
+            scanHolder.restoreScanRootsFromStore()
             tagHolder.ensureTagTablesInitialized()
             filterHolder.restoreLibraryPreferences()
             scanHolder.backfillLegacyOnlineSavedAlbumRoots()
@@ -254,7 +244,7 @@ class LibraryViewModel @Inject constructor(
             val shouldAutoScan = withContext(Dispatchers.IO) {
                 val hasAnyAlbum = runCatching { libraryReadRepository.getAllAlbumsOnce().isNotEmpty() }.getOrDefault(false)
                 if (hasAnyAlbum) return@withContext false
-                val hasRoots = runCatching { scanRootsStore.getRoots().isNotEmpty() }.getOrDefault(false)
+                val hasRoots = runCatching { scanHolder.getRootsFromStore().isNotEmpty() }.getOrDefault(false)
                 val hasDownloaded = runCatching {
                     when (val destination = downloadDestinationStore.current()) {
                         is DownloadDestination.Default -> {
@@ -272,7 +262,7 @@ class LibraryViewModel @Inject constructor(
             }
             if (!shouldAutoScan) return@launch
             delay(450)
-            scanAllRoots()
+            scanHolder.scanAllRoots()
         }
     }
 
@@ -421,313 +411,19 @@ class LibraryViewModel @Inject constructor(
 
     fun ignoreAllCloudSyncSelections() = taskCoordinator.ignoreAllCloudSyncSelections()
 
-    // R3-C1c：扫描底层（封面挑选/树缓存叶/SAF 遍历/字幕匹配/WorkManager 入队）迁入 LibraryScanStateHolder。
+    // R3-C1c：扫描底层与扫描根管理/三批量入口均迁入 LibraryScanStateHolder，VM 保留 UI 转发。
 
-    fun addScanRoot(uriString: String): Boolean {
-        val existingRoots = scanRootsStore.getRoots()
-        
-        // 检查重复
-        if (existingRoots.contains(uriString)) {
-            messageManager.showInfo("扫描目录已存在")
-            return false
-        }
-        
-        // 检查嵌套：新目录是否是现有目录的子目录
-        val newUri = runCatching { Uri.parse(uriString) }.getOrNull()
-        if (newUri != null) {
-            for (existingRoot in existingRoots) {
-                val existingUri = runCatching { Uri.parse(existingRoot) }.getOrNull() ?: continue
-                
-                // 检查新目录是否是现有目录的子目录
-                if (isSubdirectory(newUri, existingUri)) {
-                    messageManager.showInfo("该目录已被包含在现有扫描目录中")
-                    return false
-                }
-                
-                // 检查现有目录是否是新目录的子目录
-                if (isSubdirectory(existingUri, newUri)) {
-                    messageManager.showInfo("该目录包含了现有的扫描目录，请先移除子目录")
-                    return false
-                }
-            }
-        }
-        
-        val added = scanRootsStore.addRoot(uriString)
-        _scanRoots.value = runCatching { scanRootsStore.getRoots() }.getOrDefault(emptySet())
-        if (added) {
-            messageManager.showSuccess("已添加扫描目录")
-        }
-        return added
-    }
-    
-    private fun isSubdirectory(child: Uri, parent: Uri): Boolean {
-        // 如果是相同的 URI scheme 和 authority
-        if (child.scheme != parent.scheme || child.authority != parent.authority) {
-            return false
-        }
-        
-        // 获取文档树 ID
-        val childTreeId = runCatching { 
-            DocumentsContract.getTreeDocumentId(child) 
-        }.getOrNull() ?: return false
-        
-        val parentTreeId = runCatching { 
-            DocumentsContract.getTreeDocumentId(parent) 
-        }.getOrNull() ?: return false
-        
-        // 检查子目录关系
-        return childTreeId.startsWith(parentTreeId) && childTreeId != parentTreeId
-    }
+    fun addScanRoot(uriString: String): Boolean = scanHolder.addScanRoot(uriString)
 
-    fun removeScanRoot(uriString: String) {
-        scanRootsStore.removeRoot(uriString)
-        _scanRoots.value = runCatching { scanRootsStore.getRoots() }.getOrDefault(emptySet())
-        messageManager.showInfo("已移除扫描目录")
-    }
+    fun removeScanRoot(uriString: String) = scanHolder.removeScanRoot(uriString)
 
-    fun removeScanRootAndDeleteAlbums(uriString: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            scanRootsStore.removeRoot(uriString)
-            _scanRoots.value = runCatching { scanRootsStore.getRoots() }.getOrDefault(emptySet())
+    fun removeScanRootAndDeleteAlbums(uriString: String) = scanHolder.removeScanRootAndDeleteAlbums(uriString)
 
-            val allAlbums = libraryReadRepository.getAllAlbumsOnce()
-            val affected = allAlbums.filter { entity ->
-                entity.path.startsWith(uriString) ||
-                    (entity.localPath?.startsWith(uriString) == true) ||
-                    entity.coverPath.startsWith(uriString)
-            }
+    fun scanAllRoots() = scanHolder.scanAllRoots()
 
-            affected.forEach { entity ->
-                val downloadPath = entity.downloadPath
-                val keepByDownload = !downloadPath.isNullOrBlank() &&
-                    !downloadPath.startsWith("content://") &&
-                    runCatching { File(downloadPath).exists() }.getOrDefault(false)
+    fun scanCurrentDownloadDestinationAsImport() = scanHolder.scanCurrentDownloadDestinationAsImport()
 
-                if (!keepByDownload) {
-                    val tracks = libraryReadRepository.getTracksForAlbumOnce(entity.id)
-                    val hasOnline = isVirtualAlbumPath(entity.path) || tracks.any { isOnlineTrackPath(it.path) }
-                    if (!hasOnline) {
-                        libraryWriteRepository.deleteAlbumTracksAndSubtitles(entity.id)
-                        libraryWriteRepository.deleteAlbumEntity(entity)
-                    } else {
-                        tracks.filter { it.path.startsWith(uriString) }.forEach { track ->
-                            libraryWriteRepository.deleteTrackWithSubtitlesById(track.id)
-                        }
-                        val updatedPath = if (entity.path.startsWith(uriString)) (buildOnlineAlbumPath(entity) ?: entity.path) else entity.path
-                        val updated = entity.copy(
-                            path = updatedPath,
-                            localPath = entity.localPath?.takeIf { !it.startsWith(uriString) },
-                            coverPath = if (entity.coverPath.startsWith(uriString)) "" else entity.coverPath
-                        )
-                        libraryWriteRepository.updateAlbum(updated)
-                        upsertAlbumFtsIndex(updated.id, updated)
-                    }
-                } else {
-                    val tracks = libraryReadRepository.getTracksForAlbumOnce(entity.id)
-                    tracks.filter { it.path.startsWith(uriString) }.forEach { track ->
-                        libraryWriteRepository.deleteTrackWithSubtitlesById(track.id)
-                    }
-
-                    val updated = entity.copy(
-                        path = if (entity.path.startsWith(uriString)) downloadPath!! else entity.path,
-                        localPath = entity.localPath?.takeIf { !it.startsWith(uriString) },
-                        coverPath = if (entity.coverPath.startsWith(uriString)) "" else entity.coverPath
-                    )
-                    libraryWriteRepository.updateAlbum(updated)
-                    upsertAlbumFtsIndex(updated.id, updated)
-                }
-            }
-        }
-    }
-
-    fun scanAllRoots() {
-        viewModelScope.launch {
-            val token = syncCoordinator.tryBegin() ?: run {
-                taskCoordinator.showSyncBusy("刷新本地")
-                return@launch
-            }
-            try {
-                taskCoordinator.bulkStartMutex.withLock {
-                    taskCoordinator.bulkJob = currentCoroutineContext()[Job]
-                    try {
-                        withContext(Dispatchers.IO) {
-                            scanMutex.withLock {
-                                currentCoroutineContext().ensureActive()
-                                val roots = scanRootsStore.getRoots().toList()
-                                val downloadedAlbumCount = runCatching {
-                                    when (val destination = downloadDestinationStore.current()) {
-                                        is DownloadDestination.Default -> File(destination.root).listFiles()
-                                            ?.count {
-                                                it.isDirectory && isScannableLocalDirectoryName(it.name) &&
-                                                    File(it, ".download_complete").exists()
-                                            }
-                                            ?: 0
-                                        is DownloadDestination.DocumentTree -> {
-                                            val uri = Uri.parse(destination.root)
-                                            val treeId = DocumentsContract.getTreeDocumentId(uri)
-                                            scanHolder.queryChildren(uri, treeId).count { child ->
-                                                child.mimeType == DocumentsContract.Document.MIME_TYPE_DIR &&
-                                                    isScannableLocalDirectoryName(child.displayName) &&
-                                                    scanHolder.queryChildren(uri, child.documentId).any { it.displayName == ".download_complete" }
-                                            }
-                                        }
-                                    }
-                                }.getOrDefault(0)
-
-                                var totalAlbums = downloadedAlbumCount
-                                roots.forEach { root ->
-                                    currentCoroutineContext().ensureActive()
-                                    val uri = runCatching { Uri.parse(root) }.getOrNull()
-                                    val treeDocId = uri?.let { runCatching { DocumentsContract.getTreeDocumentId(it) }.getOrNull() }
-                                    if (uri != null && !treeDocId.isNullOrBlank()) {
-                                        totalAlbums += scanHolder.queryChildren(uri, treeDocId).count {
-                                            it.mimeType == DocumentsContract.Document.MIME_TYPE_DIR &&
-                                                isScannableLocalDirectoryName(it.displayName)
-                                        }
-                                    }
-                                }
-                                taskCoordinator.startBulkProgress(phase = BulkPhase.ScanningLocal, total = totalAlbums)
-
-                                var current = 0
-                                roots.forEach { root ->
-                                    currentCoroutineContext().ensureActive()
-                                    scanHolder.scanFromDocumentTree(root) { title ->
-                                        current += 1
-                                        taskCoordinator.updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
-                                    }
-                                }
-                                scanHolder.scanFromDownloadedDir { title ->
-                                    current += 1
-                                    taskCoordinator.updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
-                                }
-                                scanHolder.pruneOrphanedAlbumsByFilesystem()
-                            }
-                        }
-                        messageManager.showSuccess("扫描完成")
-                    } catch (e: CancellationException) {
-                        messageManager.showInfo("已取消扫描")
-                    } catch (e: Exception) {
-                        Log.e("LibraryViewModel", "scanAllRoots failed", e)
-                        messageManager.showError("扫描失败：${e.message}")
-                    } finally {
-                        taskCoordinator.finishBulkProgress()
-                        if (taskCoordinator.bulkJob == currentCoroutineContext()[Job]) {
-                            taskCoordinator.bulkJob = null
-                        }
-                    }
-                }
-            } finally {
-                syncCoordinator.end(token)
-            }
-        }
-    }
-
-    fun scanCurrentDownloadDestinationAsImport() {
-        viewModelScope.launch {
-            val token = syncCoordinator.tryBegin() ?: run {
-                taskCoordinator.showSyncBusy("扫描目标下载目录")
-                return@launch
-            }
-            try {
-                taskCoordinator.bulkStartMutex.withLock {
-                    taskCoordinator.bulkJob = currentCoroutineContext()[Job]
-                    try {
-                        withContext(Dispatchers.IO) {
-                            scanMutex.withLock {
-                                currentCoroutineContext().ensureActive()
-                                val destination = downloadDestinationStore.current()
-                                val totalAlbums = when (destination) {
-                                    is DownloadDestination.Default -> File(destination.root).listFiles()
-                                        ?.count { it.isDirectory && isScannableLocalDirectoryName(it.name) }
-                                        ?: 0
-
-                                    is DownloadDestination.DocumentTree -> {
-                                        val uri = Uri.parse(destination.root)
-                                        val treeId = DocumentsContract.getTreeDocumentId(uri)
-                                        scanHolder.queryChildren(uri, treeId).count {
-                                            it.mimeType == DocumentsContract.Document.MIME_TYPE_DIR &&
-                                                isScannableLocalDirectoryName(it.displayName)
-                                        }
-                                    }
-                                }
-                                taskCoordinator.startBulkProgress(phase = BulkPhase.ScanningLocal, total = totalAlbums)
-                                var current = 0
-                                scanHolder.scanFromDownloadedDir(
-                                    onAlbumScanned = { title ->
-                                        current += 1
-                                        taskCoordinator.updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
-                                    },
-                                    importAll = true,
-                                )
-                            }
-                        }
-                        messageManager.showSuccess("目标下载目录扫描完成")
-                    } catch (error: CancellationException) {
-                        messageManager.showInfo("已取消目标目录扫描")
-                    } catch (error: Exception) {
-                        Log.e(TAG, "scanCurrentDownloadDestinationAsImport failed", error)
-                        messageManager.showError("目标目录扫描失败：${error.message}")
-                    } finally {
-                        taskCoordinator.finishBulkProgress()
-                        if (taskCoordinator.bulkJob == currentCoroutineContext()[Job]) taskCoordinator.bulkJob = null
-                    }
-                }
-            } finally {
-                syncCoordinator.end(token)
-            }
-        }
-    }
-
-    fun scanSingleRoot(uriString: String) {
-        if (uriString.isBlank()) return
-        viewModelScope.launch {
-            val token = syncCoordinator.tryBegin() ?: run {
-                taskCoordinator.showSyncBusy("刷新目录")
-                return@launch
-            }
-            try {
-                taskCoordinator.bulkStartMutex.withLock {
-                    taskCoordinator.bulkJob = currentCoroutineContext()[Job]
-                    try {
-                        withContext(Dispatchers.IO) {
-                            scanMutex.withLock {
-                                currentCoroutineContext().ensureActive()
-                                val uri = runCatching { Uri.parse(uriString) }.getOrNull()
-                                val treeDocId = uri?.let { runCatching { DocumentsContract.getTreeDocumentId(it) }.getOrNull() }
-                                val totalAlbums = if (uri != null && !treeDocId.isNullOrBlank()) {
-                                    scanHolder.queryChildren(uri, treeDocId).count {
-                                        it.mimeType == DocumentsContract.Document.MIME_TYPE_DIR &&
-                                            isScannableLocalDirectoryName(it.displayName)
-                                    }
-                                } else {
-                                    0
-                                }
-                                taskCoordinator.startBulkProgress(phase = BulkPhase.ScanningLocal, total = totalAlbums)
-                                var current = 0
-                                scanHolder.scanFromDocumentTree(uriString) { title ->
-                                    current += 1
-                                    taskCoordinator.updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
-                                }
-                            }
-                        }
-                        messageManager.showSuccess("目录刷新完成")
-                    } catch (e: CancellationException) {
-                        messageManager.showInfo("已取消刷新")
-                    } catch (e: Exception) {
-                        Log.e("LibraryViewModel", "scanSingleRoot failed", e)
-                        messageManager.showError("刷新失败：${e.message}")
-                    } finally {
-                        taskCoordinator.finishBulkProgress()
-                        if (taskCoordinator.bulkJob == currentCoroutineContext()[Job]) {
-                            taskCoordinator.bulkJob = null
-                        }
-                    }
-                }
-            } finally {
-                syncCoordinator.end(token)
-            }
-        }
-    }
+    fun scanSingleRoot(uriString: String) = scanHolder.scanSingleRoot(uriString)
 
     fun syncMetadata() {
         viewModelScope.launch {
