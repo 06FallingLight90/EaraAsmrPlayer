@@ -98,7 +98,7 @@ class PreviewImageGallerySaverTest {
                     ),
                     openPathOrUrl = ""
                 ),
-                httpClient = OkHttpClient(),
+                remoteStream = com.asmr.player.util.PreviewImageRemoteStream(OkHttpClient()),
                 contentUriForFile = { _, file ->
                     stagedFile = file
                     Uri.parse("content://com.asmr.player.fileprovider/shared/${file.name}")

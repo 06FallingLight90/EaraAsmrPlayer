@@ -84,7 +84,6 @@ import androidx.media3.common.VideoSize
 import com.asmr.player.R
 import com.asmr.player.ui.common.audio.HardwareVolumeOverlay
 import com.asmr.player.util.CachePolicy
-import com.asmr.player.cache.ImageCacheEntryPoint
 import com.asmr.player.data.lyrics.lyricsTargetContextFromMediaItem
 import com.asmr.player.data.settings.CoverPreviewMode
 import com.asmr.player.data.settings.LyricsPageSettings

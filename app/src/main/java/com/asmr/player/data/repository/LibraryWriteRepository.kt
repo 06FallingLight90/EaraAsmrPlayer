@@ -27,10 +27,10 @@ import com.asmr.player.util.parseAlbumTags
 import com.google.gson.Gson
 import android.content.Context
 import com.asmr.player.data.local.datastore.LibraryPreferencesStore
-import com.asmr.player.data.local.datastore.PersistedLibraryFilters
 import com.asmr.player.domain.model.LibraryFilterPreset
 import com.asmr.player.domain.model.LibraryQuerySpec
 import com.asmr.player.domain.model.LibrarySort
+import com.asmr.player.domain.model.PersistedLibraryFilters
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

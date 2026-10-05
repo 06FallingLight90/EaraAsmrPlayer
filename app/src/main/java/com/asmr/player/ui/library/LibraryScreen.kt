@@ -135,13 +135,12 @@ import androidx.compose.ui.graphics.lerp
 import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.ui.sidepanel.LandscapeRightPanelHost
 import com.asmr.player.ui.sidepanel.RecentAlbumsPanel
-import com.asmr.player.cache.ImageCacheEntryPoint
-import com.asmr.player.cache.LazyListPreloader
-import com.asmr.player.cache.LazyStaggeredGridPreloader
+import com.asmr.player.ui.common.cover.LazyListPreloader
+import com.asmr.player.ui.common.cover.LazyStaggeredGridPreloader
+import com.asmr.player.ui.common.cover.rememberAppImageCacheManager
 import com.asmr.player.ui.groups.AlbumGroupsViewModel
 import com.asmr.player.ui.playlists.PlaylistsViewModel
 import com.asmr.player.ui.common.core.SearchBlockedKeywordsViewModel
-import dagger.hilt.android.EntryPointAccessors
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyListState
@@ -823,11 +822,7 @@ private fun LibraryScreenContent(
                                         }
                                     }
                                 } else if (isGrid) {
-                                    val app = LocalContext.current.applicationContext
-                                    val cacheManager = remember(app) {
-                                        EntryPointAccessors.fromApplication(app, ImageCacheEntryPoint::class.java)
-                                            .imageCacheManager()
-                                    }
+                                    val cacheManager = rememberAppImageCacheManager()
                                     val density = LocalDensity.current
                                     val gridCellSize = if (isCompact) 150.dp else 200.dp
                                     val gridCoverPx = remember(gridCellSize, density) { with(density) { gridCellSize.roundToPx() } }
@@ -899,11 +894,7 @@ private fun LibraryScreenContent(
                                         }
                                     }
                                 } else {
-                                    val app = LocalContext.current.applicationContext
-                                    val cacheManager = remember(app) {
-                                        EntryPointAccessors.fromApplication(app, ImageCacheEntryPoint::class.java)
-                                            .imageCacheManager()
-                                    }
+                                    val cacheManager = rememberAppImageCacheManager()
                                     val density = LocalDensity.current
                                     val screenWidthDp = LocalConfiguration.current.screenWidthDp
                                     val listItemHeight = (screenWidthDp.dp * 0.24f).coerceIn(112.dp, 140.dp)

@@ -66,9 +66,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.asmr.player.cache.ImageCacheEntryPoint
-import com.asmr.player.cache.LazyListPreloader
-import com.asmr.player.cache.LazyStaggeredGridPreloader
+import com.asmr.player.ui.common.cover.LazyListPreloader
+import com.asmr.player.ui.common.cover.LazyStaggeredGridPreloader
+import com.asmr.player.ui.common.cover.rememberAppImageCacheManager
 import com.asmr.player.domain.model.Album
 import com.asmr.player.hotlistening.HotListeningSortMode
 import com.asmr.player.ui.common.status.EaraBrandedEmptyState
@@ -341,11 +341,7 @@ private fun HotListeningScreenContent(
                         contentPadding = PaddingValues(bottom = LocalBottomOverlayPadding.current + 24.dp)
                     )
                 } else if (viewMode == 0) {
-                    val app = LocalContext.current.applicationContext
-                    val cacheManager = remember(app) {
-                        EntryPointAccessors.fromApplication(app, ImageCacheEntryPoint::class.java)
-                            .imageCacheManager()
-                    }
+                    val cacheManager = rememberAppImageCacheManager()
                     val density = LocalDensity.current
                     val screenWidthDp = LocalConfiguration.current.screenWidthDp
                     val listItemHeight = (screenWidthDp.dp * 0.24f).coerceIn(112.dp, 140.dp)
@@ -429,11 +425,7 @@ private fun HotListeningScreenContent(
                     }
                 } else {
                     val adaptiveCellSize = if (isCompactWidth) 150.dp else 200.dp
-                    val app = LocalContext.current.applicationContext
-                    val cacheManager = remember(app) {
-                        EntryPointAccessors.fromApplication(app, ImageCacheEntryPoint::class.java)
-                            .imageCacheManager()
-                    }
+                    val cacheManager = rememberAppImageCacheManager()
                     val density = LocalDensity.current
                     val gridCoverPx = remember(adaptiveCellSize, density) { with(density) { adaptiveCellSize.roundToPx() } }
                     val gridPreloadSize = remember(gridCoverPx) { IntSize(gridCoverPx, gridCoverPx) }

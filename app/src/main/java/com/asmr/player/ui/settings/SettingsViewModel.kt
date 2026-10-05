@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.asmr.player.BuildConfig
 import com.asmr.player.cache.AppCacheManager
-import com.asmr.player.cache.AppCacheState
+import com.asmr.player.util.AppCacheState
 import com.asmr.player.data.local.datastore.SettingsDataStore
 import com.asmr.player.data.download.DownloadDestination
 import com.asmr.player.data.download.DownloadDestinationStore

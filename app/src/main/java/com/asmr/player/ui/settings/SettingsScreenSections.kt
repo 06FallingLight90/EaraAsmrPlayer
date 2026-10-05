@@ -85,7 +85,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.asmr.player.BuildConfig
 import com.asmr.player.util.AppCacheLimits
-import com.asmr.player.cache.AppCacheState
+import com.asmr.player.util.AppCacheState
 import com.asmr.player.data.settings.CoverPreviewMode
 import com.asmr.player.data.settings.DeepSeekReasoningEffort
 import com.asmr.player.data.settings.DeepSeekTranslationSettings

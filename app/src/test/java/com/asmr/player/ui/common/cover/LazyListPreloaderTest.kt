@@ -1,4 +1,4 @@
-package com.asmr.player.cache
+package com.asmr.player.ui.common.cover
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

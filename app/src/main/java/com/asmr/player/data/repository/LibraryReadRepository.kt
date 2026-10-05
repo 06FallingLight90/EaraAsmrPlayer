@@ -6,7 +6,6 @@ import android.content.Context
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.dao.AlbumTagsCsv
 import com.asmr.player.data.local.datastore.LibraryPreferencesStore
-import com.asmr.player.data.local.datastore.PersistedLibraryFilters
 import com.asmr.player.domain.model.LibraryFilterPreset
 import com.asmr.player.domain.model.LibrarySort
 import com.asmr.player.domain.model.LibraryTrackAlbumHeaderRow
@@ -18,6 +17,7 @@ import com.asmr.player.data.local.db.entities.DownloadTaskEntity
 import com.asmr.player.data.local.db.entities.OnlineSavedResourceEntity
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.domain.model.LibraryQuerySpec
+import com.asmr.player.domain.model.PersistedLibraryFilters
 import kotlinx.coroutines.flow.Flow
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject

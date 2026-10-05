@@ -109,7 +109,6 @@ internal val DefaultImagePreviewLayoutSpec = ImagePreviewLayoutSpec()
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 internal interface ImagePreviewEntryPoint {
-    @Named("image")
     fun previewImageRemoteStream(): PreviewImageRemoteStream
 }
 

@@ -84,7 +84,7 @@ import androidx.media3.common.VideoSize
 import com.asmr.player.R
 import com.asmr.player.ui.common.audio.HardwareVolumeOverlay
 import com.asmr.player.util.CachePolicy
-import com.asmr.player.cache.ImageCacheEntryPoint
+import com.asmr.player.ui.common.cover.rememberAppImageCacheManager
 import com.asmr.player.data.lyrics.lyricsTargetContextFromMediaItem
 import com.asmr.player.data.settings.CoverPreviewMode
 import com.asmr.player.data.settings.LyricsPageSettings
@@ -223,10 +223,7 @@ internal fun Modifier.fitVideoPreviewAspectRatio(
 @Composable
 internal fun rememberArtworkAspectRatio(artworkModel: Any?): Float {
     val context = LocalContext.current.applicationContext
-    val manager = remember(context) {
-        EntryPointAccessors.fromApplication(context, ImageCacheEntryPoint::class.java)
-            .imageCacheManager()
-    }
+    val manager = rememberAppImageCacheManager()
     var aspectRatio by remember(artworkModel) { mutableFloatStateOf(1f) }
 
     LaunchedEffect(artworkModel, manager) {

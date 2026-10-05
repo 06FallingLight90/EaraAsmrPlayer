@@ -26,8 +26,6 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.IntSize
 import com.asmr.player.util.CachePolicy
-import com.asmr.player.cache.ImageCacheEntryPoint
-import dagger.hilt.android.EntryPointAccessors
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -71,9 +69,7 @@ fun AsmrAsyncImage(
     }
 
     val ctx = LocalContext.current.applicationContext
-    val manager = remember(ctx) {
-        EntryPointAccessors.fromApplication(ctx, ImageCacheEntryPoint::class.java).imageCacheManager()
-    }
+    val manager = rememberAppImageCacheManager()
     val measuredSize: MutableState<IntSize?> = remember { mutableStateOf(null) }
     // 跨尺寸即时占位：若该图片已被列表等处加载过，先用任意尺寸的缓存位图立即显示，
     // 同时仍按精确尺寸加载原图并在完成后无缝替换，避免详情大图等待网络重新请求。

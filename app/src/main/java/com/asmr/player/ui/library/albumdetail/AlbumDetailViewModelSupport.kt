@@ -66,7 +66,6 @@ import androidx.work.WorkManager
 import androidx.work.workDataOf
 import javax.inject.Named
 import com.asmr.player.BuildConfig
-import com.asmr.player.work.AlbumCoverThumbWorker
 
 @Immutable
 sealed class AlbumDetailUiState {

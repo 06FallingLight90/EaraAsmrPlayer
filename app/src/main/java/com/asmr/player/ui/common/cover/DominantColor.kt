@@ -19,8 +19,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.core.graphics.ColorUtils
 import androidx.palette.graphics.Palette
 import com.asmr.player.util.CachePolicy
-import com.asmr.player.cache.ImageCacheEntryPoint
-import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -34,9 +32,7 @@ fun rememberDominantColor(
 ): State<Color> {
     val context = LocalContext.current
     val app = context.applicationContext
-    val manager = remember(app) {
-        EntryPointAccessors.fromApplication(app, ImageCacheEntryPoint::class.java).imageCacheManager()
-    }
+    val manager = rememberAppImageCacheManager()
     val key = model?.toString().orEmpty()
     val animatable = remember { Animatable(defaultColor, ColorVectorConverter) }
     val animatedColor = remember { derivedStateOf { animatable.value } }

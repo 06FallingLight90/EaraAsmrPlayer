@@ -5,6 +5,7 @@ import android.util.Log
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.playback.PlaybackMediaCache
 import com.asmr.player.util.AppCacheLimits
+import com.asmr.player.util.AppCacheState
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
@@ -20,12 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-data class AppCacheState(
-    val maxSizeMb: Int = AppCacheLimits.DefaultSizeMb,
-    val usedSizeBytes: Long = 0L,
-    val isClearing: Boolean = false,
-)
 
 @Singleton
 class AppCacheManager @Inject constructor(

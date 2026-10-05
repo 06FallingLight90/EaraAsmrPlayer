@@ -21,8 +21,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import com.asmr.player.util.CachePolicy
-import com.asmr.player.cache.ImageCacheEntryPoint
-import dagger.hilt.android.EntryPointAccessors
+import com.asmr.player.ui.common.cover.rememberAppImageCacheManager
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -63,9 +62,7 @@ fun PrewarmDynamicHuePalette(
 ) {
     val context = LocalContext.current
     val app = context.applicationContext
-    val manager = remember(app) {
-        EntryPointAccessors.fromApplication(app, ImageCacheEntryPoint::class.java).imageCacheManager()
-    }
+    val manager = rememberAppImageCacheManager()
     val rawBaseKey = artworkModel?.toString().orEmpty()
     val lastNonBlankBaseKeyState = rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
     if (rawBaseKey.isNotBlank() && rawBaseKey != lastNonBlankBaseKeyState.value) {
@@ -152,9 +149,7 @@ fun rememberDynamicHuePalette(
 ): State<HuePalette> {
     val context = LocalContext.current
     val app = context.applicationContext
-    val manager = remember(app) {
-        EntryPointAccessors.fromApplication(app, ImageCacheEntryPoint::class.java).imageCacheManager()
-    }
+    val manager = rememberAppImageCacheManager()
     val rawBaseKey = artworkModel?.toString().orEmpty()
     val lastNonBlankBaseKeyState = rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
     if (rawBaseKey.isNotBlank() && rawBaseKey != lastNonBlankBaseKeyState.value) {
