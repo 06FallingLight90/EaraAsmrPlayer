@@ -79,7 +79,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Named
 import okhttp3.OkHttpClient
@@ -136,25 +135,21 @@ class LibraryViewModel @Inject constructor(
     }
 
     private val scanRootsStore = ScanRootsStore(context)
+
+    /** R3-C1b-ii：任务协调 State Holder（单专辑任务注册表/批量任务门/同步状态/批量进度/云同步选择队列）。 */
+    private val taskCoordinator = LibraryTaskCoordinator(messageManager)
     private val _scanRoots = MutableStateFlow<Set<String>>(emptySet())
     val scanRoots: StateFlow<List<String>> = _scanRoots
         .map { it.toList().sorted() }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    private val _syncStatus = MutableStateFlow<Map<Long, SyncStatus>>(emptyMap())
-    private val _bulkProgress = MutableStateFlow<BulkProgress?>(null)
-    private val cloudSyncSelectionQueue = CloudSyncSelectionRequestQueue()
-    val bulkProgress: StateFlow<BulkProgress?> = _bulkProgress.asStateFlow()
-    internal val cloudSyncSelectionDialogState: StateFlow<CloudSyncSelectionDialogState?> = cloudSyncSelectionQueue.dialogState
+    val bulkProgress: StateFlow<BulkProgress?> = taskCoordinator.bulkProgress
+    internal val cloudSyncSelectionDialogState: StateFlow<CloudSyncSelectionDialogState?> = taskCoordinator.cloudSyncSelectionQueue.dialogState
     val globalSyncState: StateFlow<GlobalSyncState?> = syncCoordinator.state
     val isGlobalSyncRunning: StateFlow<Boolean> = globalSyncState
         .map { it != null }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), globalSyncState.value != null)
     private val scanMutex = Mutex()
-    private val bulkStartMutex = Mutex()
-    private var bulkJob: Job? = null
-    private val albumJobs = ConcurrentHashMap<Long, Job>()
-    private var lastFileUpdateElapsedMs: Long = 0L
     private val _expandedTrackAlbumIds = MutableStateFlow<Set<Long>>(emptySet())
     val expandedTrackAlbumIds: StateFlow<Set<Long>> = _expandedTrackAlbumIds.asStateFlow()
 
@@ -278,10 +273,10 @@ class LibraryViewModel @Inject constructor(
     }
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val syncingAlbums: StateFlow<Map<Long, SyncStatus>> = _syncStatus.asStateFlow()
+    val syncingAlbums: StateFlow<Map<Long, SyncStatus>> = taskCoordinator.syncingAlbums
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<LibraryUiState> = _bulkProgress
+    val uiState: StateFlow<LibraryUiState> = taskCoordinator.bulkProgress
         .combine(syncingAlbums) { bulk, syncing ->
             if (bulk != null) LibraryUiState.BulkInProgress(bulk) else LibraryUiState.Success(syncing)
         }
@@ -416,92 +411,17 @@ class LibraryViewModel @Inject constructor(
 
     fun deleteUserTag(tagId: Long) = tagHolder.deleteUserTag(tagId)
 
-    fun cancelBulkTask() {
-        val job = bulkJob
-        job?.cancel()
-        bulkJob = null
-        cloudSyncSelectionQueue.cancelAll()
-        _bulkProgress.value = null
-    }
+    // R3-C1b-ii：任务协调函数实现迁入 LibraryTaskCoordinator，VM 保留 UI 转发。
 
-    private fun isBulkTaskRunning(): Boolean {
-        return bulkJob?.isActive == true
-    }
+    fun cancelBulkTask() = taskCoordinator.cancelBulkTask()
 
-    private fun showSyncBusy(nextAction: String) {
-        messageManager.showInfo("同步任务进行中，请等待完成或取消后再$nextAction")
-    }
+    fun cancelAlbumTask(albumId: Long) = taskCoordinator.cancelAlbumTask(albumId)
 
-    private fun tryRegisterAlbumJob(albumId: Long, taskName: String): Boolean {
-        if (albumId <= 0L) return false
-        if (isBulkTaskRunning()) {
-            messageManager.showInfo("正在执行批量任务，请先取消后再$taskName")
-            return false
-        }
-        val existing = albumJobs[albumId]
-        if (existing?.isActive == true) {
-            messageManager.showInfo("该专辑正在执行${taskName}")
-            return false
-        }
-        return true
-    }
+    fun confirmCloudSyncSelection(workno: String) = taskCoordinator.confirmCloudSyncSelection(workno)
 
-    fun cancelAlbumTask(albumId: Long) {
-        val job = albumJobs.remove(albumId)
-        if (job == null) {
-            messageManager.showInfo("没有可取消的任务")
-            return
-        }
-        job.cancel()
-        cloudSyncSelectionQueue.cancelForAlbum(albumId)
-        _syncStatus.value -= albumId
-        messageManager.showInfo("已取消任务")
-    }
+    fun cancelCloudSyncSelection() = taskCoordinator.cancelCloudSyncSelection()
 
-    fun confirmCloudSyncSelection(workno: String) {
-        cloudSyncSelectionQueue.resolveCurrent(workno)
-    }
-
-    fun cancelCloudSyncSelection() {
-        cloudSyncSelectionQueue.resolveCurrent(null)
-    }
-
-    fun ignoreAllCloudSyncSelections() {
-        cloudSyncSelectionQueue.ignoreAllRemainingInBatch()
-        messageManager.showInfo("已忽略本轮剩余待确认项")
-    }
-
-    private fun startBulkProgress(phase: BulkPhase, total: Int, current: Int = 0, currentAlbumTitle: String = "") {
-        _bulkProgress.value = BulkProgress(
-            phase = phase,
-            current = current.coerceAtLeast(0),
-            total = total.coerceAtLeast(0),
-            currentAlbumTitle = currentAlbumTitle,
-            currentFile = ""
-        )
-        lastFileUpdateElapsedMs = 0L
-    }
-
-    private fun updateBulkAlbumProgress(current: Int, currentAlbumTitle: String) {
-        val p = _bulkProgress.value ?: return
-        _bulkProgress.value = p.copy(
-            current = current.coerceAtLeast(0),
-            currentAlbumTitle = currentAlbumTitle
-        )
-    }
-
-    private fun maybeUpdateBulkCurrentFile(currentFile: String) {
-        val p = _bulkProgress.value ?: return
-        val now = SystemClock.elapsedRealtime()
-        if (now - lastFileUpdateElapsedMs < 120L) return
-        lastFileUpdateElapsedMs = now
-        _bulkProgress.value = p.copy(currentFile = currentFile)
-    }
-
-    private fun finishBulkProgress() {
-        _bulkProgress.value = null
-        lastFileUpdateElapsedMs = 0L
-    }
+    fun ignoreAllCloudSyncSelections() = taskCoordinator.ignoreAllCloudSyncSelections()
 
     private fun isImageName(name: String): Boolean {
         val ext = name.substringAfterLast('.', "").trim().lowercase()
@@ -754,12 +674,12 @@ class LibraryViewModel @Inject constructor(
     fun scanAllRoots() {
         viewModelScope.launch {
             val token = syncCoordinator.tryBegin() ?: run {
-                showSyncBusy("刷新本地")
+                taskCoordinator.showSyncBusy("刷新本地")
                 return@launch
             }
             try {
-                bulkStartMutex.withLock {
-                    bulkJob = currentCoroutineContext()[Job]
+                taskCoordinator.bulkStartMutex.withLock {
+                    taskCoordinator.bulkJob = currentCoroutineContext()[Job]
                     try {
                         withContext(Dispatchers.IO) {
                             scanMutex.withLock {
@@ -797,19 +717,19 @@ class LibraryViewModel @Inject constructor(
                                         }
                                     }
                                 }
-                                startBulkProgress(phase = BulkPhase.ScanningLocal, total = totalAlbums)
+                                taskCoordinator.startBulkProgress(phase = BulkPhase.ScanningLocal, total = totalAlbums)
 
                                 var current = 0
                                 roots.forEach { root ->
                                     currentCoroutineContext().ensureActive()
                                     scanFromDocumentTree(root) { title ->
                                         current += 1
-                                        updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
+                                        taskCoordinator.updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
                                     }
                                 }
                                 scanFromDownloadedDir { title ->
                                     current += 1
-                                    updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
+                                    taskCoordinator.updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
                                 }
                                 pruneOrphanedAlbumsByFilesystem()
                             }
@@ -821,9 +741,9 @@ class LibraryViewModel @Inject constructor(
                         Log.e("LibraryViewModel", "scanAllRoots failed", e)
                         messageManager.showError("扫描失败：${e.message}")
                     } finally {
-                        finishBulkProgress()
-                        if (bulkJob == currentCoroutineContext()[Job]) {
-                            bulkJob = null
+                        taskCoordinator.finishBulkProgress()
+                        if (taskCoordinator.bulkJob == currentCoroutineContext()[Job]) {
+                            taskCoordinator.bulkJob = null
                         }
                     }
                 }
@@ -836,12 +756,12 @@ class LibraryViewModel @Inject constructor(
     fun scanCurrentDownloadDestinationAsImport() {
         viewModelScope.launch {
             val token = syncCoordinator.tryBegin() ?: run {
-                showSyncBusy("扫描目标下载目录")
+                taskCoordinator.showSyncBusy("扫描目标下载目录")
                 return@launch
             }
             try {
-                bulkStartMutex.withLock {
-                    bulkJob = currentCoroutineContext()[Job]
+                taskCoordinator.bulkStartMutex.withLock {
+                    taskCoordinator.bulkJob = currentCoroutineContext()[Job]
                     try {
                         withContext(Dispatchers.IO) {
                             scanMutex.withLock {
@@ -861,12 +781,12 @@ class LibraryViewModel @Inject constructor(
                                         }
                                     }
                                 }
-                                startBulkProgress(phase = BulkPhase.ScanningLocal, total = totalAlbums)
+                                taskCoordinator.startBulkProgress(phase = BulkPhase.ScanningLocal, total = totalAlbums)
                                 var current = 0
                                 scanFromDownloadedDir(
                                     onAlbumScanned = { title ->
                                         current += 1
-                                        updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
+                                        taskCoordinator.updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
                                     },
                                     importAll = true,
                                 )
@@ -879,8 +799,8 @@ class LibraryViewModel @Inject constructor(
                         Log.e(TAG, "scanCurrentDownloadDestinationAsImport failed", error)
                         messageManager.showError("目标目录扫描失败：${error.message}")
                     } finally {
-                        finishBulkProgress()
-                        if (bulkJob == currentCoroutineContext()[Job]) bulkJob = null
+                        taskCoordinator.finishBulkProgress()
+                        if (taskCoordinator.bulkJob == currentCoroutineContext()[Job]) taskCoordinator.bulkJob = null
                     }
                 }
             } finally {
@@ -893,12 +813,12 @@ class LibraryViewModel @Inject constructor(
         if (uriString.isBlank()) return
         viewModelScope.launch {
             val token = syncCoordinator.tryBegin() ?: run {
-                showSyncBusy("刷新目录")
+                taskCoordinator.showSyncBusy("刷新目录")
                 return@launch
             }
             try {
-                bulkStartMutex.withLock {
-                    bulkJob = currentCoroutineContext()[Job]
+                taskCoordinator.bulkStartMutex.withLock {
+                    taskCoordinator.bulkJob = currentCoroutineContext()[Job]
                     try {
                         withContext(Dispatchers.IO) {
                             scanMutex.withLock {
@@ -913,11 +833,11 @@ class LibraryViewModel @Inject constructor(
                                 } else {
                                     0
                                 }
-                                startBulkProgress(phase = BulkPhase.ScanningLocal, total = totalAlbums)
+                                taskCoordinator.startBulkProgress(phase = BulkPhase.ScanningLocal, total = totalAlbums)
                                 var current = 0
                                 scanFromDocumentTree(uriString) { title ->
                                     current += 1
-                                    updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
+                                    taskCoordinator.updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
                                 }
                             }
                         }
@@ -928,9 +848,9 @@ class LibraryViewModel @Inject constructor(
                         Log.e("LibraryViewModel", "scanSingleRoot failed", e)
                         messageManager.showError("刷新失败：${e.message}")
                     } finally {
-                        finishBulkProgress()
-                        if (bulkJob == currentCoroutineContext()[Job]) {
-                            bulkJob = null
+                        taskCoordinator.finishBulkProgress()
+                        if (taskCoordinator.bulkJob == currentCoroutineContext()[Job]) {
+                            taskCoordinator.bulkJob = null
                         }
                     }
                 }
@@ -943,12 +863,12 @@ class LibraryViewModel @Inject constructor(
     fun syncMetadata() {
         viewModelScope.launch {
             val token = syncCoordinator.tryBegin() ?: run {
-                showSyncBusy("云同步")
+                taskCoordinator.showSyncBusy("云同步")
                 return@launch
             }
             try {
-                bulkStartMutex.withLock {
-                    bulkJob = currentCoroutineContext()[Job]
+                taskCoordinator.bulkStartMutex.withLock {
+                    taskCoordinator.bulkJob = currentCoroutineContext()[Job]
                     try {
                         val albums = withContext(Dispatchers.IO) { libraryReadRepository.getAllAlbumsOnce() }
                         runBatchCloudSync(albums)
@@ -959,9 +879,9 @@ class LibraryViewModel @Inject constructor(
                         Log.e("LibraryViewModel", "syncMetadata failed", e)
                         messageManager.showError("云同步失败：${e.message}")
                     } finally {
-                        finishBulkProgress()
-                        if (bulkJob == currentCoroutineContext()[Job]) {
-                            bulkJob = null
+                        taskCoordinator.finishBulkProgress()
+                        if (taskCoordinator.bulkJob == currentCoroutineContext()[Job]) {
+                            taskCoordinator.bulkJob = null
                         }
                     }
                 }
@@ -975,12 +895,12 @@ class LibraryViewModel @Inject constructor(
         if (uriString.isBlank()) return
         viewModelScope.launch {
             val token = syncCoordinator.tryBegin() ?: run {
-                showSyncBusy("云同步")
+                taskCoordinator.showSyncBusy("云同步")
                 return@launch
             }
             try {
-                bulkStartMutex.withLock {
-                    bulkJob = currentCoroutineContext()[Job]
+                taskCoordinator.bulkStartMutex.withLock {
+                    taskCoordinator.bulkJob = currentCoroutineContext()[Job]
                     try {
                         val albums = withContext(Dispatchers.IO) {
                             libraryReadRepository.getAllAlbumsOnce()
@@ -996,9 +916,9 @@ class LibraryViewModel @Inject constructor(
                         Log.e("LibraryViewModel", "syncMetadataForRoot failed", e)
                         messageManager.showError("云同步失败：${e.message}")
                     } finally {
-                        finishBulkProgress()
-                        if (bulkJob == currentCoroutineContext()[Job]) {
-                            bulkJob = null
+                        taskCoordinator.finishBulkProgress()
+                        if (taskCoordinator.bulkJob == currentCoroutineContext()[Job]) {
+                            taskCoordinator.bulkJob = null
                         }
                     }
                 }
@@ -1009,12 +929,12 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun syncAlbumMetadata(album: Album) {
-        if (!tryRegisterAlbumJob(album.id, "云同步")) return
+        if (!taskCoordinator.tryRegisterAlbumJob(album.id, "云同步")) return
         val job = viewModelScope.launch {
             val ownerJob = currentCoroutineContext()[Job]
             val token = syncCoordinator.tryBegin() ?: run {
-                showSyncBusy("云同步")
-                albumJobs.remove(album.id, ownerJob)
+                taskCoordinator.showSyncBusy("云同步")
+                taskCoordinator.albumJobs.remove(album.id, ownerJob)
                 return@launch
             }
             try {
@@ -1023,23 +943,23 @@ class LibraryViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 messageManager.showInfo("已取消云同步")
             } finally {
-                albumJobs.remove(album.id, ownerJob)
+                taskCoordinator.albumJobs.remove(album.id, ownerJob)
                 syncCoordinator.end(token)
             }
         }
-        albumJobs[album.id] = job
+        taskCoordinator.albumJobs[album.id] = job
     }
 
     private suspend fun runBatchCloudSync(albums: List<AlbumEntity>) = coroutineScope {
-        startBulkProgress(phase = BulkPhase.SyncingCloud, total = albums.size)
-        cloudSyncSelectionQueue.beginBatchSession()
+        taskCoordinator.startBulkProgress(phase = BulkPhase.SyncingCloud, total = albums.size)
+        taskCoordinator.cloudSyncSelectionQueue.beginBatchSession()
         try {
         val pendingSelections = mutableListOf<Deferred<Unit>>()
         var current = 0
         albums.forEach { entity ->
             currentCoroutineContext().ensureActive()
             current += 1
-            updateBulkAlbumProgress(current = current, currentAlbumTitle = entity.title)
+            taskCoordinator.updateBulkAlbumProgress(current = current, currentAlbumTitle = entity.title)
             withContext(Dispatchers.IO) {
                 syncAlbumMetadataInternal(
                     entity = entity,
@@ -1056,13 +976,13 @@ class LibraryViewModel @Inject constructor(
                 )
             }
         }
-        val pendingCount = cloudSyncSelectionQueue.pendingCount()
+        val pendingCount = taskCoordinator.cloudSyncSelectionQueue.pendingCount()
         if (pendingCount > 0) {
             messageManager.showInfo("主流程已完成，剩余${pendingCount}项待确认")
         }
         pendingSelections.awaitAll()
         } finally {
-            cloudSyncSelectionQueue.endBatchSession()
+            taskCoordinator.cloudSyncSelectionQueue.endBatchSession()
         }
     }
     private suspend fun resolveAlbumCloudSync(entity: AlbumEntity): DlsiteCloudSyncResolveResult {
@@ -1108,7 +1028,7 @@ class LibraryViewModel @Inject constructor(
         silent: Boolean
     ) {
         try {
-            val selectedWorkno = cloudSyncSelectionQueue.enqueue(
+            val selectedWorkno = taskCoordinator.cloudSyncSelectionQueue.enqueue(
                 albumId = entity.id.takeIf { it > 0L },
                 albumTitle = entity.title,
                 candidates = candidates
@@ -1142,18 +1062,18 @@ class LibraryViewModel @Inject constructor(
             reportSyncAlbumMetadataFailure(entity.id, e, silent)
             return
         } finally {
-            _syncStatus.value -= entity.id
+            taskCoordinator.syncStatus.value -= entity.id
         }
     }
 
     private suspend fun reportSyncAlbumMetadataFailure(entityId: Long, error: Exception, silent: Boolean) {
         Log.e("LibraryViewModel", "syncAlbumMetadataInternal failed: $entityId", error)
-        _syncStatus.value += (entityId to SyncStatus.Error(error.message ?: "同步失败"))
+        taskCoordinator.syncStatus.value += (entityId to SyncStatus.Error(error.message ?: "同步失败"))
         if (!silent) {
             messageManager.showError("同步异常：${error.message}")
             delay(3000)
         }
-        _syncStatus.value -= entityId
+        taskCoordinator.syncStatus.value -= entityId
     }
 
     private suspend fun syncAlbumMetadataInternal(
@@ -1165,7 +1085,7 @@ class LibraryViewModel @Inject constructor(
         val currentWorkno = entity.rjCode.ifBlank { entity.workId }.trim().uppercase()
         if (currentWorkno.isBlank() && keyword.isBlank()) return
 
-        _syncStatus.value += (entity.id to SyncStatus.Syncing)
+        taskCoordinator.syncStatus.value += (entity.id to SyncStatus.Syncing)
         var clearSyncStatus = true
         try {
             val result = resolveAlbumCloudSync(entity)
@@ -1191,19 +1111,19 @@ class LibraryViewModel @Inject constructor(
                 }
             }
             if (clearSyncStatus) {
-                _syncStatus.value -= entity.id
+                taskCoordinator.syncStatus.value -= entity.id
             }
         } catch (e: CancellationException) {
             if (clearSyncStatus) {
-                _syncStatus.value -= entity.id
+                taskCoordinator.syncStatus.value -= entity.id
             }
             throw e
         } catch (e: Exception) {
             Log.e("LibraryViewModel", "syncAlbumMetadataInternal failed: ${entity.id}", e)
-            _syncStatus.value += (entity.id to SyncStatus.Error(e.message ?: "同步失败"))
+            taskCoordinator.syncStatus.value += (entity.id to SyncStatus.Error(e.message ?: "同步失败"))
             if (!silent) messageManager.showError("同步异常：${e.message}")
             if (!silent) delay(3000)
-            _syncStatus.value -= entity.id
+            taskCoordinator.syncStatus.value -= entity.id
         }
     }
 
@@ -1313,15 +1233,15 @@ class LibraryViewModel @Inject constructor(
     fun rescanAlbum(album: Album) {
         val localPaths = album.getAllLocalPaths()
         if (localPaths.isEmpty()) return
-        if (!tryRegisterAlbumJob(album.id, "本地同步")) return
+        if (!taskCoordinator.tryRegisterAlbumJob(album.id, "本地同步")) return
         val job = viewModelScope.launch {
             val ownerJob = currentCoroutineContext()[Job]
             val token = syncCoordinator.tryBegin() ?: run {
-                showSyncBusy("本地同步")
-                albumJobs.remove(album.id, ownerJob)
+                taskCoordinator.showSyncBusy("本地同步")
+                taskCoordinator.albumJobs.remove(album.id, ownerJob)
                 return@launch
             }
-            _syncStatus.value += (album.id to SyncStatus.Syncing)
+            taskCoordinator.syncStatus.value += (album.id to SyncStatus.Syncing)
             try {
                 var removed = false
                 withContext(Dispatchers.IO) {
@@ -1390,38 +1310,38 @@ class LibraryViewModel @Inject constructor(
                         }
                     }
                 }
-                _syncStatus.value -= album.id
+                taskCoordinator.syncStatus.value -= album.id
                 if (removed) {
                     messageManager.showInfo("目录不存在，已从本地库移除")
                 } else {
                     messageManager.showSuccess("重扫完成")
                 }
             } catch (e: CancellationException) {
-                _syncStatus.value -= album.id
+                taskCoordinator.syncStatus.value -= album.id
                 messageManager.showInfo("已取消重扫")
             } catch (e: Exception) {
                 Log.e(TAG, "rescanAlbum failed: ${album.id}", e)
-                _syncStatus.value += (album.id to SyncStatus.Error(e.message ?: "重扫失败"))
+                taskCoordinator.syncStatus.value += (album.id to SyncStatus.Error(e.message ?: "重扫失败"))
                 messageManager.showError("重扫失败：${e.message}")
                 delay(3000)
-                _syncStatus.value -= album.id
+                taskCoordinator.syncStatus.value -= album.id
             } finally {
-                albumJobs.remove(album.id, ownerJob)
+                taskCoordinator.albumJobs.remove(album.id, ownerJob)
                 syncCoordinator.end(token)
             }
         }
-        albumJobs[album.id] = job
+        taskCoordinator.albumJobs[album.id] = job
     }
     fun deleteAlbum(album: Album) {
         viewModelScope.launch(Dispatchers.IO) {
             if (album.id <= 0L) return@launch
-            if (isBulkTaskRunning()) {
+            if (taskCoordinator.isBulkTaskRunning()) {
                 messageManager.showInfo("正在执行批量任务，请先取消后再删除")
                 return@launch
             }
 
-            albumJobs.remove(album.id)?.cancel()
-            _syncStatus.value -= album.id
+            taskCoordinator.albumJobs.remove(album.id)?.cancel()
+            taskCoordinator.syncStatus.value -= album.id
 
             try {
                 val entity = libraryReadRepository.getAlbumById(album.id) ?: return@launch
@@ -1773,7 +1693,7 @@ class LibraryViewModel @Inject constructor(
 
         audioFiles.forEach { audio ->
             currentCoroutineContext().ensureActive()
-            maybeUpdateBulkCurrentFile(audio.name)
+            taskCoordinator.maybeUpdateBulkCurrentFile(audio.name)
             val trackTitle = audio.nameWithoutExtension
             val relPath = audio.relativeTo(albumDir).path.replace('\\', '/')
             val group =
@@ -1879,7 +1799,7 @@ class LibraryViewModel @Inject constructor(
             val audioRelativeBaseByPath = LinkedHashMap<String, String>(audioFiles.size)
             audioFiles.sortedBy { it.documentId }.forEach { audio ->
                 currentCoroutineContext().ensureActive()
-                maybeUpdateBulkCurrentFile(audio.displayName)
+                taskCoordinator.maybeUpdateBulkCurrentFile(audio.displayName)
                 val audioUri = DocumentsContract.buildDocumentUriUsingTree(uri, audio.documentId)
                 val trackTitle = audio.displayName.substringBeforeLast('.').ifBlank { "track" }
                 val group = if (audio.relativePath.contains("/")) audio.relativePath.substringBeforeLast('/').substringAfterLast('/') else ""
@@ -2053,7 +1973,7 @@ class LibraryViewModel @Inject constructor(
         val trackSpecs = ArrayList<ScanTrackSpec>(audioFiles.size)
         val audioRelativeBaseByPath = LinkedHashMap<String, String>(audioFiles.size)
         audioFiles.forEach { audio ->
-            maybeUpdateBulkCurrentFile(audio.displayName)
+            taskCoordinator.maybeUpdateBulkCurrentFile(audio.displayName)
             val audioUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, audio.documentId)
             val trackTitle = audio.displayName.substringBeforeLast('.').ifBlank { "track" }
             val group = if (audio.relativePath.contains("/")) audio.relativePath.substringBeforeLast('/').substringAfterLast('/') else ""
@@ -2141,7 +2061,7 @@ class LibraryViewModel @Inject constructor(
         SafTreeSupport.readSubtitleFromUri(context, treeUri, documentId, displayName)
 
     override fun onCleared() {
-        cloudSyncSelectionQueue.cancelAll()
+        taskCoordinator.cloudSyncSelectionQueue.cancelAll()
         super.onCleared()
     }
 }
