@@ -34,9 +34,8 @@ import java.io.File
  * - 成员：rescanAlbum / deleteAlbum / deleteAlbumTreeEntry / removeTrackFromAlbum。
  * - 任务注册/取消/同步状态经 [taskCoordinator]（C1b-ii-a 就位）；
  *   同步全局门经 [syncCoordinator]（VM 构造注入透传）。
- * - rescanAlbum 依赖扫描底层两函数（scanSingleAlbumFromDocumentUri /
- *   scanTracksAndSubtitlesFromFileAlbum），C1c 扫描 holder 就位前以构造函数
- *   引用过渡（VM 以 this:: 绑定传入），C1c 后换扫描 holder 注入。
+ * - rescanAlbum 依赖的扫描底层两函数（scanSingleAlbumFromDocumentUri /
+ *   scanTracksAndSubtitlesFromFileAlbum）经 [scanHolder]（C1c-a 扫描 holder）调用。
  * - 1 行代理随迁消除：upsertAlbumFtsIndex / refreshAlbumAudioAggregate /
  *   SafTreeSupport 委托（documentExists/deletePathSafely 等）直调实现。
  * - TAG 保持 "LibraryViewModel"：日志输出与抽取前逐字一致。
@@ -50,8 +49,7 @@ internal class LibraryDeleteStateHolder(
     private val syncCoordinator: SyncCoordinator,
     private val taskCoordinator: LibraryTaskCoordinator,
     private val messageManager: MessageManager,
-    private val scanSingleAlbumFromDocumentUri: suspend (Long, String) -> Unit,
-    private val scanTracksAndSubtitlesFromFileAlbum: suspend (Long, File) -> Unit,
+    private val scanHolder: LibraryScanStateHolder,
 ) {
     private companion object {
         const val TAG = "LibraryViewModel"
@@ -91,7 +89,7 @@ internal class LibraryDeleteStateHolder(
                             val exists = treeUri != null && !docId.isNullOrBlank() &&
                                 SafTreeSupport.documentExists(context, treeUri, docId)
                             if (exists) {
-                                scanSingleAlbumFromDocumentUri(album.id, p)
+                                scanHolder.scanSingleAlbumFromDocumentUri(album.id, p)
                                 scannedAny = true
                             }
                         } else {
@@ -99,7 +97,7 @@ internal class LibraryDeleteStateHolder(
                             val exists = root.exists()
                             val isDirectory = root.isDirectory
                             if (exists && isDirectory) {
-                                scanTracksAndSubtitlesFromFileAlbum(album.id, root)
+                                scanHolder.scanTracksAndSubtitlesFromFileAlbum(album.id, root)
                                 scannedAny = true
                             }
                         }

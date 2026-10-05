@@ -13,10 +13,6 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import androidx.paging.map
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.workDataOf
 import com.asmr.player.domain.model.LibraryTrackRow
 import com.asmr.player.domain.model.TagWithCount
 import com.asmr.player.data.local.db.entities.AlbumEntity
@@ -25,10 +21,6 @@ import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.db.entities.titleForDisplay
 import com.asmr.player.data.local.library.LocalAlbumMergeService
 import com.asmr.player.data.local.library.buildOnlineAlbumPath
-import com.asmr.player.data.local.library.ensureLibraryAlbumDir
-import com.asmr.player.data.local.library.legacyOnlineSavedAlbumFolderName
-import com.asmr.player.data.local.tree.SafDocNode
-import com.asmr.player.data.local.tree.SafTreeSupport
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncCandidate
 import com.asmr.player.data.remote.dlsite.DlsiteCloudSyncResolveResult
 import com.asmr.player.data.remote.dlsite.resolveCloudSyncWorkId
@@ -37,28 +29,18 @@ import com.asmr.player.data.download.DownloadDestinationStore
 import com.asmr.player.data.repository.DownloadQueueRepository
 import com.asmr.player.data.repository.LibraryReadRepository
 import com.asmr.player.data.repository.LibraryWriteRepository
-import com.asmr.player.data.repository.LibraryWriteRepository.ScanCacheLeaf
-import com.asmr.player.data.repository.LibraryWriteRepository.ScanTrackSpec
 import com.asmr.player.data.repository.OnlineContentRepository
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.playback.PlayerConnection
-import com.asmr.player.ui.common.audio.queryTrackFileSize
 import com.asmr.player.util.GlobalSyncState
-import com.asmr.player.util.DlsiteWorkNo
 import com.asmr.player.util.ScanRootsStore
-import com.asmr.player.util.SubtitleEntry
-import com.asmr.player.util.SubtitleMatchSupport
-import com.asmr.player.util.SubtitleParser
 import com.asmr.player.util.MessageManager
 import com.asmr.player.util.SyncCoordinator
 import com.asmr.player.util.isOnlineTrackPath
 import com.asmr.player.util.isScannableLocalDirectoryName
 import com.asmr.player.util.isVirtualAlbumPath
 import com.asmr.player.util.parseAlbumTags
-import com.asmr.player.util.EmbeddedMediaExtractor
 import com.asmr.player.util.centerCropSquare
-import com.asmr.player.work.AlbumCoverThumbWorker
-import com.asmr.player.work.TrackDurationWorker
 import com.asmr.player.BuildConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -137,6 +119,17 @@ class LibraryViewModel @Inject constructor(
     /** R3-C1b-ii：任务协调 State Holder（单专辑任务注册表/批量任务门/同步状态/批量进度/云同步选择队列）。 */
     private val taskCoordinator = LibraryTaskCoordinator(messageManager)
 
+    /** R3-C1c：扫描族 State Holder（封面/树缓存/SAF 遍历/字幕/下载目录与文档树扫描/孤儿清理 + 批量入口）。 */
+    private val scanHolder = LibraryScanStateHolder(
+        context = context,
+        readRepository = libraryReadRepository,
+        writeRepository = libraryWriteRepository,
+        downloadDestinationStore = downloadDestinationStore,
+        localAlbumMergeService = localAlbumMergeService,
+        playerConnection = playerConnection,
+        taskCoordinator = taskCoordinator,
+    )
+
     /** R3-C1b-ii：删除族 State Holder（rescanAlbum/deleteAlbum/deleteAlbumTreeEntry/removeTrackFromAlbum）。 */
     private val deleteHolder = LibraryDeleteStateHolder(
         scope = viewModelScope,
@@ -147,8 +140,7 @@ class LibraryViewModel @Inject constructor(
         syncCoordinator = syncCoordinator,
         taskCoordinator = taskCoordinator,
         messageManager = messageManager,
-        scanSingleAlbumFromDocumentUri = ::scanSingleAlbumFromDocumentUri,
-        scanTracksAndSubtitlesFromFileAlbum = ::scanTracksAndSubtitlesFromFileAlbum,
+        scanHolder = scanHolder,
     )
     private val _scanRoots = MutableStateFlow<Set<String>>(emptySet())
     val scanRoots: StateFlow<List<String>> = _scanRoots
@@ -256,7 +248,7 @@ class LibraryViewModel @Inject constructor(
             _scanRoots.value = runCatching { scanRootsStore.getRoots() }.getOrDefault(emptySet())
             tagHolder.ensureTagTablesInitialized()
             filterHolder.restoreLibraryPreferences()
-            backfillLegacyOnlineSavedAlbumRoots()
+            scanHolder.backfillLegacyOnlineSavedAlbumRoots()
         }
         viewModelScope.launch {
             val shouldAutoScan = withContext(Dispatchers.IO) {
@@ -349,12 +341,6 @@ class LibraryViewModel @Inject constructor(
         )
     }
 
-    private suspend fun refreshAlbumAudioAggregate(albumId: Long) {
-        libraryWriteRepository.refreshAlbumAudioAggregate(albumId) { path ->
-            queryTrackFileSize(context, path)
-        }
-    }
-
     suspend fun loadInheritedTagsForAlbum(albumId: Long): List<String> =
         tagHolder.loadInheritedTagsForAlbum(albumId)
 
@@ -435,136 +421,7 @@ class LibraryViewModel @Inject constructor(
 
     fun ignoreAllCloudSyncSelections() = taskCoordinator.ignoreAllCloudSyncSelections()
 
-    private fun isImageName(name: String): Boolean {
-        val ext = name.substringAfterLast('.', "").trim().lowercase()
-        return ext in setOf("jpg", "jpeg", "png", "webp", "bmp", "gif")
-    }
-
-    private fun pickCoverFileFromAlbumDir(albumDir: File): File? {
-        val top = albumDir.listFiles()?.toList().orEmpty()
-        val named = top.firstOrNull { it.isFile && it.name.startsWith("cover.", ignoreCase = true) && isImageName(it.name) }
-        if (named != null) return named
-
-        val topImages = top.filter { it.isFile && isImageName(it.name) }
-        val topLargest = topImages.maxByOrNull { it.length() }
-        if (topLargest != null) return topLargest
-
-        var best: File? = null
-        var bestSize = 0L
-        albumDir.walkTopDown()
-            .onEnter { directory -> directory == albumDir || isScannableLocalDirectoryName(directory.name) }
-            .forEach { f ->
-            if (!f.isFile) return@forEach
-            if (!isImageName(f.name)) return@forEach
-            val size = runCatching { f.length() }.getOrDefault(0L)
-            if (size > bestSize) {
-                bestSize = size
-                best = f
-            }
-        }
-        return best
-    }
-
-    private fun pickCoverNode(nodes: List<SafDocNode>, treeUri: Uri, albumDocumentId: String): String {
-        val named = nodes.firstOrNull { it.mimeType != DocumentsContract.Document.MIME_TYPE_DIR && it.displayName.startsWith("cover.", ignoreCase = true) && isImageName(it.displayName) }
-        if (named != null) {
-            return DocumentsContract.buildDocumentUriUsingTree(treeUri, named.documentId).toString()
-        }
-
-        val images = nodes.filter { it.mimeType != DocumentsContract.Document.MIME_TYPE_DIR && isImageName(it.displayName) }
-        val largest = images.maxByOrNull { it.sizeBytes }
-        if (largest != null) {
-            return DocumentsContract.buildDocumentUriUsingTree(treeUri, largest.documentId).toString()
-        }
-
-        val deep = walkTree(treeUri, albumDocumentId)
-            .filter { it.mimeType != DocumentsContract.Document.MIME_TYPE_DIR && isImageName(it.displayName) }
-            .maxByOrNull { it.sizeBytes }
-        return deep?.let { DocumentsContract.buildDocumentUriUsingTree(treeUri, it.documentId).toString() }.orEmpty()
-    }
-
-    private enum class CacheTreeFileType {
-        Audio,
-        Video,
-        Image,
-        Subtitle,
-        Text,
-        Pdf,
-        Archive,
-        Document,
-        Spreadsheet,
-        Presentation,
-        Code,
-        Ebook,
-        Font,
-        AppPackage,
-        Other
-    }
-
-    private data class CacheLeafEntry(
-        val relativePath: String,
-        val absolutePath: String,
-        val fileType: CacheTreeFileType
-    )
-
-    private fun cacheFileTypeForName(fileName: String): CacheTreeFileType {
-        return when (treeFileTypeForName(fileName)) {
-            TreeFileType.Audio -> CacheTreeFileType.Audio
-            TreeFileType.Video -> CacheTreeFileType.Video
-            TreeFileType.Image -> CacheTreeFileType.Image
-            TreeFileType.Subtitle -> CacheTreeFileType.Subtitle
-            TreeFileType.Text -> CacheTreeFileType.Text
-            TreeFileType.Pdf -> CacheTreeFileType.Pdf
-            TreeFileType.Archive -> CacheTreeFileType.Archive
-            TreeFileType.Document -> CacheTreeFileType.Document
-            TreeFileType.Spreadsheet -> CacheTreeFileType.Spreadsheet
-            TreeFileType.Presentation -> CacheTreeFileType.Presentation
-            TreeFileType.Code -> CacheTreeFileType.Code
-            TreeFileType.Ebook -> CacheTreeFileType.Ebook
-            TreeFileType.Font -> CacheTreeFileType.Font
-            TreeFileType.AppPackage -> CacheTreeFileType.AppPackage
-            TreeFileType.Other -> CacheTreeFileType.Other
-        }
-    }
-
-    private fun computePathsStamp(paths: List<String>): Long {
-        val items = paths.map { it.trim() }.filter { it.isNotBlank() }.sorted()
-        var acc = 1469598103934665603L
-        items.forEach { p ->
-            val v = if (p.startsWith("content://")) queryDocumentLastModified(p) else runCatching { File(p).lastModified() }.getOrDefault(0L)
-            acc = (acc xor v) * 1099511628211L
-        }
-        return acc
-    }
-
-    private fun queryDocumentLastModified(uriString: String): Long {
-        val uri = runCatching { Uri.parse(uriString) }.getOrNull() ?: return 0L
-        return runCatching {
-            context.contentResolver.query(
-                uri,
-                arrayOf(DocumentsContract.Document.COLUMN_LAST_MODIFIED),
-                null,
-                null,
-                null
-            )?.use { cursor ->
-                val idx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
-                if (idx < 0) return@use 0L
-                if (!cursor.moveToFirst()) return@use 0L
-                cursor.getLong(idx)
-            } ?: 0L
-        }.getOrDefault(0L)
-    }
-
-    private suspend fun upsertLocalTreeCache(albumId: Long, albumPaths: List<String>, leaves: List<CacheLeafEntry>) {
-        libraryWriteRepository.upsertLocalTreeCache(
-            albumId = albumId,
-            albumPaths = albumPaths,
-            leaves = leaves.map { leaf ->
-                ScanCacheLeaf(leaf.relativePath, leaf.absolutePath, TreeFileType.valueOf(leaf.fileType.name))
-            },
-            stampProvider = { paths -> computePathsStamp(paths) },
-        )
-    }
+    // R3-C1c：扫描底层（封面挑选/树缓存叶/SAF 遍历/字幕匹配/WorkManager 入队）迁入 LibraryScanStateHolder。
 
     fun addScanRoot(uriString: String): Boolean {
         val existingRoots = scanRootsStore.getRoots()
@@ -708,10 +565,10 @@ class LibraryViewModel @Inject constructor(
                                         is DownloadDestination.DocumentTree -> {
                                             val uri = Uri.parse(destination.root)
                                             val treeId = DocumentsContract.getTreeDocumentId(uri)
-                                            queryChildren(uri, treeId).count { child ->
+                                            scanHolder.queryChildren(uri, treeId).count { child ->
                                                 child.mimeType == DocumentsContract.Document.MIME_TYPE_DIR &&
                                                     isScannableLocalDirectoryName(child.displayName) &&
-                                                    queryChildren(uri, child.documentId).any { it.displayName == ".download_complete" }
+                                                    scanHolder.queryChildren(uri, child.documentId).any { it.displayName == ".download_complete" }
                                             }
                                         }
                                     }
@@ -723,7 +580,7 @@ class LibraryViewModel @Inject constructor(
                                     val uri = runCatching { Uri.parse(root) }.getOrNull()
                                     val treeDocId = uri?.let { runCatching { DocumentsContract.getTreeDocumentId(it) }.getOrNull() }
                                     if (uri != null && !treeDocId.isNullOrBlank()) {
-                                        totalAlbums += queryChildren(uri, treeDocId).count {
+                                        totalAlbums += scanHolder.queryChildren(uri, treeDocId).count {
                                             it.mimeType == DocumentsContract.Document.MIME_TYPE_DIR &&
                                                 isScannableLocalDirectoryName(it.displayName)
                                         }
@@ -734,16 +591,16 @@ class LibraryViewModel @Inject constructor(
                                 var current = 0
                                 roots.forEach { root ->
                                     currentCoroutineContext().ensureActive()
-                                    scanFromDocumentTree(root) { title ->
+                                    scanHolder.scanFromDocumentTree(root) { title ->
                                         current += 1
                                         taskCoordinator.updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
                                     }
                                 }
-                                scanFromDownloadedDir { title ->
+                                scanHolder.scanFromDownloadedDir { title ->
                                     current += 1
                                     taskCoordinator.updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
                                 }
-                                pruneOrphanedAlbumsByFilesystem()
+                                scanHolder.pruneOrphanedAlbumsByFilesystem()
                             }
                         }
                         messageManager.showSuccess("扫描完成")
@@ -787,7 +644,7 @@ class LibraryViewModel @Inject constructor(
                                     is DownloadDestination.DocumentTree -> {
                                         val uri = Uri.parse(destination.root)
                                         val treeId = DocumentsContract.getTreeDocumentId(uri)
-                                        queryChildren(uri, treeId).count {
+                                        scanHolder.queryChildren(uri, treeId).count {
                                             it.mimeType == DocumentsContract.Document.MIME_TYPE_DIR &&
                                                 isScannableLocalDirectoryName(it.displayName)
                                         }
@@ -795,7 +652,7 @@ class LibraryViewModel @Inject constructor(
                                 }
                                 taskCoordinator.startBulkProgress(phase = BulkPhase.ScanningLocal, total = totalAlbums)
                                 var current = 0
-                                scanFromDownloadedDir(
+                                scanHolder.scanFromDownloadedDir(
                                     onAlbumScanned = { title ->
                                         current += 1
                                         taskCoordinator.updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
@@ -838,7 +695,7 @@ class LibraryViewModel @Inject constructor(
                                 val uri = runCatching { Uri.parse(uriString) }.getOrNull()
                                 val treeDocId = uri?.let { runCatching { DocumentsContract.getTreeDocumentId(it) }.getOrNull() }
                                 val totalAlbums = if (uri != null && !treeDocId.isNullOrBlank()) {
-                                    queryChildren(uri, treeDocId).count {
+                                    scanHolder.queryChildren(uri, treeDocId).count {
                                         it.mimeType == DocumentsContract.Document.MIME_TYPE_DIR &&
                                             isScannableLocalDirectoryName(it.displayName)
                                     }
@@ -847,7 +704,7 @@ class LibraryViewModel @Inject constructor(
                                 }
                                 taskCoordinator.startBulkProgress(phase = BulkPhase.ScanningLocal, total = totalAlbums)
                                 var current = 0
-                                scanFromDocumentTree(uriString) { title ->
+                                scanHolder.scanFromDocumentTree(uriString) { title ->
                                     current += 1
                                     taskCoordinator.updateBulkAlbumProgress(current = current, currentAlbumTitle = title)
                                 }
@@ -1261,26 +1118,9 @@ class LibraryViewModel @Inject constructor(
     // isCanonicalDescendant）随删除族迁 holder 后直调 SafTreeSupport，VM 委托消除；
     // resolveTreeDocumentUri 为零引用死委托一并清除（调用点清单：全仓 grep 仅定义处）。
 
-    private fun extractWorkNo(input: String): String {
-        return DlsiteWorkNo.extractWorkNo(input)
-    }
-
-    internal fun legacyOnlineSavedAlbumDir(entity: AlbumEntity): File {
-        val baseDir = File(context.getExternalFilesDir(null), "albums")
-        val folderName = legacyOnlineSavedAlbumFolderName(entity)
-        return File(baseDir, folderName)
-    }
-
-    private suspend fun backfillLegacyOnlineSavedAlbumRoots() {
-        val albums = runCatching { libraryReadRepository.getAllAlbumsOnce() }.getOrDefault(emptyList())
-        if (albums.isEmpty()) return
-
-        libraryWriteRepository.backfillLegacyOnlineSavedAlbumRoots(albums) { entity ->
-            val albumDir = legacyOnlineSavedAlbumDir(entity)
-            ensureLibraryAlbumDir(albumDir)
-            albumDir.absolutePath
-        }
-    }
+    // R3-C1c：extractWorkNo / legacyOnlineSavedAlbumDir / backfillLegacyOnlineSavedAlbumRoots
+    // 及以下扫描底层函数迁入 LibraryScanStateHolder；upsertAlbumFtsIndex / upsertAlbumTagsFromCsv
+    // 委托暂留（云同步族 C1d 迁出时随迁）。
 
     private suspend fun upsertAlbumFtsIndex(albumId: Long, entity: AlbumEntity) {
         libraryWriteRepository.upsertAlbumFtsIndex(albumId, entity)
@@ -1290,554 +1130,8 @@ class LibraryViewModel @Inject constructor(
         libraryWriteRepository.upsertAlbumTagsFromCsv(albumId, tagsCsv, source)
     }
 
-    private suspend fun scanFromDownloadedDir(
-        importAll: Boolean = false,
-        onAlbumScanned: ((String) -> Unit)? = null,
-    ) {
-        val destination = downloadDestinationStore.current()
-        if (destination is DownloadDestination.DocumentTree) {
-            scanFromDocumentTree(
-                uriString = destination.root,
-                asDownloadRoot = !importAll,
-                requireCompletionMarker = !importAll,
-                onAlbumScanned = onAlbumScanned,
-            )
-            return
-        }
-        val baseDir = File(destination.root)
-        if (!baseDir.exists() || !baseDir.isDirectory) return
-        val foundDownloadPaths = LinkedHashSet<String>()
-        baseDir.listFiles()
-            ?.filter { albumDir ->
-                albumDir.isDirectory && isScannableLocalDirectoryName(albumDir.name) &&
-                    (importAll || File(albumDir, ".download_complete").exists())
-            }
-            ?.forEach { albumDir ->
-            currentCoroutineContext().ensureActive()
-            foundDownloadPaths.add(albumDir.absolutePath)
-            val coverFile = pickCoverFileFromAlbumDir(albumDir)
-            val title = albumDir.name
-            val rj = extractWorkNo(title)
-
-            onAlbumScanned?.invoke(title)
-            val existing = resolveAndMergeAlbumForRj(
-                rj = rj,
-                fallbackPath = albumDir.absolutePath,
-                fallbackTitle = title,
-                localPath = albumDir.absolutePath.takeIf { importAll },
-                downloadPath = albumDir.absolutePath.takeUnless { importAll },
-            )
-            val aggregateTracks = albumDir.walkTopDown()
-                .onEnter { directory -> directory == albumDir || isScannableLocalDirectoryName(directory.name) }
-                .filter { it.isFile && setOf("mp3", "flac", "wav", "m4a", "ogg", "aac", "opus").contains(it.extension.lowercase()) }
-                .map { file -> TrackEntity(albumId = 0L, title = file.nameWithoutExtension, path = file.absolutePath, duration = 0.0, group = "") }
-                .toList()
-            val aggregate = libraryWriteRepository.computeAlbumAudioAggregate(aggregateTracks) { path ->
-                queryTrackFileSize(context, path)
-            }
-            val entity = AlbumEntity(
-                id = existing?.id ?: 0L,
-                title = existing?.title?.takeIf { it.isNotBlank() && it != title } ?: title,
-                path = existing?.path?.takeIf { it.isNotBlank() } ?: albumDir.absolutePath,
-                localPath = if (importAll) albumDir.absolutePath else existing?.localPath,
-                downloadPath = if (importAll) existing?.downloadPath else albumDir.absolutePath,
-                circle = existing?.circle ?: "",
-                cv = existing?.cv ?: "",
-                tags = existing?.tags ?: "",
-                coverUrl = existing?.coverUrl ?: "",
-                coverPath = coverFile?.absolutePath ?: (existing?.coverPath ?: ""),
-                coverThumbPath = existing?.coverThumbPath ?: "",
-                workId = existing?.workId?.takeIf { it.isNotBlank() } ?: rj,
-                rjCode = existing?.rjCode?.takeIf { it.isNotBlank() } ?: rj,
-                description = existing?.description ?: "",
-                audioTrackCount = aggregate.trackCount,
-                audioTotalDuration = aggregate.totalDuration,
-                audioTotalSizeBytes = aggregate.totalSizeBytes,
-            )
-            val albumId = libraryWriteRepository.insertAlbum(entity)
-            upsertAlbumFtsIndex(albumId, entity.copy(id = albumId))
-            upsertAlbumTagsFromCsv(albumId, entity.tags, TagSource.SCAN)
-            if (entity.coverPath.isBlank()) {
-                val audio = albumDir.walkTopDown()
-                    .onEnter { directory -> directory == albumDir || isScannableLocalDirectoryName(directory.name) }
-                    .firstOrNull { it.isFile && setOf("mp3","flac","wav","m4a","ogg","aac","opus").contains(it.extension.lowercase()) }
-                if (audio != null) {
-                    val bmp = EmbeddedMediaExtractor.extractArtwork(context, audio.absolutePath)
-                    if (bmp != null) {
-                        val saved = EmbeddedMediaExtractor.saveArtworkToCache(context, albumId, bmp)
-                        if (!saved.isNullOrBlank()) {
-                            val updated = entity.copy(coverPath = saved)
-                            libraryWriteRepository.updateAlbum(updated)
-                        }
-                    }
-                }
-            }
-            enqueueAlbumCoverThumbWork(albumId)
-            scanTracksAndSubtitlesFromFileAlbum(albumId, albumDir)
-        }
-        if (!importAll) {
-            pruneMissingDownloadedAlbums(baseDir = baseDir, foundDownloadPaths = foundDownloadPaths)
-        }
-    }
-
-    private suspend fun pruneMissingDownloadedAlbums(
-        baseDir: File,
-        foundDownloadPaths: Set<String>
-    ) {
-        val basePrefix = baseDir.absolutePath.trimEnd('\\', '/') + File.separator
-        val albums = libraryReadRepository.getAllAlbumsOnce()
-        val missing = albums.filter { entity ->
-            val dl = entity.downloadPath?.trim().orEmpty()
-            dl.isNotBlank() &&
-                dl.startsWith(basePrefix) &&
-                !foundDownloadPaths.contains(dl) &&
-                (!File(dl).exists() || !isScannableLocalDirectoryName(File(dl).name))
-        }
-        if (missing.isEmpty()) return
-
-        libraryWriteRepository.pruneMissingDownloadedAlbums(missing)
-    }
-
-    private fun enqueueTrackDurationWork(albumId: Long) {
-        if (albumId <= 0L) return
-        val request = OneTimeWorkRequestBuilder<TrackDurationWorker>()
-            .setInputData(workDataOf(TrackDurationWorker.KEY_ALBUM_ID to albumId))
-            .addTag("track_duration")
-            .build()
-        WorkManager.getInstance(context)
-            .enqueueUniqueWork("track_duration_album_$albumId", ExistingWorkPolicy.REPLACE, request)
-    }
-
-    private fun enqueueAlbumCoverThumbWork(albumId: Long) {
-        if (albumId <= 0L) return
-        val request = OneTimeWorkRequestBuilder<AlbumCoverThumbWorker>()
-            .setInputData(workDataOf(AlbumCoverThumbWorker.KEY_ALBUM_ID to albumId))
-            .addTag("album_cover_thumb")
-            .build()
-        WorkManager.getInstance(context)
-            .enqueueUniqueWork("album_cover_thumb_$albumId", ExistingWorkPolicy.REPLACE, request)
-    }
-
-    private suspend fun scanTracksAndSubtitlesFromFileAlbum(albumId: Long, albumDir: File) {
-        val prefix = albumDir.absolutePath.trimEnd('\\', '/') + File.separator
-        val audioExtensions = setOf("mp3", "flac", "wav", "m4a", "ogg", "aac", "opus")
-
-        val audioFiles = mutableListOf<File>()
-        val subtitleFiles = mutableListOf<File>()
-        val cacheLeaves = mutableListOf<CacheLeafEntry>()
-        albumDir.walkTopDown()
-            .onEnter { directory -> directory == albumDir || isScannableLocalDirectoryName(directory.name) }
-            .forEach { f ->
-            currentCoroutineContext().ensureActive()
-            if (!f.isFile) return@forEach
-            val ext = f.extension.lowercase()
-            if (audioExtensions.contains(ext)) {
-                audioFiles.add(f)
-            }
-
-            if (SubtitleMatchSupport.SubtitleExtensions.contains(ext)) {
-                subtitleFiles.add(f)
-            }
-
-            val type = cacheFileTypeForName(f.name)
-            if (type != CacheTreeFileType.Other) {
-                val rawRel = runCatching { f.relativeTo(albumDir).path }.getOrElse { f.name }
-                val rel = rawRel.replace('\\', '/').trim().trimStart('/')
-                if (rel.isNotBlank()) {
-                    cacheLeaves.add(CacheLeafEntry(relativePath = rel, absolutePath = f.absolutePath, fileType = type))
-                }
-            }
-        }
-        audioFiles.sortBy { it.absolutePath }
-
-        val allExistingTracks = libraryReadRepository.getTracksForAlbumOnce(albumId)
-
-        val existingTracks = allExistingTracks
-            .filter { it.path.startsWith(prefix) }
-            .associateBy { it.path }
-        val subtitleCandidates = subtitleFiles.mapNotNull { file ->
-            val relative = runCatching { file.relativeTo(albumDir).path.replace('\\', '/') }.getOrNull().orEmpty()
-            val candidate = SubtitleMatchSupport.inferCandidate(relative, file.absolutePath) ?: return@mapNotNull null
-            candidate to file
-        }
-        val subtitleCandidateList = subtitleCandidates.map { it.first }
-
-        fun parseBestSubtitle(relativePathNoExt: String): List<SubtitleEntry> {
-            val matchedSubtitle = SubtitleMatchSupport.matchBest(relativePathNoExt, subtitleCandidateList) ?: return emptyList()
-            val subtitleFile = subtitleCandidates.firstOrNull { it.first.sourceRef == matchedSubtitle.sourceRef }?.second ?: return emptyList()
-            return SubtitleParser.parse(subtitleFile.absolutePath)
-        }
-
-        val seenPaths = linkedSetOf<String>()
-        val tracksToInsert = ArrayList<TrackEntity>(audioFiles.size)
-        val tracksToUpdate = ArrayList<TrackEntity>(audioFiles.size)
-        val subtitleEntriesByAudioPath = linkedMapOf<String, List<SubtitleEntry>>()
-        val subtitleEntriesByExistingTrackId = linkedMapOf<Long, List<SubtitleEntry>>()
-
-        audioFiles.forEach { audio ->
-            currentCoroutineContext().ensureActive()
-            taskCoordinator.maybeUpdateBulkCurrentFile(audio.name)
-            val trackTitle = audio.nameWithoutExtension
-            val relPath = audio.relativeTo(albumDir).path.replace('\\', '/')
-            val group =
-                if (relPath.contains("/")) relPath.substringBeforeLast('/').substringAfterLast('/', relPath.substringBeforeLast('/')) else ""
-            val audioPath = audio.absolutePath
-            val relativePathNoExt = relPath.substringBeforeLast('.')
-            seenPaths.add(audioPath)
-
-            val parsed = parseBestSubtitle(relativePathNoExt)
-            if (parsed.isNotEmpty()) {
-                subtitleEntriesByAudioPath[audioPath] = parsed
-            }
-
-            val existingTrack = existingTracks[audioPath]
-            val scannedTrack = if (existingTrack == null) {
-                TrackEntity(
-                    albumId = albumId,
-                    title = trackTitle,
-                    path = audioPath,
-                    duration = 0.0,
-                    group = group
-                )
-            } else {
-                existingTrack.copy(title = trackTitle, group = group)
-            }
-            if (existingTrack == null) tracksToInsert.add(scannedTrack) else tracksToUpdate.add(scannedTrack)
-        }
-
-        val removedIds = existingTracks.values
-            .asSequence()
-            .filter { !seenPaths.contains(it.path) }
-            .map { it.id }
-            .toList()
-
-        libraryWriteRepository.syncScannedLocalAlbumTracks(
-            tracksToUpdate = tracksToUpdate,
-            tracksToInsert = tracksToInsert,
-            subtitleEntriesByAudioPath = subtitleEntriesByAudioPath,
-            subtitleEntriesByExistingTrackId = subtitleEntriesByExistingTrackId,
-            removedIds = removedIds,
-        )
-
-        if (subtitleEntriesByAudioPath.isNotEmpty() || subtitleEntriesByExistingTrackId.isNotEmpty()) {
-            playerConnection.requestLyricsReload()
-        }
-
-        refreshAlbumAudioAggregate(albumId)
-
-        upsertLocalTreeCache(
-            albumId = albumId,
-            albumPaths = listOf(albumDir.absolutePath),
-            leaves = cacheLeaves.distinctBy { it.relativePath }
-        )
-        enqueueTrackDurationWork(albumId)
-    }
-
-    private suspend fun scanFromDocumentTree(
-        uriString: String,
-        asDownloadRoot: Boolean = false,
-        requireCompletionMarker: Boolean = asDownloadRoot,
-        onAlbumScanned: ((String) -> Unit)? = null,
-    ) {
-        val uri = runCatching { Uri.parse(uriString) }.getOrNull() ?: return
-        val treeDocId = runCatching { DocumentsContract.getTreeDocumentId(uri) }.getOrNull() ?: return
-        val children = queryChildren(uri, treeDocId).filter { child ->
-            child.mimeType == DocumentsContract.Document.MIME_TYPE_DIR &&
-                isScannableLocalDirectoryName(child.displayName) &&
-                (!requireCompletionMarker || queryChildren(uri, child.documentId).any { it.displayName == ".download_complete" })
-        }
-        val audioExtensions = setOf("mp3", "flac", "wav", "m4a", "ogg", "aac", "opus")
-        val subtitleExtensions = setOf("lrc", "srt", "vtt")
-        val foundAlbumPaths = LinkedHashSet<String>()
-
-        children.forEach { albumDir ->
-            currentCoroutineContext().ensureActive()
-            val albumUri = DocumentsContract.buildDocumentUriUsingTree(uri, albumDir.documentId)
-            val albumPath = albumUri.toString()
-            foundAlbumPaths.add(albumPath)
-            val title = albumDir.displayName.ifBlank { "album" }
-            val rj = extractWorkNo(title)
-            val albumChildren = queryChildren(uri, albumDir.documentId)
-            val coverPath = pickCoverNode(albumChildren, uri, albumDir.documentId)
-
-            onAlbumScanned?.invoke(title)
-            val existing = resolveAndMergeAlbumForRj(
-                rj = rj,
-                fallbackPath = albumPath,
-                fallbackTitle = title,
-                localPath = if (asDownloadRoot) null else albumPath,
-                downloadPath = if (asDownloadRoot) albumPath else null,
-            )
-
-            val all = walkTree(uri, albumDir.documentId).filter { it.mimeType != DocumentsContract.Document.MIME_TYPE_DIR }
-            val audioFiles = all.filter { audioExtensions.contains(it.displayName.substringAfterLast('.', "").lowercase()) }
-            val subtitleNodes = all.filter { subtitleExtensions.contains(it.displayName.substringAfterLast('.', "").lowercase()) }
-            val subtitleCandidates = subtitleNodes.mapNotNull { node ->
-                val candidate = SubtitleMatchSupport.inferCandidate(node.relativePath, node.documentId) ?: return@mapNotNull null
-                candidate to node
-            }
-            val subtitleCandidateList = subtitleCandidates.map { it.first }
-
-            val trackSpecs = ArrayList<ScanTrackSpec>(audioFiles.size)
-            val audioRelativeBaseByPath = LinkedHashMap<String, String>(audioFiles.size)
-            audioFiles.sortedBy { it.documentId }.forEach { audio ->
-                currentCoroutineContext().ensureActive()
-                taskCoordinator.maybeUpdateBulkCurrentFile(audio.displayName)
-                val audioUri = DocumentsContract.buildDocumentUriUsingTree(uri, audio.documentId)
-                val trackTitle = audio.displayName.substringBeforeLast('.').ifBlank { "track" }
-                val group = if (audio.relativePath.contains("/")) audio.relativePath.substringBeforeLast('/').substringAfterLast('/') else ""
-                val relativeBase = audio.relativePath.substringBeforeLast('.')
-                trackSpecs.add(
-                    ScanTrackSpec(
-                        title = trackTitle,
-                        path = audioUri.toString(),
-                        group = group
-                    )
-                )
-                audioRelativeBaseByPath[audioUri.toString()] = relativeBase
-            }
-
-            val subtitlesByAudioPath: Map<String, List<SubtitleEntry>> = trackSpecs.associate { spec ->
-                val key = audioRelativeBaseByPath[spec.path].orEmpty()
-                val matched = if (key.isBlank()) null else SubtitleMatchSupport.matchBest(key, subtitleCandidateList)
-                val node = matched?.let { hit -> subtitleCandidates.firstOrNull { it.first.sourceRef == hit.sourceRef }?.second }
-                val entries = node?.let { readSubtitleFromUri(uri, it.documentId, it.displayName) }.orEmpty()
-                spec.path to entries
-            }
-
-            val entity = AlbumEntity(
-                id = existing?.id ?: 0L,
-                title = existing?.title?.takeIf { it.isNotBlank() && it != title } ?: title,
-                path = existing?.path?.takeIf { it.isNotBlank() } ?: albumPath,
-                localPath = if (asDownloadRoot) existing?.localPath else albumPath,
-                downloadPath = if (asDownloadRoot) albumPath else existing?.downloadPath,
-                circle = existing?.circle ?: "",
-                cv = existing?.cv ?: "",
-                tags = existing?.tags ?: "",
-                coverUrl = existing?.coverUrl ?: "",
-                coverPath = coverPath.ifBlank { existing?.coverPath.orEmpty() },
-                coverThumbPath = existing?.coverThumbPath.orEmpty(),
-                workId = existing?.workId?.takeIf { it.isNotBlank() } ?: rj,
-                rjCode = existing?.rjCode?.takeIf { it.isNotBlank() } ?: rj,
-                description = existing?.description ?: ""
-            )
-            val leaves = all.asSequence()
-                .mapNotNull { node ->
-                    val t = treeFileTypeForName(node.displayName)
-                    if (t == TreeFileType.Other) return@mapNotNull null
-                    val abs = DocumentsContract.buildDocumentUriUsingTree(uri, node.documentId).toString()
-                    ScanCacheLeaf(relativePath = node.relativePath, absolutePath = abs, fileType = t)
-                }
-                .distinctBy { it.relativePath }
-                .toList()
-
-            val scanResult = libraryWriteRepository.upsertScannedDocumentAlbum(
-                entity = entity,
-                scanRootPath = albumPath,
-                trackSpecs = trackSpecs,
-                subtitlesByAudioPath = subtitlesByAudioPath,
-                cacheLeaves = leaves,
-                fileSizeQuery = { path -> queryTrackFileSize(context, path) },
-                stampProvider = { paths -> computePathsStamp(paths) },
-            )
-            val insertedAlbumId = scanResult.albumId
-            if (scanResult.wroteAnySubtitles) {
-                playerConnection.requestLyricsReload()
-            }
-            runCatching {
-                val persisted = libraryReadRepository.getAlbumById(insertedAlbumId)
-                val needCover = persisted?.coverPath?.trim().orEmpty().isBlank()
-                if (needCover) {
-                    val firstAudio = trackSpecs.firstOrNull()?.path
-                    if (!firstAudio.isNullOrBlank()) {
-                        val bmp = EmbeddedMediaExtractor.extractArtwork(context, firstAudio)
-                        if (bmp != null) {
-                            val saved = EmbeddedMediaExtractor.saveArtworkToCache(context, insertedAlbumId, bmp)
-                            if (!saved.isNullOrBlank()) {
-                                val updated = persisted!!.copy(coverPath = saved)
-                                libraryWriteRepository.updateAlbum(updated)
-                            }
-                        }
-                    }
-                }
-            }
-            enqueueAlbumCoverThumbWork(insertedAlbumId)
-            enqueueTrackDurationWork(insertedAlbumId)
-        }
-        if (asDownloadRoot) {
-            pruneMissingDocumentDownloadAlbums(rootUriString = uriString, foundAlbumPaths = foundAlbumPaths)
-        } else {
-            pruneMissingDocumentAlbums(rootUriString = uriString, foundAlbumPaths = foundAlbumPaths)
-        }
-    }
-
-    private suspend fun pruneMissingDocumentDownloadAlbums(
-        rootUriString: String,
-        foundAlbumPaths: Set<String>,
-    ) {
-        val albums = libraryReadRepository.getAllAlbumsOnce()
-        albums.filter { entity ->
-            val download = entity.downloadPath?.trim().orEmpty()
-            download.isNotBlank() && download.startsWith(rootUriString) && !foundAlbumPaths.contains(download)
-        }.forEach { entity ->
-            libraryWriteRepository.pruneDocumentDownloadAlbum(entity, rootUriString)
-        }
-    }
-
-    private suspend fun pruneMissingDocumentAlbums(
-        rootUriString: String,
-        foundAlbumPaths: Set<String>
-    ) {
-        val albums = libraryReadRepository.getAllAlbumsOnce()
-        val missing = albums.filter { entity ->
-            val local = entity.localPath?.trim().orEmpty()
-            local.isNotBlank() &&
-                local.startsWith(rootUriString) &&
-                !foundAlbumPaths.contains(local)
-        }
-        if (missing.isEmpty()) return
-
-        libraryWriteRepository.pruneMissingDocumentAlbums(missing, rootUriString)
-    }
-
-    private fun existsLocalUri(uriString: String): Boolean {
-        val uri = runCatching { Uri.parse(uriString) }.getOrNull() ?: return false
-        val treeDocId = runCatching { DocumentsContract.getTreeDocumentId(uri) }.getOrNull() ?: return false
-        val docId = runCatching { DocumentsContract.getDocumentId(uri) }.getOrNull() ?: return false
-        val treeUri = DocumentsContract.buildTreeDocumentUri(uri.authority, treeDocId)
-        return documentExists(treeUri, docId)
-    }
-
-    private suspend fun pruneOrphanedAlbumsByFilesystem() {
-        val albums = libraryReadRepository.getAllAlbumsOnce()
-        if (albums.isEmpty()) return
-
-        fun fileExists(path: String): Boolean = runCatching { File(path).exists() }.getOrDefault(false)
-        fun uriOrFileExists(pathOrUri: String): Boolean {
-            val v = pathOrUri.trim()
-            if (v.isBlank()) return false
-            if (isVirtualAlbumPath(v) || isOnlineTrackPath(v)) return true
-            return if (v.startsWith("content://")) existsLocalUri(v) else fileExists(v)
-        }
-
-        libraryWriteRepository.pruneOrphanedAlbums(
-            albums = albums,
-            uriOrFileExists = { uriOrFileExists(it) },
-            fileExists = { fileExists(it) },
-            resolveLegacyDir = { entity ->
-                val albumDir = legacyOnlineSavedAlbumDir(entity)
-                ensureLibraryAlbumDir(albumDir)
-                albumDir.absolutePath
-            },
-        )
-    }
-
-    private suspend fun scanSingleAlbumFromDocumentUri(albumId: Long, albumUriString: String) {
-        val albumUri = runCatching { Uri.parse(albumUriString) }.getOrNull() ?: return
-        val treeDocId = runCatching { DocumentsContract.getTreeDocumentId(albumUri) }.getOrNull() ?: return
-        val treeUri = DocumentsContract.buildTreeDocumentUri(albumUri.authority, treeDocId)
-        val albumDocId = runCatching { DocumentsContract.getDocumentId(albumUri) }.getOrNull() ?: return
-
-        val audioExtensions = setOf("mp3", "flac", "wav", "m4a", "ogg", "aac", "opus")
-        val subtitleExtensions = setOf("lrc", "srt", "vtt")
-
-        val albumChildren = queryChildren(treeUri, albumDocId)
-        val coverPath = pickCoverNode(albumChildren, treeUri, albumDocId)
-
-        val all = walkTree(treeUri, albumDocId).filter { it.mimeType != DocumentsContract.Document.MIME_TYPE_DIR }
-        val audioFiles = all.filter { audioExtensions.contains(it.displayName.substringAfterLast('.', "").lowercase()) }.sortedBy { it.documentId }
-        val subtitleNodes = all.filter { subtitleExtensions.contains(it.displayName.substringAfterLast('.', "").lowercase()) }
-        val subtitleCandidates = subtitleNodes.mapNotNull { node ->
-            val candidate = SubtitleMatchSupport.inferCandidate(node.relativePath, node.documentId) ?: return@mapNotNull null
-            candidate to node
-        }
-        val subtitleCandidateList = subtitleCandidates.map { it.first }
-
-        val trackSpecs = ArrayList<ScanTrackSpec>(audioFiles.size)
-        val audioRelativeBaseByPath = LinkedHashMap<String, String>(audioFiles.size)
-        audioFiles.forEach { audio ->
-            taskCoordinator.maybeUpdateBulkCurrentFile(audio.displayName)
-            val audioUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, audio.documentId)
-            val trackTitle = audio.displayName.substringBeforeLast('.').ifBlank { "track" }
-            val group = if (audio.relativePath.contains("/")) audio.relativePath.substringBeforeLast('/').substringAfterLast('/') else ""
-            val relativeBase = audio.relativePath.substringBeforeLast('.')
-            trackSpecs.add(
-                ScanTrackSpec(
-                    title = trackTitle,
-                    path = audioUri.toString(),
-                    group = group
-                )
-            )
-            audioRelativeBaseByPath[audioUri.toString()] = relativeBase
-        }
-
-        val subtitlesByAudioPath: Map<String, List<SubtitleEntry>> = trackSpecs.associate { spec ->
-            val key = audioRelativeBaseByPath[spec.path].orEmpty()
-            val matched = if (key.isBlank()) null else SubtitleMatchSupport.matchBest(key, subtitleCandidateList)
-            val node = matched?.let { hit -> subtitleCandidates.firstOrNull { it.first.sourceRef == hit.sourceRef }?.second }
-            val entries = node?.let { readSubtitleFromUri(treeUri, it.documentId, it.displayName) }.orEmpty()
-            spec.path to entries
-        }
-
-        val cacheLeaves = all.mapNotNull { node ->
-            val type = cacheFileTypeForName(node.displayName)
-            if (type == CacheTreeFileType.Other) return@mapNotNull null
-            val rawRel = node.relativePath.replace('\\', '/').trim().trimStart('/')
-            if (rawRel.isBlank()) return@mapNotNull null
-            val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, node.documentId).toString()
-            CacheLeafEntry(relativePath = rawRel, absolutePath = docUri, fileType = type)
-        }
-        val treePrefix = treeUri.toString().trimEnd('/') + "/document/"
-
-        val rescanResult = libraryWriteRepository.rescanDocumentAlbum(
-            albumId = albumId,
-            coverPath = coverPath,
-            treePrefix = treePrefix,
-            trackSpecs = trackSpecs,
-            subtitlesByAudioPath = subtitlesByAudioPath,
-        )
-        if (rescanResult.wroteAnySubtitles) {
-            playerConnection.requestLyricsReload()
-        }
-        refreshAlbumAudioAggregate(albumId)
-        if (rescanResult.persistedPaths.isNotEmpty() && cacheLeaves.isNotEmpty()) {
-            upsertLocalTreeCache(
-                albumId = albumId,
-                albumPaths = rescanResult.persistedPaths,
-                leaves = cacheLeaves.distinctBy { it.relativePath }
-            )
-        }
-        enqueueAlbumCoverThumbWork(albumId)
-        enqueueTrackDurationWork(albumId)
-    }
-
-    private suspend fun resolveAndMergeAlbumForRj(
-        rj: String,
-        fallbackPath: String,
-        fallbackTitle: String,
-        localPath: String?,
-        downloadPath: String?
-    ): AlbumEntity? = localAlbumMergeService.resolveAndMerge(
-        rj = rj,
-        fallbackPath = fallbackPath,
-        fallbackTitle = fallbackTitle,
-        localPath = localPath,
-        downloadPath = downloadPath,
-    )
-
-    // R3-C1b：SAF 扫描 helper 同步下沉 SafTreeSupport（DocNode → data.local.tree.SafDocNode）。
-
-    private fun queryChildren(treeUri: Uri, parentDocumentId: String, parentRelativePath: String = ""): List<SafDocNode> =
-        SafTreeSupport.queryChildren(context, treeUri, parentDocumentId, parentRelativePath)
-
-    private fun documentExists(treeUri: Uri, documentId: String): Boolean =
-        SafTreeSupport.documentExists(context, treeUri, documentId)
-
-    private fun walkTree(treeUri: Uri, rootDocumentId: String): List<SafDocNode> =
-        SafTreeSupport.walkTree(context, treeUri, rootDocumentId)
-
-    private fun readSubtitleFromUri(treeUri: Uri, documentId: String, displayName: String): List<com.asmr.player.util.SubtitleEntry> =
-        SafTreeSupport.readSubtitleFromUri(context, treeUri, documentId, displayName)
+    // R3-C1c：SafTreeSupport 委托随迁消除（queryChildren/walkTree/documentExists/readSubtitleFromUri
+    // 由 LibraryScanStateHolder 直调实现）。
 
     override fun onCleared() {
         taskCoordinator.cloudSyncSelectionQueue.cancelAll()
