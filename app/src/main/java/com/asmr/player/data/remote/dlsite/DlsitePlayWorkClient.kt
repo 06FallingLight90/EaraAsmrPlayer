@@ -2,7 +2,7 @@ package com.asmr.player.data.remote.dlsite
 
 import android.content.Context
 import android.util.Log
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
 import com.asmr.player.data.remote.awaitResponse
 import com.asmr.player.data.remote.auth.DlsiteAuthStore

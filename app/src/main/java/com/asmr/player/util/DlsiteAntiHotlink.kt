@@ -1,6 +1,6 @@
 package com.asmr.player.util
 
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 object DlsiteAntiHotlink {

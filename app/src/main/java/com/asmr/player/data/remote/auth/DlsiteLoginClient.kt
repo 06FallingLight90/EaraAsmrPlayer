@@ -2,7 +2,7 @@ package com.asmr.player.data.remote.auth
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.FormBody

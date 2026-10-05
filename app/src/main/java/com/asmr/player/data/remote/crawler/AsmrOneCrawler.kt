@@ -1,6 +1,6 @@
 package com.asmr.player.data.remote.crawler
 
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import com.asmr.player.data.remote.ONLINE_DIRECTORY_REQUEST_TIMEOUT_MS
 import com.asmr.player.data.remote.api.Asmr200Work
 import com.asmr.player.data.remote.api.AsmrMirrorApi

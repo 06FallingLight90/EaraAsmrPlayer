@@ -7,7 +7,7 @@ import android.os.SystemClock
 import android.util.Log
 import com.asmr.player.BuildConfig
 import com.asmr.player.cache.AppCacheManager
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import com.asmr.player.data.remote.api.AsmrOneAvailabilityApi
 import com.asmr.player.data.remote.api.AsmrOneEndpoint
 import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse

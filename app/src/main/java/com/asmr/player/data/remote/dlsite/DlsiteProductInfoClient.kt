@@ -1,6 +1,6 @@
 package com.asmr.player.data.remote.dlsite
 
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import com.asmr.player.data.remote.awaitResponse
 import com.asmr.player.data.remote.scraper.DLSITE_DOMAIN
 import com.asmr.player.data.remote.scraper.storeSegment

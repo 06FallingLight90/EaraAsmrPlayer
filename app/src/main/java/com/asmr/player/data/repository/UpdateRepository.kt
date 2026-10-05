@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.Environment
 import android.os.SystemClock
 import com.asmr.player.BuildConfig
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import com.asmr.player.data.remote.update.GitHubUpdateClient
 import com.asmr.player.data.remote.update.UpdateRelease
 import dagger.hilt.android.qualifiers.ApplicationContext

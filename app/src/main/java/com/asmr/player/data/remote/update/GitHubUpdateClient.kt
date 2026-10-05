@@ -1,7 +1,7 @@
 package com.asmr.player.data.remote.update
 
 import android.os.Build
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import okhttp3.OkHttpClient

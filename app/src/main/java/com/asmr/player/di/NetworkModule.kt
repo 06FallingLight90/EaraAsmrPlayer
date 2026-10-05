@@ -21,7 +21,7 @@ import javax.inject.Singleton
 import javax.inject.Named
 
 import com.asmr.player.data.remote.TrafficStatsInterceptor
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import com.asmr.player.data.remote.NetworkRouteManager
 import com.asmr.player.util.MessageManager
 import com.asmr.player.util.ASMR_ONE_SITE_FAILURE_MESSAGE

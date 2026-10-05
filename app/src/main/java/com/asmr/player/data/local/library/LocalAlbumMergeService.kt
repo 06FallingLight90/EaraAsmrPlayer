@@ -4,7 +4,6 @@ import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.data.local.db.entities.AlbumFtsEntity
 import com.asmr.player.data.local.db.entities.TrackEntity
-import com.asmr.player.data.download.DownloadStorageGateway
 import com.asmr.player.util.DlsiteWorkNo
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -13,7 +12,7 @@ import javax.inject.Singleton
 @Singleton
 class LocalAlbumMergeService @Inject constructor(
     private val database: AppDatabase,
-    private val storage: DownloadStorageGateway,
+    private val storage: DownloadStorage,
 ) {
     suspend fun resolveAndMerge(
         rj: String,

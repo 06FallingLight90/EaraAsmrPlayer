@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.room.withTransaction
 import androidx.work.*
 import com.asmr.player.data.remote.auth.DlsiteAuthStore
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import com.asmr.player.data.remote.download.DOWNLOAD_STATE_QUEUED
 import com.asmr.player.data.remote.download.DownloadQueueCoordinator
 import com.asmr.player.data.local.db.entities.AlbumEntity

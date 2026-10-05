@@ -1,6 +1,6 @@
 package com.asmr.player.translation
 
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import com.google.gson.JsonParser
 import java.io.IOException
 import java.util.concurrent.TimeUnit

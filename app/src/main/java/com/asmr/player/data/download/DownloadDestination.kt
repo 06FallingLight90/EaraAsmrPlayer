@@ -93,7 +93,7 @@ class DownloadDestinationStore @Inject constructor(
 @Singleton
 class DownloadStorageGateway @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
+) : com.asmr.player.data.local.library.DownloadStorage {
     private val resolver: ContentResolver
         get() = context.contentResolver
 
@@ -290,7 +290,7 @@ class DownloadStorageGateway @Inject constructor(
         return candidate.second == ancestor.second || candidate.second.startsWith(ancestor.second.trimEnd('/') + "/")
     }
 
-    fun stableIdentity(reference: String): String {
+    override fun stableIdentity(reference: String): String {
         if (!isDocumentReference(reference)) {
             return runCatching { File(reference).canonicalPath }.getOrDefault(File(reference).absolutePath)
         }

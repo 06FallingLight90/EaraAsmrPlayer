@@ -1,7 +1,7 @@
 package com.asmr.player.data.remote.dlsite
 
 import android.content.Context
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import com.asmr.player.data.remote.withSearchTimeouts
 import com.asmr.player.data.remote.auth.DlsiteAuthStore
 import com.asmr.player.domain.model.Album

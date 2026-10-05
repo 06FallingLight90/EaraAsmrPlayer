@@ -43,7 +43,7 @@ import com.asmr.player.data.local.datastore.SettingsDataStore
 import com.asmr.player.data.local.db.entities.TrackPlaybackProgressEntity
 import com.asmr.player.data.remote.auth.DlsiteAuthStore
 import com.asmr.player.data.remote.auth.buildDlsiteCookieHeader
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import com.asmr.player.data.lyrics.LyricsLoader
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.data.settings.AudioEffectController

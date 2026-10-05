@@ -4,7 +4,7 @@ import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.asmr.player.BuildConfig
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import com.asmr.player.data.remote.api.AsmrOneEndpoint
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.util.ASMR_ONE_SITE_TEST_FAILURE_MESSAGE

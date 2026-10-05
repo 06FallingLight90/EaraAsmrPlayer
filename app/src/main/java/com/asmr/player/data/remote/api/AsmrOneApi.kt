@@ -1,7 +1,7 @@
 package com.asmr.player.data.remote.api
 
 import com.google.gson.annotations.SerializedName
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Path

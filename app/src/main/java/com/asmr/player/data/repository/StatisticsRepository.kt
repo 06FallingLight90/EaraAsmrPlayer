@@ -12,7 +12,7 @@ import javax.inject.Singleton
 @Singleton
 class StatisticsRepository @Inject constructor(
     private val db: AppDatabase
-) {
+) : com.asmr.player.util.NetworkTrafficSink {
     // "今天"以凌晨 5 点为重置点（[ListeningDay]），凌晨的收听仍归属前一天。
     private fun getTodayDate(): String = ListeningDay.currentDate()
 
@@ -39,7 +39,7 @@ class StatisticsRepository @Inject constructor(
         db.dailyStatDao().incrementTrackCount(today)
     }
 
-    suspend fun addNetworkTraffic(bytes: Long) = withContext(Dispatchers.IO) {
+    override suspend fun addNetworkTraffic(bytes: Long) = withContext(Dispatchers.IO) {
         if (bytes <= 0) return@withContext
         val today = getTodayDate()
         db.dailyStatDao().addTraffic(today, bytes)

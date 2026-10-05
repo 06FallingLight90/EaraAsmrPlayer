@@ -1,6 +1,6 @@
 package com.asmr.player.data.remote
 
-import com.asmr.player.data.repository.StatisticsRepository
+import com.asmr.player.util.NetworkTrafficSink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -11,7 +11,7 @@ import javax.inject.Singleton
 
 @Singleton
 class TrafficStatsInterceptor @Inject constructor(
-    private val statisticsRepository: StatisticsRepository
+    private val networkTrafficSink: NetworkTrafficSink
 ) : Interceptor {
     private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -25,7 +25,7 @@ class TrafficStatsInterceptor @Inject constructor(
         val totalBytes = requestSize + responseSize
         if (totalBytes > 0) {
             scope.launch {
-                statisticsRepository.addNetworkTraffic(totalBytes)
+                networkTrafficSink.addNetworkTraffic(totalBytes)
             }
         }
         

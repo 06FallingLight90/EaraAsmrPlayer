@@ -1,7 +1,7 @@
 package com.asmr.player.subtitle
 
 import android.content.Context
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import com.asmr.player.util.DEEPSEEK_HTTP_CLIENT
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName

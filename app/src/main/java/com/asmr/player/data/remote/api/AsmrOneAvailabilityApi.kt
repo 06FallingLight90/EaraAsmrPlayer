@@ -2,7 +2,7 @@ package com.asmr.player.data.remote.api
 
 import android.os.Build
 import com.asmr.player.BuildConfig
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import com.asmr.player.data.remote.awaitResponse
 import com.asmr.player.data.remote.withOnlineDirectoryRequestTimeouts
 import com.asmr.player.data.remote.withSearchTimeouts

@@ -1,4 +1,4 @@
-package com.asmr.player.data.remote
+package com.asmr.player.util
 
 import java.util.Locale
 

@@ -1,6 +1,6 @@
 package com.asmr.player.subtitle
 
-import com.asmr.player.data.remote.NetworkHeaders
+import com.asmr.player.util.NetworkHeaders
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
