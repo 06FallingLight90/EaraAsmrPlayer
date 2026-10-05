@@ -2,7 +2,7 @@
 
 > 依据：`docs/project-quality-review-20261004.md`（总评 C）+ 本计划制定前的逐条回源码复核。
 > 与上轮关系：R2（`docs/refactor-plan-r2.md`，tag `refactor-r2/phase-A/B/C`）完成数据访问层下沉与全局守卫；R3 清 R2 明确遗留的三笔账——**剩余依赖环**、**两个 God VM 无法收紧到 800 行**、**ui 层穿透收口未完成**，并治理主要 P1。
-> 状态：阶段 A 已完成（tag `refactor-r3/phase-A`，测试 945/0/4）；阶段 B 开工前评估见 [dependency-forecast](refactor-plan-r3-dependency-forecast.md)。**B0–B3 已提交；B4 代码在工作树挂起（RemoteFileSize.kt 缺 1 行 import 致编译红，见 [进度留档](iteration/r3-phase-b-progress.md)）**。实测：import baseline **344 → 256**，SCC **50 → 41**，2-环 18 → 13；全量测试未复跑（B6 门禁项）。基线：`refactor/architecture-cleanup`，size pin 8 条（LibraryViewModel 2500→2494）。
+> 状态：阶段 A 已完成（tag `refactor-r3/phase-A`，测试 945/0/4）；阶段 B 开工前评估见 [dependency-forecast](refactor-plan-r3-dependency-forecast.md)。**B0–B5 全部提交**（B4 环7/环8+NetworkHeaders 迁移；B5a/c/d 穿透收口三批；详见 [进度留档](iteration/r3-phase-b-progress.md)）。实测：import baseline **344 → 205**，SCC **50 → 41**（B5 后底层团不变），2-环 18 → 13；全量测试 B6 门禁复跑中。基线：`refactor/architecture-cleanup`，size pin 8 条（LibraryViewModel 2494→2493）。
 
 ## 0. 已确认决策（用户 2026-10-04 拍板）
 

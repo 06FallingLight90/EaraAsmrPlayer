@@ -55,9 +55,9 @@ feature 服务包：subtitle · translation · cache · work · hotlistening · 
 
 - 预期方向：`ui → (playback, data, domain)`；`playback → (data, domain)`；`service → (playback, data)`；`data → (domain, util)`。
 - 数据访问边界（R2-B4/B5，2026-10-02）：两个 God VM（LibraryViewModel / AlbumDetailViewModel）的数据库读写已收进 `data/repository/LibraryWriteRepository`（标签/删除/扫描/在线保存事务族，平台接缝 lambda 注入）与 `LibraryReadRepository`（查询/流/PagingSource 出口），构造不再注入 `AppDatabase`/DAO。
-- 已知穿透（存量入 `tools/import-direction-baseline.txt`，新增违规会被 CI 拦截）：R3-A1 起 ui 侧（含 main）不得 import `data.local.db.*`（含实体与查询类型，此前规则仅覆盖 `dao.`/`AppDatabaseProvider`）、`data.local.datastore.*`、`cache.*` 与 `work.*`；反向 `translation`/`hotlistening` 不得 import `ui.*`。存量欠账见 baseline，随 R3-B 分族收口。
+- 已知穿透（存量入 `tools/import-direction-baseline.txt`，新增违规会被 CI 拦截）：R3-A1 起 ui 侧（含 main）不得 import `data.local.db.*`（含实体与查询类型，此前规则仅覆盖 `dao.`/`AppDatabaseProvider`）、`data.local.datastore.*`、`cache.*` 与 `work.*`；反向 `translation`/`hotlistening` 不得 import `ui.*`。R3-B 收口后 baseline 344 → 205：UI 消费纯类型下沉 domain.model/util、SQL 构建经 repository spec 出口、`ui.common.cover.ImageCacheBridge` 为取图片缓存管理器的唯一 seam、net-stack 能力（站点探测/预览图流/异常文案）下沉 util 与 data；剩余欠账（实体类直引、main→SettingsDataStore、Worker 类引用等）见 `docs/iteration/r3-phase-b-progress.md` §3。
 - 反向耦合（`data → 上层`）已清零（R2-B1 模型下沉 domain/data，守卫规则锁死）。
-- `domain` 基本纯净：仅 `Track.kt` 依赖 `util.RemoteSubtitleSource`。
+- `domain`（含 `domain.model`）R3-B1e 起零出边纯叶子：投影 DTO 与查询语义类型（LibraryQuerySpec 族/PersistedLibraryFilters）已内聚，`RemoteSubtitleSource` 已从 util 迁入，任何出边回潮会触发 SCC ratchet。
 
 ## 3. AlbumDetail 家族职责表
 
