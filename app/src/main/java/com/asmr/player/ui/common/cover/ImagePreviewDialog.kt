@@ -75,6 +75,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import com.asmr.player.util.PreviewImageRemoteStream
 import com.asmr.player.ui.theme.AsmrTheme
 import com.asmr.player.util.MessageManager
 import dagger.hilt.EntryPoint
@@ -85,7 +86,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Named
-import okhttp3.OkHttpClient
 
 internal const val IMAGE_PREVIEW_DIALOG_TAG = "image_preview_dialog"
 internal const val IMAGE_PREVIEW_CLOSE_TAG = "image_preview_close"
@@ -105,16 +105,16 @@ internal data class ImagePreviewLayoutSpec(
 
 internal val DefaultImagePreviewLayoutSpec = ImagePreviewLayoutSpec()
 
-/** R3-B2 环11 消解：ui.common.cover 不再直引根包 AsmrApp，经 Hilt EntryPoint 取图片客户端。 */
+/** R3-B5c：EntryPoint 改出 data 层流打开器，okhttp3 类型退出 ui（消 ui→okhttp3 方向违规）。 */
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 internal interface ImagePreviewEntryPoint {
     @Named("image")
-    fun imageOkHttpClient(): OkHttpClient
+    fun previewImageRemoteStream(): PreviewImageRemoteStream
 }
 
-private fun imageOkHttpClient(context: android.content.Context): OkHttpClient {
-    return EntryPointAccessors.fromApplication(context, ImagePreviewEntryPoint::class.java).imageOkHttpClient()
+private fun previewImageRemoteStream(context: android.content.Context): PreviewImageRemoteStream {
+    return EntryPointAccessors.fromApplication(context, ImagePreviewEntryPoint::class.java).previewImageRemoteStream()
 }
 
 @Suppress("DEPRECATION")
@@ -221,7 +221,7 @@ internal fun ImagePreviewDialog(
                 savePreviewImageToGallery(
                     context = context.applicationContext,
                     request = request,
-                    httpClient = imageOkHttpClient(context.applicationContext)
+                    remoteStream = previewImageRemoteStream(context.applicationContext)
                 )
                 savingImageKey = null
                 savedImageKey = request.key
@@ -279,7 +279,7 @@ internal fun ImagePreviewDialog(
                 val prepared = preparePreviewImageForExternalOpen(
                     context = context.applicationContext,
                     request = openRequest,
-                    httpClient = imageOkHttpClient(context.applicationContext)
+                    remoteStream = previewImageRemoteStream(context.applicationContext)
                 )
                 val viewIntent = Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(prepared.uri, prepared.mimeType)

@@ -9,6 +9,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
+import com.asmr.player.util.PreviewImageRemoteStream
 import com.asmr.player.util.CacheImageModel
 import com.asmr.player.util.Formatting
 import java.io.File
@@ -18,8 +19,6 @@ import java.io.IOException
 import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 
 internal data class PreviewImageSaveRequest(
     val key: String,
@@ -87,11 +86,11 @@ internal fun buildPreviewImageDisplayName(
 internal suspend fun savePreviewImageToGallery(
     context: Context,
     request: PreviewImageSaveRequest,
-    httpClient: OkHttpClient
+    remoteStream: PreviewImageRemoteStream
 ): Uri = withContext(Dispatchers.IO) {
     val source = resolvePreviewImageSaveSource(request)
     if (source.location.isBlank()) throw IOException("图片来源为空")
-    withPreviewImageInput(context, source, httpClient) { input, sourceMimeType ->
+    withPreviewImageInput(context, source, remoteStream) { input, sourceMimeType ->
         val mimeType = normalizeImageMimeType(sourceMimeType)
             ?: imageMimeTypeForLocation(source.location)
             ?: "image/jpeg"
@@ -111,7 +110,7 @@ internal suspend fun savePreviewImageToGallery(
 internal suspend fun preparePreviewImageForExternalOpen(
     context: Context,
     request: PreviewImageSaveRequest,
-    httpClient: OkHttpClient,
+    remoteStream: PreviewImageRemoteStream,
     contentUriForFile: (Context, File) -> Uri = ::previewImageContentUriForFile
 ): PreparedExternalPreviewImage = withContext(Dispatchers.IO) {
     val source = resolvePreviewImageSaveSource(request)
@@ -133,7 +132,7 @@ internal suspend fun preparePreviewImageForExternalOpen(
         }
         source.location.startsWith("http://", ignoreCase = true) ||
             source.location.startsWith("https://", ignoreCase = true) -> {
-            stageRemotePreviewImage(context, request, source, httpClient, contentUriForFile)
+            stageRemotePreviewImage(context, request, source, remoteStream, contentUriForFile)
         }
         else -> prepareLocalPreviewImageForExternalOpen(context, File(source.location), contentUriForFile)
     }
@@ -155,10 +154,10 @@ private fun stageRemotePreviewImage(
     context: Context,
     request: PreviewImageSaveRequest,
     source: PreviewImageSaveSource,
-    httpClient: OkHttpClient,
+    remoteStream: PreviewImageRemoteStream,
     contentUriForFile: (Context, File) -> Uri
 ): PreparedExternalPreviewImage {
-    return withPreviewImageInput(context, source, httpClient) { input, sourceMimeType ->
+    return withPreviewImageInput(context, source, remoteStream) { input, sourceMimeType ->
         val mimeType = normalizeImageMimeType(sourceMimeType)
             ?: imageMimeTypeForLocation(source.location)
             ?: "image/jpeg"
@@ -230,21 +229,13 @@ private const val PREVIEW_IMAGE_SHARE_CACHE_MAX_AGE_MS = 24L * 60L * 60L * 1_000
 private fun <T> withPreviewImageInput(
     context: Context,
     source: PreviewImageSaveSource,
-    httpClient: OkHttpClient,
+    remoteStream: PreviewImageRemoteStream,
     block: (InputStream, String?) -> T
 ): T {
     val location = source.location
     return when {
         location.startsWith("http://", ignoreCase = true) || location.startsWith("https://", ignoreCase = true) -> {
-            val requestBuilder = Request.Builder().url(location)
-            source.headers.forEach { (name, value) -> requestBuilder.header(name, value) }
-            httpClient.newCall(requestBuilder.build()).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("图片下载失败：HTTP ${response.code}")
-                val body = response.body ?: throw IOException("图片下载结果为空")
-                body.byteStream().use { input ->
-                    block(input, body.contentType()?.toString())
-                }
-            }
+            remoteStream.withRemoteInput(location, source.headers, block)
         }
         location.startsWith("content://", ignoreCase = true) -> {
             val uri = Uri.parse(location)

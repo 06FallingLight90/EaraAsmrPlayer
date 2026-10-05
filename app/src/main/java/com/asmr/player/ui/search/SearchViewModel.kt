@@ -6,6 +6,7 @@ import com.asmr.player.BuildConfig
 import com.asmr.player.data.local.datastore.LastSearchStateV1
 import com.asmr.player.data.local.datastore.SearchCacheStore
 import com.asmr.player.data.repository.SearchRepository
+import com.asmr.player.data.repository.searchErrorUserMessage
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.domain.model.Album
 import com.asmr.player.hotlistening.HotListeningApi
@@ -32,10 +33,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import org.jsoup.HttpStatusException
-import retrofit2.HttpException
-import java.io.IOException
-import java.net.SocketTimeoutException
 import java.util.Locale
 import java.util.LinkedHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -868,33 +865,7 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    private fun toUserMessage(e: Throwable): String {
-        val raw = e.message.orEmpty()
-        if (raw.contains("请先登录")) return "请先登录后再使用\"已购\"搜索"
-        return when (e) {
-            is SocketTimeoutException -> "连接超时，请稍后重试"
-            is IOException -> "网络连接失败，请检查网络后重试"
-            is HttpException -> {
-                val code = e.code()
-                when {
-                    code == 401 -> "登录已过期，请重新登录"
-                    code == 403 -> "访问受限，请稍后再试"
-                    code in 500..599 -> "服务器开小差了，请稍后重试"
-                    else -> "请求失败，请稍后重试"
-                }
-            }
-
-            is HttpStatusException -> {
-                when (e.statusCode) {
-                    403, 429 -> "访问受限或触发风控，请稍后再试"
-                    in 500..599 -> "服务器开小差了，请稍后重试"
-                    else -> "请求失败，请稍后重试"
-                }
-            }
-
-            else -> "搜索失败，请稍后重试"
-        }
-    }
+    private fun toUserMessage(e: Throwable): String = searchErrorUserMessage(e)
 
     private fun extractAsmrOneWorkNo(album: Album): String? {
         return sequenceOf(album.rjCode, album.workId)

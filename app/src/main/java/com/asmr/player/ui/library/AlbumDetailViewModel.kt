@@ -91,7 +91,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import okhttp3.OkHttpClient
 import com.asmr.player.ui.library.albumdetail.AlbumDetailModel
 import com.asmr.player.ui.library.albumdetail.albumDetailRequestKey
 import com.asmr.player.ui.library.albumdetail.AlbumDetailSimilarWorksState
@@ -159,7 +158,6 @@ class AlbumDetailViewModel @Inject constructor(
     private val appCacheManager: AppCacheManager,
     private val onlineContentRepository: OnlineContentRepository,
     val dlsiteAuthStore: DlsiteAuthStore,
-    @Named("image") private val imageOkHttpClient: OkHttpClient,
     val messageManager: MessageManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {

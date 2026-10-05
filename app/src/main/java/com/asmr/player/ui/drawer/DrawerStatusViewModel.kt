@@ -1,10 +1,9 @@
 package com.asmr.player.ui.drawer
 
-import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.asmr.player.BuildConfig
-import com.asmr.player.util.NetworkHeaders
+import com.asmr.player.util.SiteLatencyProbe
 import com.asmr.player.data.remote.api.AsmrOneEndpoint
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.util.ASMR_ONE_SITE_TEST_FAILURE_MESSAGE
@@ -18,9 +17,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 enum class SiteStatusType { Unknown, Testing, Ok, Fail }
@@ -32,7 +28,7 @@ data class SiteStatus(
 
 @HiltViewModel
 class DrawerStatusViewModel @Inject constructor(
-    private val okHttpClient: OkHttpClient,
+    private val siteLatencyProbe: SiteLatencyProbe,
     private val settingsRepository: SettingsRepository,
     private val messageManager: MessageManager
 ) : ViewModel() {
@@ -85,34 +81,8 @@ class DrawerStatusViewModel @Inject constructor(
         }
     }
 
-    private fun measure(url: String, suppressAutomaticError: Boolean = false): Long? {
-        val client = okHttpClient.newBuilder()
-            .callTimeout(10, TimeUnit.SECONDS)
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(5, TimeUnit.SECONDS)
-            .build()
-        val requestBuilder = Request.Builder()
-            .url(url)
-            .get()
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-            .header("Cache-Control", "no-cache")
-            .header("Accept", "application/json, text/plain, */*")
-        if (suppressAutomaticError) {
-            requestBuilder.header(
-                NetworkHeaders.HEADER_SILENT_IO_ERROR,
-                NetworkHeaders.SILENT_IO_ERROR_ON
-            )
-        }
-        val request = requestBuilder.build()
-        val start = SystemClock.elapsedRealtime()
-        return runCatching {
-            client.newCall(request).execute().use { resp ->
-                // 只要不是 404 或网络错误，都认为通了（即使是空搜索结果）
-                if (!resp.isSuccessful && resp.code != 404) return@use null
-                SystemClock.elapsedRealtime() - start
-            }
-        }.getOrNull()
-    }
+    private fun measure(url: String, suppressAutomaticError: Boolean = false): Long? =
+        siteLatencyProbe.measure(url, suppressAutomaticError)
 }
 
 private fun Long?.toStatus(): SiteStatus {

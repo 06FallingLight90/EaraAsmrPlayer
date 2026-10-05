@@ -64,9 +64,6 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
 import javax.inject.Named
 import com.asmr.player.BuildConfig
 import com.asmr.player.work.AlbumCoverThumbWorker
