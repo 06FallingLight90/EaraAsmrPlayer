@@ -1,5 +1,4 @@
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailScreen.kt: 1518
 app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt: 2510
 app/src/main/java/com/asmr/player/ui/library/LibraryScreen.kt: 1582
-app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailDlsiteTabs.kt: 1932
 app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt: 2186
