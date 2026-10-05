@@ -6,7 +6,8 @@ app/src/main/java/com/asmr/player/ui/downloads/DownloadsViewModel.kt com.asmr.pl
 app/src/main/java/com/asmr/player/ui/downloads/DownloadsViewModel.kt com.asmr.player.data.local.db.dao.DownloadDao
 app/src/main/java/com/asmr/player/ui/downloads/DownloadsViewModel.kt com.asmr.player.data.local.db.dao.TrackDao
 app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt okhttp3.OkHttpClient
-app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt okhttp3.Request
+app/src/main/java/com/asmr/player/ui/library/LibraryCloudSyncStateHolder.kt okhttp3.OkHttpClient
+app/src/main/java/com/asmr/player/ui/library/LibraryCloudSyncStateHolder.kt okhttp3.Request
 app/src/main/java/com/asmr/player/ui/player/LyricsScreen.kt com.asmr.player.service.PlaybackState
 app/src/main/java/com/asmr/player/ui/player/PlayerViewModel.kt com.asmr.player.data.local.db.dao.TrackDao
 app/src/main/java/com/asmr/player/data/remote/api/AsmrOneAvailabilityApi.kt com.asmr.player.listentogether.XxHash64
@@ -70,9 +71,10 @@ app/src/main/java/com/asmr/player/ui/library/LibraryScreen.kt com.asmr.player.ui
 app/src/main/java/com/asmr/player/ui/library/LibraryScreen.kt com.asmr.player.ui.playlists.PlaylistsViewModel
 app/src/main/java/com/asmr/player/ui/library/LibraryScreen.kt com.asmr.player.ui.sidepanel.LandscapeRightPanelHost
 app/src/main/java/com/asmr/player/ui/library/LibraryScreen.kt com.asmr.player.ui.sidepanel.RecentAlbumsPanel
-app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt com.asmr.player.data.remote.dlsite.DlsiteCloudSyncCandidate
-app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt com.asmr.player.data.remote.dlsite.DlsiteCloudSyncResolveResult
-app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt com.asmr.player.data.remote.dlsite.resolveCloudSyncWorkId
+app/src/main/java/com/asmr/player/ui/library/LibraryCloudSyncStateHolder.kt com.asmr.player.data.remote.dlsite.DlsiteCloudSyncCandidate
+app/src/main/java/com/asmr/player/ui/library/LibraryCloudSyncStateHolder.kt com.asmr.player.data.local.db.entities.AlbumEntity
+app/src/main/java/com/asmr/player/ui/library/LibraryCloudSyncStateHolder.kt com.asmr.player.data.remote.dlsite.DlsiteCloudSyncResolveResult
+app/src/main/java/com/asmr/player/ui/library/LibraryCloudSyncStateHolder.kt com.asmr.player.data.remote.dlsite.resolveCloudSyncWorkId
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailDialogs.kt com.asmr.player.data.local.db.AppDatabaseProvider
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailDialogs.kt com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailDialogs.kt com.asmr.player.ui.dlsite.DlsitePlayViewModel
