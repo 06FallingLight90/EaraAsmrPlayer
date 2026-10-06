@@ -48,3 +48,11 @@ C7 service 层 God 拆解：`data/download/DownloadManager`（C7-1，1184→516+
 23. **ensureAsmrOneLoaded 未收录路径实际发两次 search**：preferInitial 直解 + directRjs 兜底循环——`resolveAsmrOneWork(throwOnRequestFailure=true)` 的缓存 TTL 检查带 `cached.second != null` 条件，null 缓存不消费 → 需 enqueue 两份空 works。
 24. **selectDlsiteLanguage 尾部同时重发 ensureDlsiteLoaded + ensureAsmrOneLoaded**（两请求竞争 FIFO 入队响应）→ 入队多份无害响应（`{}` 对 editions → 空列表、对 search → 空 works，双向降级）规避到达顺序不确定性。
 25. **loadAlbum 不自动触发三路 ensure\***（调用点仅 selectDlsiteLanguage 尾部 / refreshAsmrOneSection / invalidateAsmrOneEndpointState）→ C8-0b 的时序完全由测试编排控制，请求计数断言据此设计。
+
+## C8-1 增量（首批低复杂度域 reducer 收编，+10 测）
+
+26. **同包顶层 reducer 函数与 VM 成员同名会被 member-shadowing 吞掉**：plan 草案里的 `finishAsmrOneLoad(model,...)` 与 VM 私有成员 `finishAsmrOneLoad(keyRj,...)` 同名——类内调用解析到成员（import 被遮蔽），会变成无限递归陷阱；reducer 改名 `markAsmrOneLoadFinished`。凡后批 reducer 化，先 grep VM 成员名再定名。
+27. **带消息副作用的赋值点（trial catch 分支）守卫不能全折进 reducer**：原语义是"workno 匹配 → 先 showError 再赋值"；若 workno 守卫只存在于 reducer（赋值时才判），mismatch 时消息已发出而赋值被跳过——副作用顺序发散。处理：token 判定 + workno 前置判定留在 VM 调用点（为消息门控），reducer 内守卫保留（冗余但受表驱动测试钉住）。
+28. **`resetAsmrOneContent` 放弃 plan 草案的"形态二无条件版"**：invalidateAsmrOneEndpointState 的 keyRj 空白守卫挡的是赋值+重装载，refreshAsmrOneSection 的空白守卫挡的是 attemptedRj.remove/forget 副作用——空白判定留在调用点（副作用顺序保持原位），reducer 为纯无条件五字段重置；两处调用点共用同一 reducer。
+29. **reducer 表驱动测试零 Robolectric**：AlbumDetailModel/Album/Track/AsmrOneTrackNodeResponse/DlsiteRecommendations 全为带默认值纯数据类，测试 harness 一个 `model(可覆盖字段…)` 工厂即可；断言沿用 org.junit.Assert（坑 19）。
+30. **gradlew-local.bat 文件名无前导点**（坑复现）：AGENTS.md 的 `\.gradlew-local.bat` 写法有误导，实际是 `gradlew-local.bat`；后台 Shell 调用会被推后台且 exit 0 假象场景依旧，前台跑或后台+日志轮询均可。
