@@ -3,6 +3,7 @@ package com.asmr.player.ui.library.albumdetail
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
 import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
+import com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -49,7 +50,8 @@ class AlbumDetailReducersTest {
         hasResolvedInitialDlsiteTarget: Boolean = false,
         hasLoadedInitialDlsiteContent: Boolean = false,
         isDlsiteLanguageUserSelected: Boolean = false,
-        dlsiteTrialTracks: List<Track> = emptyList()
+        dlsiteTrialTracks: List<Track> = emptyList(),
+        preserveHeaderAlbumMetadata: Boolean = false
     ): AlbumDetailModel = AlbumDetailModel(
         baseRjCode = baseRjCode,
         rjCode = rjCode,
@@ -68,7 +70,7 @@ class AlbumDetailReducersTest {
         hasLoadedInitialDlsiteContent = hasLoadedInitialDlsiteContent,
         hasResolvedAsmrOneContent = hasResolvedAsmrOneContent,
         hasResolvedDlsitePlayContent = hasResolvedDlsitePlayContent,
-        preserveHeaderAlbumMetadata = false,
+        preserveHeaderAlbumMetadata = preserveHeaderAlbumMetadata,
         isDlsiteLanguageUserSelected = isDlsiteLanguageUserSelected,
         asmrOneWorkId = asmrOneWorkId,
         asmrOneSite = asmrOneSite,
@@ -394,5 +396,247 @@ class AlbumDetailReducersTest {
         // 树与 workno 保持原样
         assertEquals(tree, updated.dlsitePlayTree)
         assertEquals("RJ789", updated.dlsitePlayWorkno)
+    }
+
+    // ------------------------------------------------------------ 域 F ensureDlsiteLoaded
+
+    @Test
+    fun `markDlsiteLoadStarted sets dlsite loading and clears trial loading`() {
+        val base = model(isLoadingDlsiteTrial = true, hasLoadedInitialDlsiteContent = true)
+        val updated = markDlsiteLoadStarted(base)
+        assertTrue(updated.isLoadingDlsite)
+        assertFalse(updated.isLoadingDlsiteTrial)
+        // 域外字段不动
+        assertTrue(updated.hasLoadedInitialDlsiteContent)
+        assertEquals(base.rjCode, updated.rjCode)
+    }
+
+    @Test
+    fun `applyInitialDlsiteTargetResolved reload without keep clears asmrOne content`() {
+        val target = ResolvedDlsiteLoadTarget(
+            editions = emptyList(),
+            selectedLang = "JPN",
+            workno = "RJ456"
+        )
+        val base = model(
+            rjCode = "RJ123",
+            hasResolvedAsmrOneContent = true,
+            isLoadingAsmrOne = true,
+            isLoadingDlsiteTrial = true
+        )
+        val updated = applyInitialDlsiteTargetResolved(
+            model = base,
+            resolvedTarget = target,
+            mustReloadAsmrOne = true,
+            keepAsmrOneContentDuringTargetSwitch = false
+        )
+        assertEquals("RJ456", updated.rjCode)
+        assertEquals("RJ456", updated.dlsiteWorkno)
+        assertTrue(updated.hasResolvedInitialDlsiteTarget)
+        // displayAlbum = 旧 displayAlbum 按 fetchedDlsiteInfo=null、asmrOneWorkId=null 重合并
+        assertEquals(
+            base.displayAlbum.withResolvedWorkIdentity(rjCode = "RJ456", asmrOneWorkId = null),
+            updated.displayAlbum
+        )
+        assertFalse(updated.hasResolvedAsmrOneContent)
+        assertNull(updated.asmrOneWorkId)
+        assertNull(updated.asmrOneSite)
+        assertTrue(updated.asmrOneTree.isEmpty())
+        assertFalse(updated.isLoadingAsmrOne)
+        assertTrue(updated.isLoadingDlsite)
+        assertFalse(updated.isLoadingDlsiteTrial)
+    }
+
+    @Test
+    fun `applyInitialDlsiteTargetResolved reload with keep preserves asmrOne content`() {
+        val target = ResolvedDlsiteLoadTarget(
+            editions = emptyList(),
+            selectedLang = "JPN",
+            workno = "RJ456"
+        )
+        val base = model(rjCode = "RJ123", hasResolvedAsmrOneContent = true)
+        val updated = applyInitialDlsiteTargetResolved(
+            model = base,
+            resolvedTarget = target,
+            mustReloadAsmrOne = true,
+            keepAsmrOneContentDuringTargetSwitch = true
+        )
+        // 树非空时保留 asmrOne 内容（仅 hasResolved 清 false）
+        assertEquals(base.asmrOneWorkId, updated.asmrOneWorkId)
+        assertEquals(base.asmrOneSite, updated.asmrOneSite)
+        assertEquals(base.asmrOneTree, updated.asmrOneTree)
+        assertFalse(updated.hasResolvedAsmrOneContent)
+        // displayAlbum 仍按 asmrOneWorkId=null 重合并（merge 参数不感知 keep）
+        assertEquals(
+            base.displayAlbum.withResolvedWorkIdentity(rjCode = "RJ456", asmrOneWorkId = null),
+            updated.displayAlbum
+        )
+    }
+
+    @Test
+    fun `applyInitialDlsiteTargetResolved without reload keeps asmrOne state`() {
+        val target = ResolvedDlsiteLoadTarget(
+            editions = emptyList(),
+            selectedLang = "JPN",
+            workno = "RJ123"
+        )
+        val base = model(
+            rjCode = "RJ123",
+            hasResolvedAsmrOneContent = true,
+            isLoadingAsmrOne = true
+        )
+        val updated = applyInitialDlsiteTargetResolved(
+            model = base,
+            resolvedTarget = target,
+            mustReloadAsmrOne = false,
+            keepAsmrOneContentDuringTargetSwitch = false
+        )
+        assertTrue(updated.hasResolvedAsmrOneContent)
+        assertTrue(updated.isLoadingAsmrOne)
+        assertEquals(base.asmrOneWorkId, updated.asmrOneWorkId)
+        assertEquals(base.asmrOneTree, updated.asmrOneTree)
+        // displayAlbum 按原 asmrOneWorkId 重合并
+        assertEquals(
+            base.displayAlbum.withResolvedWorkIdentity(
+                rjCode = "RJ123",
+                asmrOneWorkId = base.asmrOneWorkId
+            ),
+            updated.displayAlbum
+        )
+        assertTrue(updated.isLoadingDlsite)
+        assertTrue(updated.hasResolvedInitialDlsiteTarget)
+    }
+
+    @Test
+    fun `finishDlsiteInitialLoadWithoutWorkno settles load`() {
+        val base = model(isLoadingDlsite = true, hasLoadedInitialDlsiteContent = false)
+        val updated = finishDlsiteInitialLoadWithoutWorkno(base)
+        assertTrue(updated.hasLoadedInitialDlsiteContent)
+        assertFalse(updated.isLoadingDlsite)
+        // 域外字段不动
+        assertEquals(base.rjCode, updated.rjCode)
+        assertEquals(base.dlsiteWorkno, updated.dlsiteWorkno)
+    }
+
+    @Test
+    fun `applyDlsiteContentLoaded merges header and writes content fields`() {
+        val fetched = album(id = 9L, title = "online-info", rjCode = "RJ123")
+        val gallery = listOf("https://img/g1")
+        val trial = listOf(Track(albumId = 2L, title = "trial", path = "/t"))
+        val recs = com.asmr.player.data.remote.scraper.DlsiteRecommendations()
+        val base = model(isLoadingDlsite = true, hasLoadedInitialDlsiteContent = false)
+        val updated = applyDlsiteContentLoaded(
+            model = base,
+            fetchedDlsiteInfo = fetched,
+            dlsiteGalleryUrls = gallery,
+            dlsiteTrialTracks = trial,
+            dlsiteRecommendations = recs
+        )
+        assertTrue(updated.hasLoadedInitialDlsiteContent)
+        assertFalse(updated.isLoadingDlsite)
+        assertSame(fetched, updated.dlsiteInfo)
+        assertEquals(gallery, updated.dlsiteGalleryUrls)
+        assertEquals(trial, updated.dlsiteTrialTracks)
+        assertEquals(recs, updated.dlsiteRecommendations)
+        // displayAlbum = 按 fetchedDlsiteInfo 重合并（锚定 mergeDetailHeaderAlbum 参数接线，其自身语义由 Support 覆盖）
+        assertEquals(
+            mergeDetailHeaderAlbum(
+                currentDisplayAlbum = base.displayAlbum,
+                localAlbum = base.localAlbum,
+                fetchedDlsiteInfo = fetched,
+                rjCode = base.rjCode,
+                asmrOneWorkId = base.asmrOneWorkId,
+                preserveHeaderAlbumMetadata = base.preserveHeaderAlbumMetadata
+            ),
+            updated.displayAlbum
+        )
+    }
+
+    @Test
+    fun `applyDlsiteContentLoaded preserves header metadata keeps old dlsiteInfo`() {
+        val oldInfo = album(id = 8L, title = "old-info", rjCode = "RJ123")
+        val fetched = album(id = 9L, title = "online-info", rjCode = "RJ123")
+        val base = model(dlsiteInfo = oldInfo, preserveHeaderAlbumMetadata = true)
+        val updated = applyDlsiteContentLoaded(
+            model = base,
+            fetchedDlsiteInfo = fetched,
+            dlsiteGalleryUrls = emptyList(),
+            dlsiteTrialTracks = emptyList(),
+            dlsiteRecommendations = com.asmr.player.data.remote.scraper.DlsiteRecommendations()
+        )
+        assertSame(oldInfo, updated.dlsiteInfo)
+        // preserve 路径 displayAlbum 仅解析 work identity
+        assertEquals(
+            base.displayAlbum.withResolvedWorkIdentity(
+                rjCode = base.rjCode,
+                asmrOneWorkId = base.asmrOneWorkId
+            ),
+            updated.displayAlbum
+        )
+    }
+
+    @Test
+    fun `applyDlsiteRecommendationEnrich replaces recommendations only`() {
+        val enriched = com.asmr.player.data.remote.scraper.DlsiteRecommendations(
+            circleWorks = listOf(DlsiteRecommendedWork(rjCode = "RJ999", title = "t", coverUrl = "c"))
+        )
+        val base = model(isLoadingDlsite = true)
+        val updated = applyDlsiteRecommendationEnrich(base, enriched)
+        assertEquals(enriched, updated.dlsiteRecommendations)
+        // 域外字段不动
+        assertEquals(base.isLoadingDlsite, updated.isLoadingDlsite)
+        assertEquals(base.displayAlbum, updated.displayAlbum)
+    }
+
+    @Test
+    fun `markDlsiteLoadFailed closes dlsite loading only`() {
+        val base = model(isLoadingDlsite = true, isLoadingDlsiteTrial = true)
+        val updated = markDlsiteLoadFailed(base)
+        assertFalse(updated.isLoadingDlsite)
+        // 失败收口不动 trial 标志与其他字段
+        assertTrue(updated.isLoadingDlsiteTrial)
+        assertFalse(updated.hasLoadedInitialDlsiteContent)
+    }
+
+    @Test
+    fun `mergeDlsiteRecommendations prefer non blank and dedupe`() {
+        // primary 空 → 直接用 secondary
+        val onlySecondary = mergeDlsiteRecommendations(
+            fromV2 = com.asmr.player.data.remote.scraper.DlsiteRecommendations(),
+            fallback = com.asmr.player.data.remote.scraper.DlsiteRecommendations(
+                circleWorks = listOf(DlsiteRecommendedWork(rjCode = "RJ1", title = "f1", coverUrl = "c1"))
+            )
+        )
+        assertEquals(listOf(DlsiteRecommendedWork(rjCode = "RJ1", title = "f1", coverUrl = "c1")), onlySecondary.circleWorks)
+
+        // secondary 空 → 直接用 primary
+        val primary = listOf(DlsiteRecommendedWork(rjCode = "RJ2", title = "p2", coverUrl = "c2"))
+        val onlyPrimary = mergeDlsiteRecommendations(
+            fromV2 = com.asmr.player.data.remote.scraper.DlsiteRecommendations(alsoBoughtWorks = primary),
+            fallback = com.asmr.player.data.remote.scraper.DlsiteRecommendations()
+        )
+        assertEquals(primary, onlyPrimary.alsoBoughtWorks)
+
+        // 重叠项按 primary 优先、secondary 补空白；rjCode 大小写/空白不敏感去重
+        val merged = mergeDlsiteRecommendations(
+            fromV2 = com.asmr.player.data.remote.scraper.DlsiteRecommendations(
+                sameVoiceWorks = listOf(
+                    DlsiteRecommendedWork(rjCode = " rj3 ", title = "", coverUrl = "cv3", ribbon = null),
+                    DlsiteRecommendedWork(rjCode = "RJ4", title = "p4", coverUrl = "cv4", ribbon = "r4")
+                )
+            ),
+            fallback = com.asmr.player.data.remote.scraper.DlsiteRecommendations(
+                sameVoiceWorks = listOf(
+                    DlsiteRecommendedWork(rjCode = "RJ3", title = "f3", coverUrl = "old", ribbon = "rf3"),
+                    DlsiteRecommendedWork(rjCode = "RJ5", title = "f5", coverUrl = "cv5", ribbon = null)
+                )
+            )
+        )
+        val mergedWorks = merged.sameVoiceWorks
+        // RJ3：primary 的空白 title 由 secondary 补，coverUrl/ribbon 保留 primary
+        assertEquals(DlsiteRecommendedWork(rjCode = " rj3 ", title = "f3", coverUrl = "cv3", ribbon = "rf3"), mergedWorks[0])
+        assertEquals(DlsiteRecommendedWork(rjCode = "RJ4", title = "p4", coverUrl = "cv4", ribbon = "r4"), mergedWorks[1])
+        // RJ5 仅在 secondary → 追加
+        assertEquals(DlsiteRecommendedWork(rjCode = "RJ5", title = "f5", coverUrl = "cv5", ribbon = null), mergedWorks[2])
     }
 }

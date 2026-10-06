@@ -39,7 +39,6 @@ import com.asmr.player.data.download.DownloadBatchRequest
 import com.asmr.player.data.download.EnqueueDownloadBatchResult
 import com.asmr.player.data.download.RelativeDownloadItem
 import com.asmr.player.data.remote.scraper.DLSiteScraper
-import com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 import com.asmr.player.data.remote.scraper.DlsiteRecommendations
 import com.asmr.player.data.repository.LibraryReadRepository
 import com.asmr.player.data.repository.LibraryWriteRepository
@@ -116,6 +115,13 @@ import com.asmr.player.ui.library.albumdetail.applyDlsiteLanguageLocalReload
 import com.asmr.player.ui.library.albumdetail.markDlsitePlayLoading
 import com.asmr.player.ui.library.albumdetail.finishDlsitePlayLoad
 import com.asmr.player.ui.library.albumdetail.markDlsitePlayLoadFailed
+import com.asmr.player.ui.library.albumdetail.markDlsiteLoadStarted
+import com.asmr.player.ui.library.albumdetail.applyInitialDlsiteTargetResolved
+import com.asmr.player.ui.library.albumdetail.finishDlsiteInitialLoadWithoutWorkno
+import com.asmr.player.ui.library.albumdetail.applyDlsiteContentLoaded
+import com.asmr.player.ui.library.albumdetail.applyDlsiteRecommendationEnrich
+import com.asmr.player.ui.library.albumdetail.markDlsiteLoadFailed
+import com.asmr.player.ui.library.albumdetail.mergeDlsiteRecommendations
 import com.asmr.player.ui.library.albumdetail.withResolvedWorkIdentity
 import com.asmr.player.ui.library.albumdetail.buildAlbumDetailSimilarWorks
 import com.asmr.player.ui.library.albumdetail.buildDlsiteTrialDownloadTree
@@ -132,7 +138,6 @@ import com.asmr.player.ui.library.albumdetail.LocalIncrementalSelectionPaths
 import com.asmr.player.ui.library.albumdetail.LocalSourceAvailability
 import com.asmr.player.data.local.tree.localTreeSourcesForAlbum
 import com.asmr.player.ui.library.albumdetail.mergeAsmrOneHeaderAlbum
-import com.asmr.player.ui.library.albumdetail.mergeDetailHeaderAlbum
 import com.asmr.player.ui.library.albumdetail.RemoteSelectionFileRef
 import com.asmr.player.ui.library.albumdetail.resolveAlbumDetailRj
 import com.asmr.player.ui.library.albumdetail.resolveAsmrOneTrackWorkId
@@ -914,10 +919,7 @@ class AlbumDetailViewModel @Inject constructor(
         dlsiteLoadJob = viewModelScope.launch {
             val latestBefore = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return@launch
             _uiState.value = AlbumDetailUiState.Success(
-                model = latestBefore.copy(
-                    isLoadingDlsite = true,
-                    isLoadingDlsiteTrial = false
-                )
+                model = markDlsiteLoadStarted(latestBefore)
             )
             try {
                 var loadModel = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return@launch
@@ -926,50 +928,21 @@ class AlbumDetailViewModel @Inject constructor(
                     val latestResolved = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return@launch
                     if (token != dlsiteLoadToken) return@launch
                     val targetWorkno = resolvedTarget.workno.trim().uppercase()
-                    val targetChanged = shouldReloadAsmrOneForResolvedInitialTarget(
+                    val mustReloadAsmrOne = shouldReloadAsmrOneForResolvedInitialTarget(
                         currentRj = latestResolved.rjCode,
                         resolvedWorkno = targetWorkno
                     )
-                    val mustReloadAsmrOne = targetChanged
-                    val keepAsmrOneContentDuringTargetSwitch = targetChanged &&
+                    val keepAsmrOneContentDuringTargetSwitch = mustReloadAsmrOne &&
                         latestResolved.asmrOneTree.isNotEmpty()
                     if (mustReloadAsmrOne) {
                         asmrOneLoadToken++
                         asmrOneAttemptedRj.clear()
                     }
-                    loadModel = latestResolved.copy(
-                        rjCode = resolvedTarget.workno,
-                        displayAlbum = mergeDetailHeaderAlbum(
-                            currentDisplayAlbum = latestResolved.displayAlbum,
-                            localAlbum = latestResolved.localAlbum,
-                            fetchedDlsiteInfo = latestResolved.dlsiteInfo,
-                            rjCode = resolvedTarget.workno,
-                            asmrOneWorkId = if (mustReloadAsmrOne) null else latestResolved.asmrOneWorkId,
-                            preserveHeaderAlbumMetadata = latestResolved.preserveHeaderAlbumMetadata
-                        ),
-                        dlsiteWorkno = resolvedTarget.workno,
-                        dlsiteEditions = resolvedTarget.editions,
-                        dlsiteSelectedLang = resolvedTarget.selectedLang,
-                        hasResolvedInitialDlsiteTarget = true,
-                        hasResolvedAsmrOneContent = if (mustReloadAsmrOne) false else latestResolved.hasResolvedAsmrOneContent,
-                        asmrOneWorkId = if (mustReloadAsmrOne && !keepAsmrOneContentDuringTargetSwitch) {
-                            null
-                        } else {
-                            latestResolved.asmrOneWorkId
-                        },
-                        asmrOneSite = if (mustReloadAsmrOne && !keepAsmrOneContentDuringTargetSwitch) {
-                            null
-                        } else {
-                            latestResolved.asmrOneSite
-                        },
-                        asmrOneTree = if (mustReloadAsmrOne && !keepAsmrOneContentDuringTargetSwitch) {
-                            emptyList()
-                        } else {
-                            latestResolved.asmrOneTree
-                        },
-                        isLoadingDlsite = true,
-                        isLoadingAsmrOne = if (mustReloadAsmrOne) false else latestResolved.isLoadingAsmrOne,
-                        isLoadingDlsiteTrial = false
+                    loadModel = applyInitialDlsiteTargetResolved(
+                        model = latestResolved,
+                        resolvedTarget = resolvedTarget,
+                        mustReloadAsmrOne = mustReloadAsmrOne,
+                        keepAsmrOneContentDuringTargetSwitch = keepAsmrOneContentDuringTargetSwitch
                     )
                     _uiState.value = AlbumDetailUiState.Success(model = loadModel)
                 }
@@ -978,10 +951,7 @@ class AlbumDetailViewModel @Inject constructor(
                     val workno = loadModel.dlsiteWorkno.trim().uppercase().ifBlank { loadModel.rjCode.trim().uppercase() }
                     if (workno.isBlank()) {
                         _uiState.value = AlbumDetailUiState.Success(
-                            model = loadModel.copy(
-                                hasLoadedInitialDlsiteContent = true,
-                                isLoadingDlsite = false
-                            )
+                            model = finishDlsiteInitialLoadWithoutWorkno(loadModel)
                         )
                         return@launch
                     }
@@ -990,10 +960,7 @@ class AlbumDetailViewModel @Inject constructor(
                 val workno = loadModel.dlsiteWorkno.trim().uppercase().ifBlank { loadModel.rjCode.trim().uppercase() }
                 if (workno.isBlank()) {
                     _uiState.value = AlbumDetailUiState.Success(
-                        model = loadModel.copy(
-                            hasLoadedInitialDlsiteContent = true,
-                            isLoadingDlsite = false
-                        )
+                        model = finishDlsiteInitialLoadWithoutWorkno(loadModel)
                     )
                     return@launch
                 }
@@ -1014,59 +981,19 @@ class AlbumDetailViewModel @Inject constructor(
                 val dlsiteInfo = dlsiteWorkInfo?.album
                 val dlsiteGalleryUrls = dlsiteWorkInfo?.galleryUrls.orEmpty()
                 
-                fun mergePreferNonBlank(
-                    primary: List<DlsiteRecommendedWork>,
-                    secondary: List<DlsiteRecommendedWork>
-                ): List<DlsiteRecommendedWork> {
-                    if (primary.isEmpty()) return secondary
-                    if (secondary.isEmpty()) return primary
-                    val secondaryById = secondary.associateBy { it.rjCode.trim().uppercase() }
-                    val merged = primary.map { p ->
-                        val s = secondaryById[p.rjCode.trim().uppercase()]
-                        if (s == null) {
-                            p
-                        } else {
-                            p.copy(
-                                title = p.title.ifBlank { s.title },
-                                coverUrl = p.coverUrl.ifBlank { s.coverUrl },
-                                ribbon = p.ribbon ?: s.ribbon
-                            )
-                        }
-                    }
-                    val existing = merged.mapTo(hashSetOf()) { it.rjCode.trim().uppercase() }
-                    val appended = secondary.filter { it.rjCode.trim().uppercase() !in existing }
-                    return (merged + appended).distinctBy { it.rjCode.trim().uppercase() }
-                }
-
-                val fallbackRecs = dlsiteWorkInfo?.recommendations ?: DlsiteRecommendations()
-                val circleWorks = mergePreferNonBlank(dlsiteRecommendationsFromV2.circleWorks, fallbackRecs.circleWorks)
-                val sameVoiceWorks = mergePreferNonBlank(dlsiteRecommendationsFromV2.sameVoiceWorks, fallbackRecs.sameVoiceWorks)
-                val alsoBoughtWorks = mergePreferNonBlank(dlsiteRecommendationsFromV2.alsoBoughtWorks, fallbackRecs.alsoBoughtWorks)
-                
-                val dlsiteRecommendationsRaw = DlsiteRecommendations(
-                    circleWorks = circleWorks,
-                    sameVoiceWorks = sameVoiceWorks,
-                    alsoBoughtWorks = alsoBoughtWorks
+                val dlsiteRecommendationsRaw = mergeDlsiteRecommendations(
+                    fromV2 = dlsiteRecommendationsFromV2,
+                    fallback = dlsiteWorkInfo?.recommendations ?: DlsiteRecommendations()
                 )
                 val updated = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return@launch
                 if (token != dlsiteLoadToken) return@launch
-                val displayAlbum = mergeDetailHeaderAlbum(
-                    currentDisplayAlbum = updated.displayAlbum,
-                    localAlbum = updated.localAlbum,
-                    fetchedDlsiteInfo = dlsiteInfo,
-                    rjCode = updated.rjCode,
-                    asmrOneWorkId = updated.asmrOneWorkId,
-                    preserveHeaderAlbumMetadata = updated.preserveHeaderAlbumMetadata
-                )
                 _uiState.value = AlbumDetailUiState.Success(
-                    model = updated.copy(
-                        displayAlbum = displayAlbum,
-                        dlsiteInfo = if (updated.preserveHeaderAlbumMetadata) updated.dlsiteInfo else dlsiteInfo,
+                    model = applyDlsiteContentLoaded(
+                        model = updated,
+                        fetchedDlsiteInfo = dlsiteInfo,
                         dlsiteGalleryUrls = dlsiteGalleryUrls,
                         dlsiteTrialTracks = dlsiteTrialTracks,
-                        dlsiteRecommendations = dlsiteRecommendationsRaw,
-                        hasLoadedInitialDlsiteContent = true,
-                        isLoadingDlsite = false
+                        dlsiteRecommendations = dlsiteRecommendationsRaw
                     )
                 )
 
@@ -1080,13 +1007,15 @@ class AlbumDetailViewModel @Inject constructor(
                         .getOrNull() ?: return@enrichLaunch
                     val updated2 = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return@enrichLaunch
                     if (token != dlsiteLoadToken) return@enrichLaunch
-                    _uiState.value = AlbumDetailUiState.Success(model = updated2.copy(dlsiteRecommendations = enriched))
+                    _uiState.value = AlbumDetailUiState.Success(
+                        model = applyDlsiteRecommendationEnrich(updated2, enriched)
+                    )
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 val updated = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return@launch
-                _uiState.value = AlbumDetailUiState.Success(model = updated.copy(isLoadingDlsite = false))
+                _uiState.value = AlbumDetailUiState.Success(model = markDlsiteLoadFailed(updated))
             }
         }
     }

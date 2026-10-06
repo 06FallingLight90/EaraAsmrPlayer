@@ -2,6 +2,7 @@ package com.asmr.player.ui.library.albumdetail
 
 import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
 import com.asmr.player.data.remote.scraper.DlsiteRecommendations
+import com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
 
@@ -220,4 +221,138 @@ internal fun markDlsitePlayLoadFailed(model: AlbumDetailModel): AlbumDetailModel
         hasResolvedDlsitePlayContent = true,
         isLoadingDlsitePlay = false
     )
+}
+
+/** 域 F：dlsite 开载置位（原 ensureDlsiteLoaded launch 头部内联 copy；沿用调用点的 model 快照应用）。 */
+internal fun markDlsiteLoadStarted(model: AlbumDetailModel): AlbumDetailModel {
+    return model.copy(
+        isLoadingDlsite = true,
+        isLoadingDlsiteTrial = false
+    )
+}
+
+/** 域 F：初始装载目标解析推进（原 ensureDlsiteLoaded target resolve 段内联 copy；mustReloadAsmrOne / keepAsmrOneContentDuringTargetSwitch 由调用点推导，asmrOne token 与 attemptedRj 副作用留在调用点）。 */
+internal fun applyInitialDlsiteTargetResolved(
+    model: AlbumDetailModel,
+    resolvedTarget: ResolvedDlsiteLoadTarget,
+    mustReloadAsmrOne: Boolean,
+    keepAsmrOneContentDuringTargetSwitch: Boolean
+): AlbumDetailModel {
+    return model.copy(
+        rjCode = resolvedTarget.workno,
+        displayAlbum = mergeDetailHeaderAlbum(
+            currentDisplayAlbum = model.displayAlbum,
+            localAlbum = model.localAlbum,
+            fetchedDlsiteInfo = model.dlsiteInfo,
+            rjCode = resolvedTarget.workno,
+            asmrOneWorkId = if (mustReloadAsmrOne) null else model.asmrOneWorkId,
+            preserveHeaderAlbumMetadata = model.preserveHeaderAlbumMetadata
+        ),
+        dlsiteWorkno = resolvedTarget.workno,
+        dlsiteEditions = resolvedTarget.editions,
+        dlsiteSelectedLang = resolvedTarget.selectedLang,
+        hasResolvedInitialDlsiteTarget = true,
+        hasResolvedAsmrOneContent = if (mustReloadAsmrOne) false else model.hasResolvedAsmrOneContent,
+        asmrOneWorkId = if (mustReloadAsmrOne && !keepAsmrOneContentDuringTargetSwitch) {
+            null
+        } else {
+            model.asmrOneWorkId
+        },
+        asmrOneSite = if (mustReloadAsmrOne && !keepAsmrOneContentDuringTargetSwitch) {
+            null
+        } else {
+            model.asmrOneSite
+        },
+        asmrOneTree = if (mustReloadAsmrOne && !keepAsmrOneContentDuringTargetSwitch) {
+            emptyList()
+        } else {
+            model.asmrOneTree
+        },
+        isLoadingDlsite = true,
+        isLoadingAsmrOne = if (mustReloadAsmrOne) false else model.isLoadingAsmrOne,
+        isLoadingDlsiteTrial = false
+    )
+}
+
+/** 域 F：初始装载无 workno 收口（原 ensureDlsiteLoaded 两处 workno 空白早退内联 copy：视为已装载并停 loading；workno 空白判定留在调用点）。 */
+internal fun finishDlsiteInitialLoadWithoutWorkno(model: AlbumDetailModel): AlbumDetailModel {
+    return model.copy(
+        hasLoadedInitialDlsiteContent = true,
+        isLoadingDlsite = false
+    )
+}
+
+/** 域 F：dlsite 抓取结果合并（原 ensureDlsiteLoaded 抓取后内联 copy；displayAlbum 按抓取到的 dlsiteInfo 重合并；preserveHeaderAlbumMetadata 时保留旧 dlsiteInfo）。 */
+internal fun applyDlsiteContentLoaded(
+    model: AlbumDetailModel,
+    fetchedDlsiteInfo: Album?,
+    dlsiteGalleryUrls: List<String>,
+    dlsiteTrialTracks: List<Track>,
+    dlsiteRecommendations: DlsiteRecommendations
+): AlbumDetailModel {
+    return model.copy(
+        displayAlbum = mergeDetailHeaderAlbum(
+            currentDisplayAlbum = model.displayAlbum,
+            localAlbum = model.localAlbum,
+            fetchedDlsiteInfo = fetchedDlsiteInfo,
+            rjCode = model.rjCode,
+            asmrOneWorkId = model.asmrOneWorkId,
+            preserveHeaderAlbumMetadata = model.preserveHeaderAlbumMetadata
+        ),
+        dlsiteInfo = if (model.preserveHeaderAlbumMetadata) model.dlsiteInfo else fetchedDlsiteInfo,
+        dlsiteGalleryUrls = dlsiteGalleryUrls,
+        dlsiteTrialTracks = dlsiteTrialTracks,
+        dlsiteRecommendations = dlsiteRecommendations,
+        hasLoadedInitialDlsiteContent = true,
+        isLoadingDlsite = false
+    )
+}
+
+/** 域 F：推荐位 asmrOne 富化回写（原 ensureDlsiteLoaded enrich job 内联 copy；token 与推荐位非空守卫留在调用点）。 */
+internal fun applyDlsiteRecommendationEnrich(
+    model: AlbumDetailModel,
+    enriched: DlsiteRecommendations
+): AlbumDetailModel {
+    return model.copy(dlsiteRecommendations = enriched)
+}
+
+/** 域 F：初始装载失败收口（原 ensureDlsiteLoaded catch 分支内联 copy）。 */
+internal fun markDlsiteLoadFailed(model: AlbumDetailModel): AlbumDetailModel {
+    return model.copy(isLoadingDlsite = false)
+}
+
+/** 域 F：推荐位两路合并（原 ensureDlsiteLoaded 局部函数 mergePreferNonBlank 及三路组装逐字随迁）。 */
+internal fun mergeDlsiteRecommendations(
+    fromV2: DlsiteRecommendations,
+    fallback: DlsiteRecommendations
+): DlsiteRecommendations {
+    return DlsiteRecommendations(
+        circleWorks = mergePreferNonBlank(fromV2.circleWorks, fallback.circleWorks),
+        sameVoiceWorks = mergePreferNonBlank(fromV2.sameVoiceWorks, fallback.sameVoiceWorks),
+        alsoBoughtWorks = mergePreferNonBlank(fromV2.alsoBoughtWorks, fallback.alsoBoughtWorks)
+    )
+}
+
+private fun mergePreferNonBlank(
+    primary: List<DlsiteRecommendedWork>,
+    secondary: List<DlsiteRecommendedWork>
+): List<DlsiteRecommendedWork> {
+    if (primary.isEmpty()) return secondary
+    if (secondary.isEmpty()) return primary
+    val secondaryById = secondary.associateBy { it.rjCode.trim().uppercase() }
+    val merged = primary.map { p ->
+        val s = secondaryById[p.rjCode.trim().uppercase()]
+        if (s == null) {
+            p
+        } else {
+            p.copy(
+                title = p.title.ifBlank { s.title },
+                coverUrl = p.coverUrl.ifBlank { s.coverUrl },
+                ribbon = p.ribbon ?: s.ribbon
+            )
+        }
+    }
+    val existing = merged.mapTo(hashSetOf()) { it.rjCode.trim().uppercase() }
+    val appended = secondary.filter { it.rjCode.trim().uppercase() !in existing }
+    return (merged + appended).distinctBy { it.rjCode.trim().uppercase() }
 }
