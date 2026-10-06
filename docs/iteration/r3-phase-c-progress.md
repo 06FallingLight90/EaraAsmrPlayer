@@ -1,7 +1,7 @@
-# R3 阶段 C 进度留档（2026-10-06：C1 + C3 + C4-1..C4-6 完成，VM 463 行 / Repo 门面 238 行）
+# R3 阶段 C 进度留档（2026-10-06：C1 + C3 + C4 全部完成（7/7），VM 463 行 / Repo 门面 238 行 / EqualizerPanel 1189→170+4 文件）
 
-> 状态：阶段 B 已闭环（tag `refactor-r3/phase-B`）；阶段 C 执行中——C1 六 holder 分治、C3 写仓拆族、C4-1..C4-6 God 文件区块化完成（7 文件中 6 个，仅剩 EqualizerPanel）。
-> 基线：`refactor/architecture-cleanup`，阶段 B tag 之后 24 个提交（C1a..C1d、docs ×2、C3、C4-1、C4-2、docs、C4-3、docs、C4-4、C4-5、docs 停工留档、C4-6、docs）。
+> 状态：阶段 B 已闭环（tag `refactor-r3/phase-B`）；阶段 C 执行中——C1 六 holder 分治、C3 写仓拆族、C4 God 文件区块化全部完成（7/7，SearchScreen 归 C9）。
+> 基线：`refactor/architecture-cleanup`，阶段 B tag 之后 26 个提交（C1a..C1d、docs ×2、C3、C4-1、C4-2、docs、C4-3、docs、C4-4、C4-5、docs 停工留档、C4-6、docs、C4-7、docs）。
 > 实机走查（B 阶段遗留 + C 阶段六族/写仓拆族）仍挂起待设备。
 
 ## 1. 已提交进度
@@ -22,6 +22,7 @@
 | `44df31e` | C4-4 | LibraryScreen 区块化拆族（**1573 行单文件 → 主文件 1138 + 2 同包主题文件** ui/library）：LibraryChrome 212（7 个 internal test tag + CollapseOvershoot + LibraryChrome——单测 LibraryScreenChromeTest / androidTest LibraryChromeAndroidTest 同包引用零改动）/ LibraryTrackListSupport 268（两圆角常量 + TrackAlbumHeader / rememberAlbumTrackListTotalSizeBytes / TrackListRow / AlbumSyncStatusOverlay，private→internal 4 处）；主文件保留 LibraryScreen + LibraryScreenContent + TagAssignTarget + 共享常量（LibraryPageHorizontalPadding private→internal 三文件共用）；顺带删 55 条 stale import；**LibraryActionItem 全文件零调用（死码，按 TaskProgressMeta 先例保留待清账）**；size baseline 删 pin（4→3 条：AlbumDetailScreen 1518 / AlbumDetailViewModel 2510 / SearchScreen 2186——SearchScreen 归 C9）；import baseline 无变化（新增违规 0）；三绿 945/0/4 |
 | `91f535d` | C4-5 | AlbumDetailScreen 区块化（**1515 行单 Composable 函数 → 主文件 1103 + 2 同包主题文件** ui/library）：AlbumDetailHeroScrollConnection 193（rememberAlbumDetailHeroNestedScrollConnection——hero 折叠/回弹 NestedScrollConnection 整体迁出，4 参数 heroMotion/scope/两 maxPx，remember 键随迁）/ AlbumDetailDialogHosts 259（Success 尾部对话框簇 canSaveOnline+10 组对话框/浮层整体迁出，15 个原 remember 状态以 `XState: MutableState<T>` 参数注入 + 函数内同名 `var x by xState` 委托前导，函数体逐字零改动）；主文件 15 处声明拆 `val xState = remember{...}` + `var x by xState`（组合槽位不变，行为等价）；机械清 138 条 stale import；**主文件 1103 < 1500 退出 size pin（3→2 条，剩 AlbumDetailViewModel / SearchScreen）**；import baseline 202→203（删 4 条主文件 stale + 新文件 5 条存量同性质入 baseline，净 +1——同一 ui→data.remote.api 方向多一个文件，B 文件参数类型所需）；三绿 945/0/4 |
 | `53c2ee3` | C4-6 | SettingsScreen 区块化拆族（**1270 行单文件 → 主文件 613 + 2 同包主题文件** ui/settings）：主文件保留 BlockedKeywords/Translation/SupportStatus/AppCache 四薄分支 + 四个 FlatActionDialog（与状态声明耦合紧，不拆）；SettingsScreenLocalLibrary 230（LocalLibrary 内容区整体迁出，12 参数，pendingDownloadDestination/pendingRemoveRoot 改 MutableState 注入）/ SettingsScreenDetailSections 571（Appearance/Playback/Lyrics/About 四 Section 聚合，activeTipKey 改 MutableState 注入，MONOCHROME_THEME_SENTINEL 随迁）；三处声明拆两行式（坑 10）；机械清 68 条 stale import；**切片设计外修复三件（新证据，坑 14-16）**：①参数类型为项目 AsmrColorScheme（textPrimary/primarySoft 属其自定义属性）②Appearance/Playback/Lyrics 三函数补 @OptIn(ExperimentalMaterial3Api::class)（原文件级 OptIn 不随迁）③About 尾部 Modifier.align 依赖原 SettingsDetailCard 的 ColumnScope——Box(fillMaxWidth)+Alignment.CenterEnd 等价替换（新增一布局节点，视觉零差异）；import baseline 净 +2（删主文件 2 条失效 BulkPhase/launchDownloadedApkInstall + 新文件 4 条同方向存量 settings→library/update 入 baseline）；SettingsScreen 无 size pin；四绿 945/0/4（含 androidTest 编译） |
+| `2404496` | C4-7 | EqualizerPanel 区块化拆族（**1189 行单文件 → 主文件 170 + 4 同包主题文件** ui/common/audio）：主文件保留签名/colors 派生/状态（showSaveDialog·activeTipKey·editingLevels 拆 MutableState）/normalizedLevels/LaunchedEffect/Column 壳 + 5 section 调用/保存对话框；EqualizerPanelPrimitives 150（InfoTip：activeTipKeyState 注入；ModuleCard：容器色/海拔参数化）/ EqualizerPanelVolumeScene 405（VolumeThresholdSection + SceneEffectSection，updateVolumeThreshold/updateSceneEffect local fun 随迁逐字）/ EqualizerPanelStereoSpeed 358（SpeedPitchSection：playback 非空条件整体迁入 + StereoSection，updatePlayback 三 remember val、updateBalance/updateChannelMode 随迁）/ EqualizerPanelEqualizer 417（VerticalSlider 唯一消费者同文件 + EqualizerSection，editingLevels/showSaveDialog MutableState 注入，updateLevel/freqLabels 随迁）；调用点机械补参 InfoTip 15 / ModuleCard 5 / VerticalSlider 1（色参透传）；**消费方零改动（ui/player 6 文件走公共签名）**；切片脚本磁盘行号定位+边界断言兜住 VerticalSlider `) {` 行号漂移（坑 8 复用）；编译迭代修 3 类漏 import（MaterialTheme/CardElevation/ExperimentalLayoutApi——@file:OptIn 引用类须显式 import，坑 17）；import baseline 无变化（新文件 import 方向与原文件一致）；size baseline 无 Equalizer pin；四绿 945/0/4。**C4 至此 7/7 收官** |
 
 ### C1b-ii 附带清账（调用点清单安全网）
 
@@ -39,8 +40,8 @@
 
 ## 3. 下一任务队列（计划 §8.4 剩余）
 
-1. **C4**：God 文件区块化（~~AlbumDetailScreen 1518~~✅C4-5 / ~~DownloadsScreen 2281~~✅C4-2 / SearchScreen 2186 / ~~AlbumDetailDlsiteTabs 1932~~✅C4-3 / ~~LibraryScreen 1582~~✅C4-4 / ~~SettingsScreen 1270~~✅C4-6 / EqualizerPanel 1190）——单巨型 Composable 拆子 composable + 状态对象，每文件一提交；**C4-1（AlbumDetailDirectorySupport 2698）已先期完成**；SearchScreen 的完整重写归 C9。
-2. **C7**：service 层拆解（PlaybackService 1471 / SubtitleTaskService 1429 / DownloadManager 1122）。
+1. **C4**：God 文件区块化——**✅ 全部收官（7/7）**：~~AlbumDetailDirectorySupport 2698~~✅C4-1 / ~~DownloadsScreen 2281~~✅C4-2 / ~~AlbumDetailDlsiteTabs 1932~~✅C4-3 / ~~LibraryScreen 1582~~✅C4-4 / ~~AlbumDetailScreen 1518~~✅C4-5 / ~~SettingsScreen 1270~~✅C4-6 / ~~EqualizerPanel 1190~~✅C4-7；SearchScreen 2186 的完整重写归 C9（不区块化）。
+2. **C7**：service 层拆解（PlaybackService 1471 / SubtitleTaskService 1429 / DownloadManager 1122）——**下一任务**。
 3. **C8**（条件式重写，前置 AlbumDetailViewModelTest + 行为档案）/ **C9**（搜索重写，前置四分支 seam 测试）。
 4. **C5** ratchet 分级收紧（>1500 清零 → 1000-1500 区间 14 文件 → 降 SIZE_LIMIT）→ **C6** 结构收尾 → 门禁（全量测试双绿 + 子代理审查 + 实机走查）→ tag `refactor-r3/phase-C`。
 
@@ -62,6 +63,7 @@
 14. **切片签名想当然用 Material3 ColorScheme（C4-6 实测）**：项目 `AsmrTheme.colorScheme` 返回自定义 `AsmrColorScheme`（textPrimary/textSecondary/primarySoft/primaryStrong 属它，Theme.kt），跨文件抽函数前先确认主题参数真实类型，否则满屏 Unresolved reference: textPrimary。
 15. **文件级/函数级 @OptIn 不随迁（C4-6 实测）**：搬移体用 experimental API（SegmentedButton 族）时，原 SettingsScreen 的 @OptIn 留在主文件对新文件无效——新函数需自带 `@OptIn(ExperimentalMaterial3Api::class)`。
 16. **搬出 scoped 接收者壳后 Modifier.align 失去作用域（C4-6 实测）**：原体依赖 `SettingsDetailCard`（content 为 ColumnScope 接收者）的 align——切片保留壳在主文件时搬运体脱离作用域；单点用 `Box(Modifier.fillMaxWidth()) + Alignment.CenterEnd` 等价替换（新增一布局节点，视觉零差异），多点则应把卡片壳下沉进 section 函数。
+17. **`@file:OptIn` 引用的注解类必须有显式 import（C4-7 实测）**：新文件若用 `@file:OptIn(ExperimentalLayoutApi::class)` 且没有对应 import（无 wildcard 覆盖时），报 `Unresolved reference` 于第 1 行注解处——file 注解先于 package 解析，不会从后续 wildcard import 获益；报错定位在 1:46 容易误判为 OptIn 语法问题。另：Edit 工具替换 `import ...Slider` 会同时命中 `SliderColors` 前缀（2 匹配报错），需带换行上下文消歧。
 
 ## 5. 阶段 C 后续队列（计划 §8.4）
 
