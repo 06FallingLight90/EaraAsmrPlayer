@@ -39,3 +39,12 @@ C7 service 层 God 拆解：`data/download/DownloadManager`（C7-1，1184→516+
 17. **AlbumDetailUiState/AlbumDetailModel 定义在 `ui/library/albumdetail` 子包**（Support 文件），VM 在 `ui/library`——测试 import 两个包名都要写全。
 18. **ImageCacheManager 可测构造**（CacheModule 同构）：MemoryCache(bytes)/DiskCache(dir,maxBytes,ttlMs)/CacheStats()/CacheConfig(cacheVersion="test")/ImageLoaderFacade(context,okHttp,Dispatchers.Default) 均为简单构造，无需 Coil 真实依赖。
 19. **Truth 不在测试类路径**：断言一律 org.junit.Assert（项目先例统一）。
+
+## C8-0b 增量（三路 ensure*Loaded 时序/幂等/去重钉测，+9 测）
+
+20. **DlsitePlayWorkClient/DlsiteProductInfoClient 域名硬编码但接受 OkHttpClient 注入 → 拦截器重定向**：测试 OkHttp 加 application interceptor 把任意请求改写 scheme/host/port 指向 MockWebServer，全链路可控（请求序 editions → sign → ziptree）。DLSiteScraper 走 Jsoup 自建连接无注入口——Robolectric/离线下 404+`ignoreHttpErrors(true)` 走确定性失败兜底，不落 MockWebServer。
+21. **DlsitePlayWorkClient 内部自建 `DlsiteAuthStore(context)`（Keystore 默认 cipher），与测试注入的存储不是同一密钥体系**：测试 cipher 写入的"密文"在客户端侧 decrypt 失败 → readCookie 静默清 pref → 视为未登录 → fetchPlayableTree 抛 IllegalStateException → loop 吞掉 lastError → 表现为"sign 请求根本没发出"（拦截器 println 探针落 XML system-out 定位）。cookie 注入必须走 **legacy 明文 pref 键**（`cookie_play`，镜像 private 常量 KEY_COOKIE_PLAY）：readCookie 迁移路径对"迁移加密失败"原样返回明文。且测试 cipher 的 **encrypt 必须抛错**阻止 VM 侧读时的迁移写入——否则写入的密文会被客户端 Keystore cipher 判损坏清空。
+22. **VM 的 `resolveInitialDlsiteLoadTarget(model)` 包装（L901）在 baseRjCode 非空时经 productInfoClient 发 editions 预取请求**：MockWebServer 无入队响应时请求线程在 QueueDispatcher 阻塞（take() 挂起）→ ensure 永不完成 → awaitUiState 超时。凡触发该包装的测试须先 enqueue editions 响应（`{}` 即可：parse 找不到 productId 键 → 空列表）。
+23. **ensureAsmrOneLoaded 未收录路径实际发两次 search**：preferInitial 直解 + directRjs 兜底循环——`resolveAsmrOneWork(throwOnRequestFailure=true)` 的缓存 TTL 检查带 `cached.second != null` 条件，null 缓存不消费 → 需 enqueue 两份空 works。
+24. **selectDlsiteLanguage 尾部同时重发 ensureDlsiteLoaded + ensureAsmrOneLoaded**（两请求竞争 FIFO 入队响应）→ 入队多份无害响应（`{}` 对 editions → 空列表、对 search → 空 works，双向降级）规避到达顺序不确定性。
+25. **loadAlbum 不自动触发三路 ensure\***（调用点仅 selectDlsiteLanguage 尾部 / refreshAsmrOneSection / invalidateAsmrOneEndpointState）→ C8-0b 的时序完全由测试编排控制，请求计数断言据此设计。
