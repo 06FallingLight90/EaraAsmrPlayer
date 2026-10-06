@@ -1,28 +1,19 @@
 package com.asmr.player.service
 
-import android.app.PendingIntent
 import android.bluetooth.BluetoothAdapter
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.res.Configuration
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioFocusRequest
 import android.media.AudioManager
-import android.net.Uri
-import android.os.Build
 import android.os.SystemClock
-import android.provider.Settings
 import android.util.Log
-import androidx.core.app.TaskStackBuilder
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
-import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -31,16 +22,13 @@ import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.FileDataSource
-import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import androidx.media3.session.SessionCommands
 import androidx.media3.datasource.cache.CacheDataSource
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.datastore.SettingsDataStore
-import com.asmr.player.data.local.db.entities.TrackPlaybackProgressEntity
 import com.asmr.player.data.remote.auth.DlsiteAuthStore
 import com.asmr.player.data.remote.auth.buildDlsiteCookieHeader
 import com.asmr.player.util.NetworkHeaders
@@ -57,7 +45,6 @@ import com.asmr.player.playback.BalanceAudioProcessor
 import com.asmr.player.playback.ChannelModeAudioProcessor
 import com.asmr.player.playback.DefaultSpectrumAudioTrackBufferDurationMillis
 import com.asmr.player.playback.FadingPlayer
-import com.asmr.player.domain.model.AppVolume
 import com.asmr.player.playback.AppVolumeBoostController
 import com.asmr.player.playback.PlaybackController
 import com.asmr.player.playback.GraphicEqualizerAudioProcessor
@@ -76,10 +63,8 @@ import com.asmr.player.playback.SpectrumOutputBufferSizeProvider
 import com.asmr.player.playback.SpectrumPcmRingSlotCount
 import com.asmr.player.playback.VolumeThresholdAudioProcessor
 import com.asmr.player.playback.VolumeFader
-import com.asmr.player.playback.isRecoverableRemotePlaybackFailure
 import com.asmr.player.playback.capturePersistedPlaybackState
 import com.asmr.player.playback.spectrumVisualDelayMillis
-import com.asmr.player.util.EmbeddedMediaExtractor
 import com.asmr.player.util.SubtitleEntry
 import com.asmr.player.util.SubtitleIndexFinder
 import dagger.hilt.android.AndroidEntryPoint
@@ -95,7 +80,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -110,18 +94,18 @@ import okhttp3.OkHttpClient
 @UnstableApi
 class PlaybackService : MediaSessionService() {
 
-    private var mediaSession: MediaSession? = null
-    private lateinit var exoPlayer: ExoPlayer
-    private lateinit var sessionPlayer: FadingPlayer
-    private lateinit var appVolumeBoostController: AppVolumeBoostController
-    private var startupAppVolumePercent: Int? = null
-    private val graphicEqualizerAudioProcessor = GraphicEqualizerAudioProcessor()
-    private val balanceAudioProcessor = BalanceAudioProcessor()
-    private val stereoOrbitAudioProcessor = StereoOrbitAudioProcessor()
-    private val sceneEffectAudioProcessor = SceneEffectAudioProcessor()
-    private val channelModeAudioProcessor = ChannelModeAudioProcessor()
-    private val volumeThresholdAudioProcessor = VolumeThresholdAudioProcessor()
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    internal var mediaSession: MediaSession? = null
+    internal lateinit var exoPlayer: ExoPlayer
+    internal lateinit var sessionPlayer: FadingPlayer
+    internal lateinit var appVolumeBoostController: AppVolumeBoostController
+    internal var startupAppVolumePercent: Int? = null
+    internal val graphicEqualizerAudioProcessor = GraphicEqualizerAudioProcessor()
+    internal val balanceAudioProcessor = BalanceAudioProcessor()
+    internal val stereoOrbitAudioProcessor = StereoOrbitAudioProcessor()
+    internal val sceneEffectAudioProcessor = SceneEffectAudioProcessor()
+    internal val channelModeAudioProcessor = ChannelModeAudioProcessor()
+    internal val volumeThresholdAudioProcessor = VolumeThresholdAudioProcessor()
+    internal val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val volumeFader = VolumeFader(serviceScope)
     @Volatile private var spectrumAudioTrackBufferDurationMillis =
         DefaultSpectrumAudioTrackBufferDurationMillis
@@ -147,29 +131,29 @@ class PlaybackService : MediaSessionService() {
     }
     
     // Temporary settings for current session
-    private val sessionSettings = MutableStateFlow<EqualizerSettings?>(null)
-    private var effectApplyJob: Job? = null
+    internal val sessionSettings = MutableStateFlow<EqualizerSettings?>(null)
+    internal var effectApplyJob: Job? = null
     private var sleepTimerJob: Job? = null
-    @Volatile private var lastEffectiveSettings: EqualizerSettings = EqualizerSettings()
+    @Volatile internal var lastEffectiveSettings: EqualizerSettings = EqualizerSettings()
     
-    private var currentLyrics: List<SubtitleEntry> = emptyList()
-    private var lyricsIndexFinder: SubtitleIndexFinder? = null
-    private var lastLyricIndex: Int = Int.MIN_VALUE
-    private var floatingLyricsEnabled: Boolean = false
-    private var overlay: FloatingLyricsOverlay? = null
+    internal var currentLyrics: List<SubtitleEntry> = emptyList()
+    internal var lyricsIndexFinder: SubtitleIndexFinder? = null
+    internal var lastLyricIndex: Int = Int.MIN_VALUE
+    internal var floatingLyricsEnabled: Boolean = false
+    internal var overlay: FloatingLyricsOverlay? = null
     private var pauseOnOutputDisconnectEnabled: Boolean = true
     private var resumeOnOutputConnectEnabled: Boolean = false
-    private var pauseOnOtherAudioEnabled: Boolean = true
+    internal var pauseOnOtherAudioEnabled: Boolean = true
     private var autoPausedByDisconnect: Boolean = false
     private var autoPausedByAudioFocusLoss: Boolean = false
     private var lastOutputEventAtMs: Long = 0L
-    private var audioFocusRequest: AudioFocusRequest? = null
-    private var hasAudioFocus: Boolean = false
-    private var notificationProvider: LyricMediaNotificationProvider? = null
-    private var sfwHideSystemControlsEnabled: Boolean = false
-    private var videoOutputEnabled: Boolean = false
+    internal var audioFocusRequest: AudioFocusRequest? = null
+    internal var hasAudioFocus: Boolean = false
+    internal var notificationProvider: LyricMediaNotificationProvider? = null
+    internal var sfwHideSystemControlsEnabled: Boolean = false
+    internal var videoOutputEnabled: Boolean = false
 
-    private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+    internal val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN -> handleAudioFocusGain()
             AudioManager.AUDIOFOCUS_LOSS -> {
@@ -184,7 +168,7 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    private val outputBroadcastReceiver = object : BroadcastReceiver() {
+    internal val outputBroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 AudioManager.ACTION_AUDIO_BECOMING_NOISY -> handlePotentialOutputDisconnect("becoming_noisy")
@@ -206,7 +190,7 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    private val audioDeviceCallback = object : AudioDeviceCallback() {
+    internal val audioDeviceCallback = object : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
             if (addedDevices.any { it.isResumeEligibleOutputDevice() }) {
                 handlePotentialOutputConnect("device_added")
@@ -247,18 +231,18 @@ class PlaybackService : MediaSessionService() {
     @Inject
     lateinit var playbackStateStore: PlaybackStateStore
 
-    private var lastMarkedMediaId: String? = null
-    private var lastMarkedElapsedMs: Long = 0L
+    internal var lastMarkedMediaId: String? = null
+    internal var lastMarkedElapsedMs: Long = 0L
 
     private var statsJob: Job? = null
-    private var playbackRecoveryJob: Job? = null
+    internal var playbackRecoveryJob: Job? = null
     private var appExitJob: Job? = null
-    private val playbackRecoveryPolicy = PlaybackRecoveryPolicy()
+    internal val playbackRecoveryPolicy = PlaybackRecoveryPolicy()
     private var currentTrackListenedMs: Long = 0L
     private var isCurrentTrackCounted: Boolean = false
     private var currentMediaId: String? = null
-    private var lastProgressPersistElapsedMs: Long = 0L
-    private val pendingNetworkTrafficBytes = AtomicLong(0L)
+    internal var lastProgressPersistElapsedMs: Long = 0L
+    internal val pendingNetworkTrafficBytes = AtomicLong(0L)
 
     private fun updateSpectrumVisualDelay() {
         spectrumAnalyzer.setVisualDelayMs(
@@ -624,191 +608,6 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    private suspend fun updateArtworkForCurrentMedia() {
-        val (index, item) = withContext(Dispatchers.Main.immediate) {
-            exoPlayer.currentMediaItemIndex to exoPlayer.currentMediaItem
-        }
-        if (index < 0) return
-        if (item == null) return
-
-        val uriString = item.localConfiguration?.uri?.toString().orEmpty().trim()
-        if (uriString.isBlank()) return
-        if (uriString.startsWith("http", ignoreCase = true)) return
-
-        val mime = item.localConfiguration?.mimeType.orEmpty()
-        val ext = uriString.substringBefore('#').substringBefore('?').substringAfterLast('.', "").lowercase()
-        val isVideo = item.mediaMetadata.extras?.getBoolean("is_video") == true ||
-            mime.startsWith("video/") ||
-            ext in setOf("mp4", "m4v", "webm", "mkv", "mov")
-        if (isVideo) return
-
-        val cacheKey = "track:" + (item.mediaId.ifBlank { uriString })
-        val file = EmbeddedMediaExtractor.getArtworkCacheFile(applicationContext, cacheKey)
-
-        if (!file.exists() || file.length() <= 0L) {
-            val bmp = EmbeddedMediaExtractor.extractArtwork(applicationContext, uriString) ?: return
-            val saved = EmbeddedMediaExtractor.saveArtworkToCache(applicationContext, cacheKey, bmp) ?: return
-            if (saved.isBlank()) return
-        }
-        if (!file.exists() || file.length() <= 0L) return
-
-        val newUri = Uri.fromFile(file)
-        val oldUri = item.mediaMetadata.artworkUri
-        if (oldUri != null && oldUri.toString() == newUri.toString()) return
-
-        val updatedMeta = item.mediaMetadata.buildUpon().setArtworkUri(newUri).build()
-        val updatedItem = item.buildUpon().setMediaMetadata(updatedMeta).build()
-        withContext(Dispatchers.Main.immediate) {
-            if (exoPlayer.currentMediaItemIndex == index) {
-                exoPlayer.replaceMediaItem(index, updatedItem)
-            }
-        }
-    }
-
-    private fun markCurrentAlbumPlayed() {
-        val item = exoPlayer.currentMediaItem ?: return
-        val extras = item.mediaMetadata.extras ?: return
-        val albumId = extras.getLong("album_id", -1L)
-        if (albumId <= 0L) return
-
-        val mediaId = item.mediaId
-        val nowElapsed = SystemClock.elapsedRealtime()
-        if (mediaId == lastMarkedMediaId && nowElapsed - lastMarkedElapsedMs < 5_000L) return
-        lastMarkedMediaId = mediaId
-        lastMarkedElapsedMs = nowElapsed
-
-        val playedAt = System.currentTimeMillis()
-        serviceScope.launch(Dispatchers.IO) {
-            runCatching { database.playStatDao().markAlbumPlayed(albumId, playedAt) }
-        }
-    }
-
-    /**
-     * 采集当前播放项的作品上下文快照（供会话级收听记录使用）。
-     * 必须在主线程调用（[serviceScope] 使用 Main.immediate）。
-     * 无有效作品标识（albumId / rjCode 均为空）时返回 null。
-     */
-    private fun currentListeningTrackContext(): ListeningTrackContext? {
-        val item = exoPlayer.currentMediaItem ?: return null
-        val metadata = item.mediaMetadata
-        val extras = metadata.extras
-        val albumId = extras?.getLong("album_id", -1L) ?: -1L
-        val rjCode = extras?.getString("rj_code").orEmpty()
-        if (albumId <= 0L && rjCode.isBlank()) return null
-        return ListeningTrackContext(
-            albumId = albumId,
-            rjCode = rjCode,
-            title = metadata.title?.toString().orEmpty(),
-            artist = metadata.artist?.toString().orEmpty(),
-            albumTitle = metadata.albumTitle?.toString().orEmpty(),
-            artworkUri = metadata.artworkUri?.toString()
-        )
-    }
-
-    private suspend fun flushPendingNetworkTraffic() {
-        val bytes = pendingNetworkTrafficBytes.getAndSet(0L)
-        if (bytes <= 0L) return
-        statisticsRepository.addNetworkTraffic(bytes)
-        // 音频流量归入当前收听会话（若存在）。
-        listeningRecordRepository.addTraffic(bytes)
-    }
-
-    private suspend fun persistCurrentTrackProgressIfNeeded(force: Boolean) {
-        data class Snapshot(
-            val mediaId: String,
-            val albumId: Long,
-            val trackId: Long,
-            val positionMs: Long,
-            val durationMs: Long
-        )
-
-        val snapshot = withContext(Dispatchers.Main.immediate) {
-            val item = exoPlayer.currentMediaItem
-            val extras = item?.mediaMetadata?.extras
-            Snapshot(
-                mediaId = item?.mediaId.orEmpty(),
-                albumId = extras?.getLong("album_id", -1L) ?: -1L,
-                trackId = extras?.getLong("track_id", -1L) ?: -1L,
-                positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
-                durationMs = exoPlayer.duration.takeIf { it > 0L } ?: 0L
-            )
-        }
-
-        if (snapshot.mediaId.isBlank()) return
-        if (snapshot.albumId <= 0L) return
-
-        val durationMs = snapshot.durationMs
-        val isCompleted = if (durationMs > 0L) {
-            val remaining = (durationMs - snapshot.positionMs).coerceAtLeast(0L)
-            remaining <= 10_000L || snapshot.positionMs.toDouble() / durationMs.toDouble() >= 0.95
-        } else {
-            false
-        }
-
-        val nowElapsed = SystemClock.elapsedRealtime()
-        val shouldPersist = force || isCompleted || nowElapsed - lastProgressPersistElapsedMs >= 10_000L
-        if (!shouldPersist) return
-        lastProgressPersistElapsedMs = nowElapsed
-
-        withContext(Dispatchers.IO) {
-            val dao = database.trackPlaybackProgressDao()
-            val now = System.currentTimeMillis()
-            val existing = dao.getByMediaId(snapshot.mediaId)
-            val mergedDurationMs = when {
-                snapshot.durationMs > 0L -> snapshot.durationMs
-                existing != null && existing.durationMs > 0L -> existing.durationMs
-                else -> 0L
-            }
-            val mergedCompleted = existing?.completed == true || isCompleted
-            val mergedPositionMs = when {
-                mergedDurationMs > 0L -> snapshot.positionMs.coerceIn(0L, mergedDurationMs)
-                else -> snapshot.positionMs
-            }
-
-            dao.upsert(
-                TrackPlaybackProgressEntity(
-                    mediaId = snapshot.mediaId,
-                    albumId = snapshot.albumId,
-                    trackId = snapshot.trackId.takeIf { it > 0L },
-                    positionMs = mergedPositionMs,
-                    durationMs = mergedDurationMs,
-                    completed = mergedCompleted,
-                    createdAt = existing?.createdAt ?: now,
-                    updatedAt = now
-                )
-            )
-        }
-    }
-
-    private fun requestPlaybackAudioFocus(): Boolean {
-        if (!pauseOnOtherAudioEnabled) return true
-        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-        val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val request = (audioFocusRequest ?: AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                .setAudioAttributes(
-                    android.media.AudioAttributes.Builder()
-                        .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
-                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build()
-                )
-                .setAcceptsDelayedFocusGain(false)
-                .setWillPauseWhenDucked(true)
-                .setOnAudioFocusChangeListener(audioFocusChangeListener)
-                .build()
-                .also { audioFocusRequest = it })
-            audioManager.requestAudioFocus(request)
-        } else {
-            @Suppress("DEPRECATION")
-            audioManager.requestAudioFocus(
-                audioFocusChangeListener,
-                AudioManager.STREAM_MUSIC,
-                AudioManager.AUDIOFOCUS_GAIN
-            )
-        }
-        hasAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
-        return hasAudioFocus
-    }
-
     private fun handleAudioFocusGain() {
         hasAudioFocus = true
         if (!autoPausedByAudioFocusLoss) return
@@ -831,105 +630,6 @@ class PlaybackService : MediaSessionService() {
         serviceScope.launch(Dispatchers.Main.immediate) {
             sessionPlayer.pause()
         }
-    }
-
-    private fun schedulePlaybackRecovery(error: PlaybackException) {
-        val item = exoPlayer.currentMediaItem ?: return
-        if (!exoPlayer.playWhenReady) return
-
-        val mediaItemIndex = exoPlayer.currentMediaItemIndex
-        val uri = item.localConfiguration?.uri?.toString().orEmpty()
-        if (
-            !isRecoverableRemotePlaybackFailure(
-                uriText = uri,
-                errorCode = error.errorCode,
-                httpStatusCode = error.findHttpStatusCode()
-            )
-        ) {
-            return
-        }
-
-        val mediaKey = "$mediaItemIndex:${item.mediaId}:$uri"
-        val attempt = playbackRecoveryPolicy.nextAttempt(mediaKey)
-        if (attempt == null) {
-            Log.e(
-                "PlaybackService",
-                "Playback recovery exhausted for mediaId=${item.mediaId} error=${error.errorCodeName}"
-            )
-            return
-        }
-
-        playbackRecoveryJob?.cancel()
-        playbackRecoveryJob = serviceScope.launch(Dispatchers.Main.immediate) {
-            Log.w(
-                "PlaybackService",
-                "Scheduling playback recovery attempt=${attempt.number} delayMs=${attempt.delayMs} " +
-                    "mediaId=${item.mediaId} error=${error.errorCodeName}"
-            )
-            delay(attempt.delayMs)
-            if (!exoPlayer.playWhenReady) return@launch
-            val currentItem = exoPlayer.currentMediaItem ?: return@launch
-            val currentUri = currentItem.localConfiguration?.uri?.toString().orEmpty()
-            if (
-                exoPlayer.currentMediaItemIndex != mediaItemIndex ||
-                currentItem.mediaId != item.mediaId ||
-                currentUri != uri
-            ) {
-                return@launch
-            }
-            if (exoPlayer.playerError !== error || exoPlayer.playbackState != Player.STATE_IDLE) return@launch
-
-            val resumePositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
-            exoPlayer.seekTo(resumePositionMs)
-            exoPlayer.prepare()
-        }
-    }
-
-    private fun cancelPlaybackRecovery(resetPolicy: Boolean) {
-        playbackRecoveryJob?.cancel()
-        playbackRecoveryJob = null
-        if (resetPolicy) {
-            playbackRecoveryPolicy.reset()
-        }
-    }
-
-    private fun PlaybackException.findHttpStatusCode(): Int? {
-        var current: Throwable? = this
-        while (current != null) {
-            if (current is HttpDataSource.InvalidResponseCodeException) {
-                return current.responseCode
-            }
-            current = current.cause
-        }
-        return null
-    }
-
-    private fun abandonPlaybackAudioFocus() {
-        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
-        } else {
-            @Suppress("DEPRECATION")
-            audioManager.abandonAudioFocus(audioFocusChangeListener)
-        }
-        hasAudioFocus = false
-    }
-
-    private fun registerPlaybackRouteListeners() {
-        val intentFilter = IntentFilter().apply {
-            addAction(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
-            addAction(Intent.ACTION_HEADSET_PLUG)
-            addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
-        }
-        registerReceiver(outputBroadcastReceiver, intentFilter)
-        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-        audioManager.registerAudioDeviceCallback(audioDeviceCallback, null)
-    }
-
-    private fun unregisterPlaybackRouteListeners() {
-        runCatching { unregisterReceiver(outputBroadcastReceiver) }
-        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-        runCatching { audioManager.unregisterAudioDeviceCallback(audioDeviceCallback) }
     }
 
     private fun handlePotentialOutputDisconnect(reason: String) {
@@ -960,396 +660,12 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    private fun hasResumeEligibleOutputDevice(): Boolean {
-        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-        return audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-            .any { it.isResumeEligibleOutputDevice() }
-    }
-
     private fun applyPlaybackRuntimeSettings(settings: PlaybackRuntimeSettings) {
         floatingLyricsEnabled = settings.floatingLyricsEnabled
         pauseOnOutputDisconnectEnabled = settings.pauseOnOutputDisconnect
         resumeOnOutputConnectEnabled = settings.resumeOnOutputConnect
         pauseOnOtherAudioEnabled = settings.pauseOnOtherAudio
         sfwHideSystemControlsEnabled = settings.sfwHideSystemControls
-    }
-
-    private fun refreshMediaNotification() {
-        serviceScope.launch(Dispatchers.Main.immediate) {
-            runCatching {
-                syncMediaNotificationControllerState()
-                if (mediaSession != null) {
-                    notificationProvider?.refreshNotification()
-                }
-            }.onFailure {
-                Log.w("PlaybackService", "Failed to refresh media notification", it)
-            }
-        }
-    }
-
-    private fun buildMediaSession(): MediaSession {
-        return MediaSession.Builder(this, sessionPlayer)
-            .setSessionActivity(createContentIntent())
-            // Media3 默认每 3 秒把仅位置变化的 PLAYING 状态重新广播给所有系统控制器。
-            // 系统本就能根据 position/speed/eventTime 外推位置；关闭这类周期广播可避免
-            // MIUI 同期唤醒蓝牙、妙播、灵动岛和媒体面板，真实播放状态变化仍会立即通知。
-            .setPeriodicPositionUpdateEnabled(false)
-            .setCallback(object : MediaSession.Callback {
-                override fun onConnect(
-                    session: MediaSession,
-                    controller: MediaSession.ControllerInfo
-                ): MediaSession.ConnectionResult {
-                    val isNotificationController =
-                        isMediaNotificationController(session, controller)
-                    if (sfwHideSystemControlsEnabled && isNotificationController) {
-                        return MediaSession.ConnectionResult.reject()
-                    }
-                    val base = super.onConnect(session, controller)
-                    val commands = if (isNotificationController) {
-                        MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS
-                    } else {
-                        MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS
-                            .buildUpon()
-                            .add(androidx.media3.session.SessionCommand("GET_AUDIO_SESSION_ID", android.os.Bundle.EMPTY))
-                            .add(androidx.media3.session.SessionCommand("UPDATE_SESSION_EQ", android.os.Bundle.EMPTY))
-                            .add(androidx.media3.session.SessionCommand("RELOAD_LYRICS", android.os.Bundle.EMPTY))
-                            .add(androidx.media3.session.SessionCommand("SET_VIDEO_OUTPUT_ENABLED", android.os.Bundle.EMPTY))
-                            .build()
-                    }
-                    val playerCommands = if (
-                        isNotificationController &&
-                        sfwHideSystemControlsEnabled
-                    ) {
-                        Player.Commands.EMPTY
-                    } else {
-                        base.availablePlayerCommands
-                    }
-                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
-                        .setAvailablePlayerCommands(playerCommands)
-                        .setAvailableSessionCommands(commands)
-                        .build()
-                }
-
-                override fun onPostConnect(
-                    session: MediaSession,
-                    controller: MediaSession.ControllerInfo
-                ) {
-                    if (isMediaNotificationController(session, controller)) {
-                        syncMediaNotificationControllerState(session, controller)
-                    }
-                }
-
-                override fun onCustomCommand(
-                    session: MediaSession,
-                    controller: MediaSession.ControllerInfo,
-                    customCommand: androidx.media3.session.SessionCommand,
-                    args: android.os.Bundle
-                ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
-                    // 安全修复（20261002 体检 Quick Win #5）：4 条自定义命令
-                    // （GET_AUDIO_SESSION_ID/UPDATE_SESSION_EQ/RELOAD_LYRICS/SET_VIDEO_OUTPUT_ENABLED）
-                    // 仅对本应用进程内控制器开放。第三方 App 即使绑定 MediaSession
-                    // 也不得篡改音效/视频输出或读取 audioSessionId。
-                    // 通知控制器只拿到 DEFAULT_SESSION_COMMANDS，到不了这里；
-                    // 此闸挡的是经 onConnect 拿到自定义命令集的任意非本包控制器。
-                    if (controller.packageName != applicationContext.packageName) {
-                        return com.google.common.util.concurrent.Futures.immediateFuture(
-                            androidx.media3.session.SessionResult(
-                                androidx.media3.session.SessionResult.RESULT_ERROR_NOT_SUPPORTED
-                            )
-                        )
-                    }
-                    when (customCommand.customAction) {
-                        "GET_AUDIO_SESSION_ID" -> {
-                            val resultBundle = android.os.Bundle()
-                            resultBundle.putInt("AUDIO_SESSION_ID", exoPlayer.audioSessionId)
-                            return com.google.common.util.concurrent.Futures.immediateFuture(
-                                androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS, resultBundle)
-                            )
-                        }
-
-                        "UPDATE_SESSION_EQ" -> {
-                            val prev = sessionSettings.value ?: EqualizerSettings()
-                            val enabled = if (args.containsKey("enabled")) args.getBoolean("enabled") else prev.enabled
-                            val levels = args.getIntArray("levels")?.toList() ?: prev.bandLevels
-                            val virt = if (args.containsKey("virtualizer")) args.getInt("virtualizer") else prev.virtualizerStrength
-                            val bal = if (args.containsKey("balance")) args.getFloat("balance") else prev.balance
-                            val preset = args.getString("preset") ?: prev.presetName
-                            val gain = if (args.containsKey("gain")) args.getFloat("gain") else prev.originalGain
-                            val reverbEnabled = if (args.containsKey("reverbEnabled")) args.getBoolean("reverbEnabled") else prev.reverbEnabled
-                            val reverbPreset = args.getString("reverbPreset") ?: prev.reverbPreset
-                            val reverbWet = if (args.containsKey("reverbWet")) args.getInt("reverbWet") else prev.reverbWet
-                            val stereoEnabled = if (args.containsKey("stereoEnabled")) args.getBoolean("stereoEnabled") else prev.stereoEnabled
-                            val orbitEnabled = if (args.containsKey("orbitEnabled")) args.getBoolean("orbitEnabled") else prev.orbitEnabled
-                            val orbitSpeed = if (args.containsKey("orbitSpeed")) args.getFloat("orbitSpeed") else prev.orbitSpeed
-                            val orbitDistance = if (args.containsKey("orbitDistance")) args.getFloat("orbitDistance") else prev.orbitDistance
-                            val channelMode = if (args.containsKey("channelMode")) args.getInt("channelMode") else prev.channelMode
-                            val orbitAzimuthDeg = if (args.containsKey("orbitAzimuthDeg")) args.getFloat("orbitAzimuthDeg") else prev.orbitAzimuthDeg
-                            val channelEnabled = if (args.containsKey("channelEnabled")) args.getBoolean("channelEnabled") else prev.channelEnabled
-                            val vtEnabled = if (args.containsKey("volumeThresholdEnabled")) args.getBoolean("volumeThresholdEnabled") else prev.volumeThresholdEnabled
-                            val vtMode = if (args.containsKey("volumeThresholdMode")) args.getInt("volumeThresholdMode") else prev.volumeThresholdMode
-                            val vtMinDb = if (args.containsKey("volumeThresholdMinDb")) args.getFloat("volumeThresholdMinDb") else prev.volumeThresholdMinDb
-                            val vtMaxDb = if (args.containsKey("volumeThresholdMaxDb")) args.getFloat("volumeThresholdMaxDb") else prev.volumeThresholdMaxDb
-                            val loudnessTargetDb = if (args.containsKey("volumeLoudnessTargetDb")) args.getFloat("volumeLoudnessTargetDb") else prev.volumeLoudnessTargetDb
-                            val sceneEffectEnabled = if (args.containsKey("sceneEffectEnabled")) args.getBoolean("sceneEffectEnabled") else prev.sceneEffectEnabled
-                            val sceneEffectPresetId = args.getString("sceneEffectPresetId") ?: prev.sceneEffectPresetId
-                            val sceneEffectAmount = if (args.containsKey("sceneEffectAmount")) args.getInt("sceneEffectAmount") else prev.sceneEffectAmount
-                            sessionSettings.value = prev.copy(
-                                enabled = enabled,
-                                bandLevels = levels,
-                                virtualizerStrength = virt,
-                                balance = bal,
-                                presetName = preset,
-                                originalGain = gain,
-                                reverbEnabled = reverbEnabled,
-                                reverbPreset = reverbPreset,
-                                reverbWet = reverbWet,
-                                stereoEnabled = stereoEnabled,
-                                orbitEnabled = orbitEnabled,
-                                orbitSpeed = orbitSpeed,
-                                orbitDistance = orbitDistance,
-                                orbitAzimuthDeg = orbitAzimuthDeg,
-                                channelEnabled = channelEnabled,
-                                channelMode = channelMode,
-                                volumeThresholdEnabled = vtEnabled,
-                                volumeThresholdMode = vtMode,
-                                volumeThresholdMinDb = vtMinDb,
-                                volumeThresholdMaxDb = vtMaxDb,
-                                volumeLoudnessTargetDb = loudnessTargetDb,
-                                sceneEffectEnabled = sceneEffectEnabled,
-                                sceneEffectPresetId = sceneEffectPresetId,
-                                sceneEffectAmount = sceneEffectAmount
-                            )
-                            return com.google.common.util.concurrent.Futures.immediateFuture(
-                                androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS, android.os.Bundle.EMPTY)
-                            )
-                        }
-
-                        "RELOAD_LYRICS" -> {
-                            serviceScope.launch { loadLyricsForCurrentMedia() }
-                            return com.google.common.util.concurrent.Futures.immediateFuture(
-                                androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS, android.os.Bundle.EMPTY)
-                            )
-                        }
-
-                        "SET_VIDEO_OUTPUT_ENABLED" -> {
-                            setVideoOutputEnabled(args.getBoolean("enabled", false))
-                            return com.google.common.util.concurrent.Futures.immediateFuture(
-                                androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS, android.os.Bundle.EMPTY)
-                            )
-                        }
-                    }
-                    return super.onCustomCommand(session, controller, customCommand, args)
-                }
-            })
-            .build()
-    }
-
-    private fun setVideoOutputEnabled(enabled: Boolean) {
-        if (videoOutputEnabled == enabled) return
-        videoOutputEnabled = enabled
-        applyVideoOutputEnabled()
-    }
-
-    private fun applyVideoOutputEnabled() {
-        val item = exoPlayer.currentMediaItem
-        val videoActive = videoOutputEnabled && item.isVideoMediaItem()
-        val params = exoPlayer.trackSelectionParameters
-        val updated = params.buildUpon()
-            .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, !videoActive)
-            .build()
-        if (updated != params) {
-            exoPlayer.trackSelectionParameters = updated
-        }
-    }
-
-    private fun MediaItem?.isVideoMediaItem(): Boolean {
-        val item = this ?: return false
-        val uriString = item.localConfiguration?.uri?.toString().orEmpty()
-        val mime = item.localConfiguration?.mimeType.orEmpty()
-        val ext = uriString
-            .substringBefore('#')
-            .substringBefore('?')
-            .substringAfterLast('.', "")
-            .lowercase()
-        return item.mediaMetadata.extras?.getBoolean("is_video") == true ||
-            mime.startsWith("video/") ||
-            ext in setOf("mp4", "m4v", "webm", "mkv", "mov")
-    }
-
-    private fun refreshMediaNotificationControllerRegistration() {
-        val session = mediaSession ?: return
-        runCatching {
-            if (isSessionAdded(session)) {
-                removeSession(session)
-            }
-            addSession(session)
-        }.onFailure {
-            Log.w(
-                "PlaybackService",
-                "Failed to refresh media notification controller registration",
-                it
-            )
-        }
-    }
-
-    private fun syncMediaNotificationControllerState() {
-        val session = mediaSession ?: return
-        val controller = session.getMediaNotificationControllerInfo() ?: return
-        syncMediaNotificationControllerState(session, controller)
-    }
-
-    private fun isMediaNotificationController(
-        session: MediaSession,
-        controller: MediaSession.ControllerInfo
-    ): Boolean {
-        return session.isMediaNotificationController(controller) ||
-            controller.connectionHints.getBoolean(MEDIA_NOTIFICATION_CONTROLLER_HINT, false)
-    }
-
-    private fun syncMediaNotificationControllerState(
-        session: MediaSession,
-        controller: MediaSession.ControllerInfo
-    ) {
-        val sessionCommands = if (sfwHideSystemControlsEnabled) {
-            SessionCommands.EMPTY
-        } else {
-            MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS
-        }
-        val playerCommands = if (sfwHideSystemControlsEnabled) {
-            Player.Commands.EMPTY
-        } else {
-            session.player.availableCommands
-        }
-        session.setAvailableCommands(
-            controller,
-            sessionCommands,
-            playerCommands
-        )
-        session.setCustomLayout(controller, emptyList())
-    }
-
-    private fun ensureNotificationChannel() {
-        if (Build.VERSION.SDK_INT < 26) return
-        val manager = getSystemService(NotificationManager::class.java) ?: return
-        val existing = manager.getNotificationChannel(LYRICS_CHANNEL_ID)
-        if (existing != null) return
-        val channel = NotificationChannel(
-            LYRICS_CHANNEL_ID,
-            "播放控制",
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            setShowBadge(false)
-            setSound(null, null)
-            description = "用于后台播放控制与锁屏媒体面板"
-        }
-        manager.createNotificationChannel(channel)
-    }
-
-    private suspend fun loadLyricsForCurrentMedia() {
-        val item = withContext(Dispatchers.Main.immediate) { exoPlayer.currentMediaItem }
-        val result = lyricsLoader.load(item)
-        currentLyrics = result.lyrics
-        lyricsIndexFinder = if (result.lyrics.isNotEmpty()) SubtitleIndexFinder(result.lyrics) else null
-        lastLyricIndex = Int.MIN_VALUE
-        refreshMediaNotification()
-    }
-
-    private suspend fun updateLyricsTick(): Long {
-        data class TickState(
-            val overlayNeeded: Boolean,
-            val positionMs: Long,
-            val isPlaying: Boolean
-        )
-
-        val state = withContext(Dispatchers.Main.immediate) {
-            val overlayReady = overlay?.canDraw() == true
-            val need = floatingLyricsEnabled && overlayReady
-            if (need && overlay?.isShown() != true) overlay?.show()
-            if (!need && overlay?.isShown() == true) overlay?.hide()
-            TickState(
-                overlayNeeded = need,
-                positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
-                isPlaying = exoPlayer.isPlaying
-            )
-        }
-        val overlayNeeded = state.overlayNeeded
-        val positionMs = state.positionMs
-        val playing = state.isPlaying
-
-        if (!overlayNeeded) return 1_000L
-        val lyrics = currentLyrics
-        if (lyrics.isEmpty()) {
-            withContext(Dispatchers.Main.immediate) {
-                if (overlayNeeded) overlay?.updateLine("暂无歌词")
-            }
-            return 2_000L
-        }
-
-        val idx = lyricsIndexFinder?.findActiveIndex(positionMs) ?: -1
-        if (idx != lastLyricIndex) {
-            lastLyricIndex = idx
-
-            val current = lyrics.getOrNull(idx)?.text.orEmpty().ifBlank { " " }
-            withContext(Dispatchers.Main.immediate) {
-                if (overlayNeeded) overlay?.updateLine(current, lyrics.getOrNull(idx))
-            }
-        }
-
-        return nextLyricsTickDelayMs(lyrics, idx, positionMs, playing)
-    }
-
-    private fun startEffectLoops(startupAppVolumeSyncJob: Job) {
-        effectApplyJob?.cancel()
-        effectApplyJob = serviceScope.launch {
-            combine(
-                audioEffectController.equalizerSettings,
-                sessionSettings
-            ) { global, session ->
-                session ?: global
-            }
-                .distinctUntilChanged()
-                .collect { settings ->
-                lastEffectiveSettings = settings
-                graphicEqualizerAudioProcessor.setEnabled(settings.enabled)
-                graphicEqualizerAudioProcessor.setBandLevels(settings.bandLevels)
-                val stereoEnabled = settings.stereoEnabled
-                val panActive = stereoEnabled && (settings.orbitEnabled || settings.orbitAzimuthDeg != 0f)
-                balanceAudioProcessor.setBalance(if (stereoEnabled && !panActive) settings.balance else 0f)
-                channelModeAudioProcessor.setMode(if (stereoEnabled) settings.channelMode else 0)
-                volumeThresholdAudioProcessor.setEnabled(settings.volumeThresholdEnabled)
-                volumeThresholdAudioProcessor.setMode(settings.volumeThresholdMode)
-                volumeThresholdAudioProcessor.setThresholds(settings.volumeThresholdMinDb, settings.volumeThresholdMaxDb)
-                volumeThresholdAudioProcessor.setLoudnessTargetDb(settings.volumeLoudnessTargetDb)
-                sceneEffectAudioProcessor.setEnabled(settings.sceneEffectEnabled)
-                sceneEffectAudioProcessor.setPreset(settings.sceneEffectPresetId)
-                sceneEffectAudioProcessor.setAmount(settings.sceneEffectAmount)
-                stereoOrbitAudioProcessor.setEnabled(settings.stereoEnabled)
-                stereoOrbitAudioProcessor.setAutoOrbitEnabled(settings.orbitEnabled)
-                stereoOrbitAudioProcessor.setOrbitSpeedDegPerSec(settings.orbitSpeed)
-                stereoOrbitAudioProcessor.setDistance(settings.orbitDistance)
-                stereoOrbitAudioProcessor.setAzimuthDeg(settings.orbitAzimuthDeg)
-            }
-        }
-        serviceScope.launch {
-            startupAppVolumeSyncJob.join()
-            var skipStartupApplyPercent = startupAppVolumePercent
-            settingsRepository.appVolumePercent
-                .distinctUntilChanged()
-                .collect { appVolumePercent ->
-                    if (
-                        skipStartupApplyPercent == appVolumePercent ||
-                        settingsRepository.consumePendingSystemVolumeSync(appVolumePercent)
-                    ) {
-                        skipStartupApplyPercent = null
-                        sessionPlayer.setBaseVolume(1f)
-                        return@collect
-                    }
-                    skipStartupApplyPercent = null
-                    sessionPlayer.setBaseVolume(
-                        appVolumeBoostController.applyVolumePercent(appVolumePercent)
-                    )
-                }
-        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
@@ -1360,21 +676,6 @@ class PlaybackService : MediaSessionService() {
             return START_NOT_STICKY
         }
         return super.onStartCommand(intent, flags, startId)
-    }
-
-    private fun createContentIntent(): PendingIntent {
-        val intent = packageManager.getLaunchIntentForPackage(packageName) ?: Intent(Intent.ACTION_MAIN)
-            .setPackage(packageName)
-            .addCategory(Intent.CATEGORY_LAUNCHER)
-        return TaskStackBuilder.create(this)
-            .addNextIntentWithParentStack(intent)
-            .getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            ?: PendingIntent.getActivity(
-                this,
-                0,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -1427,13 +728,6 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    private fun releaseMediaSession() {
-        val session = mediaSession ?: return
-        mediaSession = null
-        session.player.release()
-        session.release()
-    }
-
     companion object {
         private const val ACTION_STOP_FOR_APP_EXIT =
             "com.asmr.player.action.STOP_PLAYBACK_FOR_APP_EXIT"
@@ -1446,8 +740,8 @@ class PlaybackService : MediaSessionService() {
 
         private const val DLSITE_UA =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        private const val LYRICS_CHANNEL_ID = "playback"
-        private const val MEDIA_NOTIFICATION_CONTROLLER_HINT =
+        internal const val LYRICS_CHANNEL_ID = "playback"
+        internal const val MEDIA_NOTIFICATION_CONTROLLER_HINT =
             "androidx.media3.session.MediaNotificationManager"
         private const val OUTPUT_EVENT_DEBOUNCE_MS = 1200L
         private const val NETWORK_CONNECT_TIMEOUT_MS = 15_000
