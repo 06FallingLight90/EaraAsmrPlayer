@@ -128,9 +128,11 @@ app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt com.asmr.player.ui.l
 app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt com.asmr.player.ui.playlists.PlaylistsViewModel
 app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt com.asmr.player.ui.sidepanel.LandscapeRightPanelHost
 app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt com.asmr.player.ui.sidepanel.RecentAlbumsPanel
-app/src/main/java/com/asmr/player/ui/settings/SettingsScreen.kt com.asmr.player.ui.library.BulkPhase
 app/src/main/java/com/asmr/player/ui/settings/SettingsScreen.kt com.asmr.player.ui.library.LibraryViewModel
-app/src/main/java/com/asmr/player/ui/settings/SettingsScreen.kt com.asmr.player.ui.update.launchDownloadedApkInstall
+app/src/main/java/com/asmr/player/ui/settings/SettingsScreenDetailSections.kt com.asmr.player.ui.update.launchDownloadedApkInstall
+app/src/main/java/com/asmr/player/ui/settings/SettingsScreenLocalLibrary.kt com.asmr.player.ui.library.BulkPhase
+app/src/main/java/com/asmr/player/ui/settings/SettingsScreenLocalLibrary.kt com.asmr.player.ui.library.BulkProgress
+app/src/main/java/com/asmr/player/ui/settings/SettingsScreenLocalLibrary.kt com.asmr.player.ui.library.LibraryViewModel
 app/src/main/java/com/asmr/player/ui/sidepanel/RecentAlbumsPanel.kt com.asmr.player.ui.player.PlayerViewModel
 app/src/main/java/com/asmr/player/main/MainPrimaryPagerUi.kt com.asmr.player.data.remote.scraper.resolveRecommendedWorkHeroCoverUrl
 app/src/main/java/com/asmr/player/main/MainTopBarUi.kt com.asmr.player.data.remote.scraper.resolveRecommendedWorkHeroCoverUrl
