@@ -32,6 +32,8 @@ class AlbumDetailReducersTest {
         listenTogetherRjListenerCount: Int? = null,
         displayAlbum: Album = album(id = 1L, title = "display"),
         localAlbum: Album? = album(id = 2L, title = "local"),
+        dlsiteInfo: Album? = null,
+        dlsiteGalleryUrls: List<String> = emptyList(),
         dlsiteWorkno: String = "RJ123",
         dlsitePlayWorkno: String = "RJ123",
         asmrOneWorkId: String? = "w-1",
@@ -44,6 +46,9 @@ class AlbumDetailReducersTest {
         isLoadingDlsiteTrial: Boolean = false,
         isLoadingAsmrOne: Boolean = false,
         isLoadingDlsitePlay: Boolean = false,
+        hasResolvedInitialDlsiteTarget: Boolean = false,
+        hasLoadedInitialDlsiteContent: Boolean = false,
+        isDlsiteLanguageUserSelected: Boolean = false,
         dlsiteTrialTracks: List<Track> = emptyList()
     ): AlbumDetailModel = AlbumDetailModel(
         baseRjCode = baseRjCode,
@@ -51,20 +56,20 @@ class AlbumDetailReducersTest {
         listenTogetherRjListenerCount = listenTogetherRjListenerCount,
         displayAlbum = displayAlbum,
         localAlbum = localAlbum,
-        dlsiteInfo = null,
-        dlsiteGalleryUrls = emptyList(),
+        dlsiteInfo = dlsiteInfo,
+        dlsiteGalleryUrls = dlsiteGalleryUrls,
         dlsiteTrialTracks = dlsiteTrialTracks,
         dlsiteRecommendations = com.asmr.player.data.remote.scraper.DlsiteRecommendations(),
         dlsiteWorkno = dlsiteWorkno,
         dlsitePlayWorkno = dlsitePlayWorkno,
         dlsiteEditions = emptyList(),
         dlsiteSelectedLang = "ja-jp",
-        hasResolvedInitialDlsiteTarget = false,
-        hasLoadedInitialDlsiteContent = false,
+        hasResolvedInitialDlsiteTarget = hasResolvedInitialDlsiteTarget,
+        hasLoadedInitialDlsiteContent = hasLoadedInitialDlsiteContent,
         hasResolvedAsmrOneContent = hasResolvedAsmrOneContent,
         hasResolvedDlsitePlayContent = hasResolvedDlsitePlayContent,
         preserveHeaderAlbumMetadata = false,
-        isDlsiteLanguageUserSelected = false,
+        isDlsiteLanguageUserSelected = isDlsiteLanguageUserSelected,
         asmrOneWorkId = asmrOneWorkId,
         asmrOneSite = asmrOneSite,
         asmrOneTree = asmrOneTree,
@@ -271,5 +276,123 @@ class AlbumDetailReducersTest {
         assertFalse(updated.isLoadingDlsiteTrial)
         // 失败收口不动已有试听音轨
         assertEquals(tracks, updated.dlsiteTrialTracks)
+    }
+
+    // ------------------------------------------------------------ 域 G selectDlsiteLanguage
+
+    @Test
+    fun `applyDlsiteLanguageSwitch resets all fields and remerges header album`() {
+        val info = album(id = 9L, title = "online-info", rjCode = "RJ123")
+        val trial = listOf(Track(albumId = 2L, title = "trial", path = "/t"))
+        val base = model(
+            dlsiteInfo = info,
+            dlsiteGalleryUrls = listOf("https://img/g1"),
+            dlsiteTrialTracks = trial,
+            hasLoadedInitialDlsiteContent = true,
+            hasResolvedAsmrOneContent = true,
+            hasResolvedDlsitePlayContent = true,
+            isLoadingDlsite = true,
+            isLoadingDlsiteTrial = true,
+            isLoadingAsmrOne = true,
+            isLoadingDlsitePlay = true
+        )
+        val updated = applyDlsiteLanguageSwitch(base, selectedLang = "JPN", workno = "RJ456")
+        assertEquals("JPN", updated.dlsiteSelectedLang)
+        assertEquals("RJ456", updated.dlsiteWorkno)
+        assertEquals("", updated.dlsitePlayWorkno)
+        assertEquals("RJ456", updated.rjCode)
+        // displayAlbum = 旧 displayAlbum 按 fetchedDlsiteInfo=null 重合并
+        assertEquals(
+            base.displayAlbum.withResolvedWorkIdentity(rjCode = "RJ456", asmrOneWorkId = null),
+            updated.displayAlbum
+        )
+        assertNull(updated.dlsiteInfo)
+        assertTrue(updated.dlsiteGalleryUrls.isEmpty())
+        assertTrue(updated.dlsiteTrialTracks.isEmpty())
+        assertEquals(
+            com.asmr.player.data.remote.scraper.DlsiteRecommendations(),
+            updated.dlsiteRecommendations
+        )
+        assertTrue(updated.hasResolvedInitialDlsiteTarget)
+        assertFalse(updated.hasLoadedInitialDlsiteContent)
+        assertFalse(updated.hasResolvedAsmrOneContent)
+        assertFalse(updated.hasResolvedDlsitePlayContent)
+        assertTrue(updated.isDlsiteLanguageUserSelected)
+        assertNull(updated.asmrOneWorkId)
+        assertNull(updated.asmrOneSite)
+        assertTrue(updated.asmrOneTree.isEmpty())
+        assertTrue(updated.dlsitePlayTree.isEmpty())
+        assertFalse(updated.isLoadingDlsite)
+        assertFalse(updated.isLoadingDlsiteTrial)
+        assertFalse(updated.isLoadingAsmrOne)
+        assertFalse(updated.isLoadingDlsitePlay)
+        // 域外字段不动
+        assertEquals(base.baseRjCode, updated.baseRjCode)
+        assertEquals(base.localAlbum, updated.localAlbum)
+        assertFalse(updated.preserveHeaderAlbumMetadata)
+    }
+
+    @Test
+    fun `applyDlsiteLanguageLocalReload guard and transform`() {
+        val local = album(id = 3L, title = "new-local", rjCode = "RJ456")
+        // 守卫：rjCode 不匹配 → 早退
+        assertNull(applyDlsiteLanguageLocalReload(model(), workno = "RJ999", local = local))
+        // 匹配（大小写不敏感）→ localAlbum 替换 + displayAlbum 按当前 dlsiteInfo 重合并
+        val base = model()
+        val updated = applyDlsiteLanguageLocalReload(base, workno = "rj123", local = local)!!
+        assertEquals(local, updated.localAlbum)
+        assertEquals(
+            base.displayAlbum.withResolvedWorkIdentity(rjCode = base.rjCode, asmrOneWorkId = base.asmrOneWorkId),
+            updated.displayAlbum
+        )
+        // local 为 null → 仅重合并 displayAlbum，localAlbum 置空
+        val nullLocal = applyDlsiteLanguageLocalReload(base, workno = "RJ123", local = null)!!
+        assertNull(nullLocal.localAlbum)
+        assertEquals(updated.displayAlbum, nullLocal.displayAlbum)
+    }
+
+    // ------------------------------------------------------------ 域 J dlsitePlay 尾段
+
+    @Test
+    fun `markDlsitePlayLoading sets loading and clears resolved`() {
+        val updated = markDlsitePlayLoading(model(hasResolvedDlsitePlayContent = true))
+        assertTrue(updated.isLoadingDlsitePlay)
+        assertFalse(updated.hasResolvedDlsitePlayContent)
+        // 域外字段不动
+        assertEquals(model().dlsitePlayWorkno, updated.dlsitePlayWorkno)
+        assertEquals(model().dlsitePlayTree, updated.dlsitePlayTree)
+    }
+
+    @Test
+    fun `finishDlsitePlayLoad writes tree and closes loading`() {
+        val tree = listOf(AsmrOneTrackNodeResponse(title = "n1"))
+        val updated = finishDlsitePlayLoad(
+            model(isLoadingDlsitePlay = true),
+            tree = tree,
+            pickedWorkno = " rj456 "
+        )
+        assertEquals(tree, updated.dlsitePlayTree)
+        // 原内联语义仅 trim 不转大写（大写归一发生在候选推导处）
+        assertEquals("rj456", updated.dlsitePlayWorkno)
+        assertTrue(updated.hasResolvedDlsitePlayContent)
+        assertFalse(updated.isLoadingDlsitePlay)
+
+        // pickedWorkno=null → workno 归一为空串
+        val noPick = finishDlsitePlayLoad(model(), tree = emptyList(), pickedWorkno = null)
+        assertEquals("", noPick.dlsitePlayWorkno)
+        assertTrue(noPick.hasResolvedDlsitePlayContent)
+        assertFalse(noPick.isLoadingDlsitePlay)
+    }
+
+    @Test
+    fun `markDlsitePlayLoadFailed closes loading keeping tree`() {
+        val tree = listOf(AsmrOneTrackNodeResponse(title = "n2"))
+        val base = model(dlsitePlayTree = tree, dlsitePlayWorkno = "RJ789", isLoadingDlsitePlay = true)
+        val updated = markDlsitePlayLoadFailed(base)
+        assertFalse(updated.isLoadingDlsitePlay)
+        assertTrue(updated.hasResolvedDlsitePlayContent)
+        // 树与 workno 保持原样
+        assertEquals(tree, updated.dlsitePlayTree)
+        assertEquals("RJ789", updated.dlsitePlayWorkno)
     }
 }

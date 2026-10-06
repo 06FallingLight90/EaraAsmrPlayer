@@ -111,6 +111,11 @@ import com.asmr.player.ui.library.albumdetail.dlsiteTrialRequestWorkno
 import com.asmr.player.ui.library.albumdetail.setDlsiteTrialLoading
 import com.asmr.player.ui.library.albumdetail.finishDlsiteTrialLoad
 import com.asmr.player.ui.library.albumdetail.clearDlsiteTrialLoading
+import com.asmr.player.ui.library.albumdetail.applyDlsiteLanguageSwitch
+import com.asmr.player.ui.library.albumdetail.applyDlsiteLanguageLocalReload
+import com.asmr.player.ui.library.albumdetail.markDlsitePlayLoading
+import com.asmr.player.ui.library.albumdetail.finishDlsitePlayLoad
+import com.asmr.player.ui.library.albumdetail.markDlsitePlayLoadFailed
 import com.asmr.player.ui.library.albumdetail.withResolvedWorkIdentity
 import com.asmr.player.ui.library.albumdetail.buildAlbumDetailSimilarWorks
 import com.asmr.player.ui.library.albumdetail.buildDlsiteTrialDownloadTree
@@ -1109,36 +1114,10 @@ class AlbumDetailViewModel @Inject constructor(
         asmrOneAttemptedRj.clear()
         dlsitePlayAttemptedRj.clear()
         _uiState.value = AlbumDetailUiState.Success(
-            model = current.model.copy(
-                dlsiteSelectedLang = target?.lang ?: normalized,
-                dlsiteWorkno = workno,
-                dlsitePlayWorkno = "",
-                rjCode = workno,
-                displayAlbum = mergeDetailHeaderAlbum(
-                    currentDisplayAlbum = current.model.displayAlbum,
-                    localAlbum = current.model.localAlbum,
-                    fetchedDlsiteInfo = null,
-                    rjCode = workno,
-                    asmrOneWorkId = null,
-                    preserveHeaderAlbumMetadata = current.model.preserveHeaderAlbumMetadata
-                ),
-                dlsiteInfo = null,
-                dlsiteGalleryUrls = emptyList(),
-                dlsiteTrialTracks = emptyList(),
-                dlsiteRecommendations = DlsiteRecommendations(),
-                hasResolvedInitialDlsiteTarget = true,
-                hasLoadedInitialDlsiteContent = false,
-                hasResolvedAsmrOneContent = false,
-                hasResolvedDlsitePlayContent = false,
-                isDlsiteLanguageUserSelected = true,
-                asmrOneWorkId = null,
-                asmrOneSite = null,
-                asmrOneTree = emptyList(),
-                dlsitePlayTree = emptyList(),
-                isLoadingDlsite = false,
-                isLoadingDlsiteTrial = false,
-                isLoadingAsmrOne = false,
-                isLoadingDlsitePlay = false
+            model = applyDlsiteLanguageSwitch(
+                model = current.model,
+                selectedLang = target?.lang ?: normalized,
+                workno = workno
             )
         )
         clearTreeState("tree:asmrOne:$workno")
@@ -1146,22 +1125,7 @@ class AlbumDetailViewModel @Inject constructor(
         clearTreeState("localTree:rj:$workno")
         viewModelScope.launch {
             val local = runCatching { loadLocalAlbumByRj(workno) }.getOrNull() ?: current.model.localAlbum
-            val updated = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return@launch
-            if (!updated.rjCode.equals(workno, ignoreCase = true)) return@launch
-            val displayAlbum = mergeDetailHeaderAlbum(
-                currentDisplayAlbum = updated.displayAlbum,
-                localAlbum = local,
-                fetchedDlsiteInfo = updated.dlsiteInfo,
-                rjCode = updated.rjCode,
-                asmrOneWorkId = updated.asmrOneWorkId,
-                preserveHeaderAlbumMetadata = updated.preserveHeaderAlbumMetadata
-            )
-            _uiState.value = AlbumDetailUiState.Success(
-                model = updated.copy(
-                    localAlbum = local,
-                    displayAlbum = displayAlbum
-                )
-            )
+            updateSuccessModel { applyDlsiteLanguageLocalReload(it, workno, local) }
         }
         ensureDlsiteLoaded()
         ensureAsmrOneLoaded()
@@ -1493,10 +1457,7 @@ class AlbumDetailViewModel @Inject constructor(
         dlsitePlayLoadJob?.cancel()
         dlsitePlayLoadJob = viewModelScope.launch {
             _uiState.value = AlbumDetailUiState.Success(
-                model = current.model.copy(
-                    isLoadingDlsitePlay = true,
-                    hasResolvedDlsitePlayContent = false
-                )
+                model = markDlsitePlayLoading(current.model)
             )
             try {
                 val editions = runCatching {
@@ -1553,32 +1514,19 @@ class AlbumDetailViewModel @Inject constructor(
                 result.subtitlesByUrl.forEach { (url, subs) ->
                     if (subs.isNotEmpty()) OnlineLyricsStore.set(url, subs)
                 }
-                val updated = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return@launch
+                if (_uiState.value !is AlbumDetailUiState.Success) return@launch
                 if (pickedResult == null && lastError != null && !sawNotAvailable) {
                     dlsitePlayAttemptedRj.remove(attemptKey)
                     if (showFailureMessage) {
                         messageManager.showError("DLsite Play 加载失败，请稍后重试")
                     }
                 }
-                _uiState.value = AlbumDetailUiState.Success(
-                    model = updated.copy(
-                        dlsitePlayTree = result.tree,
-                        dlsitePlayWorkno = pickedWorkno?.trim().orEmpty(),
-                        hasResolvedDlsitePlayContent = true,
-                        isLoadingDlsitePlay = false
-                    )
-                )
+                updateSuccessModel { finishDlsitePlayLoad(it, result.tree, pickedWorkno) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 dlsitePlayAttemptedRj.remove(attemptKey)
-                val updated = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return@launch
-                _uiState.value = AlbumDetailUiState.Success(
-                    model = updated.copy(
-                        hasResolvedDlsitePlayContent = true,
-                        isLoadingDlsitePlay = false
-                    )
-                )
+                updateSuccessModel(::markDlsitePlayLoadFailed)
             }
         }
     }

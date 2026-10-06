@@ -1,9 +1,12 @@
 package com.asmr.player.ui.library.albumdetail
 
+import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
+import com.asmr.player.data.remote.scraper.DlsiteRecommendations
+import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
 
 /**
- * C8-1 首批纯函数 reducer（r3-c8-reducer-plan.md §2）：把 AlbumDetailViewModel
+ * C8 各批次纯函数 reducer（r3-c8-reducer-plan.md §2/§3）：把 AlbumDetailViewModel
  * 内联的 Success 态 copy 变换收编为 (AlbumDetailModel, 事件参数) -> AlbumDetailModel? 纯函数。
  *
  * 约定：
@@ -130,4 +133,91 @@ internal fun clearDlsiteTrialLoading(
 ): AlbumDetailModel? {
     if (!model.dlsiteTrialRequestWorkno().equals(requestWorkno, ignoreCase = true)) return null
     return model.copy(isLoadingDlsiteTrial = false)
+}
+
+/** 域 G：语言切换大重置（原 selectDlsiteLanguage 内联 copy；selectedLang/workno 由调用点推导；token/attemptedRj 副作用留在调用点；displayAlbum 按 fetchedDlsiteInfo=null 重合并，沿用调用点的 model 快照应用）。 */
+internal fun applyDlsiteLanguageSwitch(
+    model: AlbumDetailModel,
+    selectedLang: String,
+    workno: String
+): AlbumDetailModel {
+    return model.copy(
+        dlsiteSelectedLang = selectedLang,
+        dlsiteWorkno = workno,
+        dlsitePlayWorkno = "",
+        rjCode = workno,
+        displayAlbum = mergeDetailHeaderAlbum(
+            currentDisplayAlbum = model.displayAlbum,
+            localAlbum = model.localAlbum,
+            fetchedDlsiteInfo = null,
+            rjCode = workno,
+            asmrOneWorkId = null,
+            preserveHeaderAlbumMetadata = model.preserveHeaderAlbumMetadata
+        ),
+        dlsiteInfo = null,
+        dlsiteGalleryUrls = emptyList(),
+        dlsiteTrialTracks = emptyList(),
+        dlsiteRecommendations = DlsiteRecommendations(),
+        hasResolvedInitialDlsiteTarget = true,
+        hasLoadedInitialDlsiteContent = false,
+        hasResolvedAsmrOneContent = false,
+        hasResolvedDlsitePlayContent = false,
+        isDlsiteLanguageUserSelected = true,
+        asmrOneWorkId = null,
+        asmrOneSite = null,
+        asmrOneTree = emptyList(),
+        dlsitePlayTree = emptyList(),
+        isLoadingDlsite = false,
+        isLoadingDlsiteTrial = false,
+        isLoadingAsmrOne = false,
+        isLoadingDlsitePlay = false
+    )
+}
+
+/** 域 G：语言切换尾部本地重装载（原 selectDlsiteLanguage launch 内联守卫：rjCode 与 workno 匹配才赋值；displayAlbum 按当前 dlsiteInfo 重合并）。 */
+internal fun applyDlsiteLanguageLocalReload(
+    model: AlbumDetailModel,
+    workno: String,
+    local: Album?
+): AlbumDetailModel? {
+    if (!model.rjCode.equals(workno, ignoreCase = true)) return null
+    val displayAlbum = mergeDetailHeaderAlbum(
+        currentDisplayAlbum = model.displayAlbum,
+        localAlbum = local,
+        fetchedDlsiteInfo = model.dlsiteInfo,
+        rjCode = model.rjCode,
+        asmrOneWorkId = model.asmrOneWorkId,
+        preserveHeaderAlbumMetadata = model.preserveHeaderAlbumMetadata
+    )
+    return model.copy(localAlbum = local, displayAlbum = displayAlbum)
+}
+
+/** 域 J：dlsitePlay 开载置位（原 ensureDlsitePlayLoaded launch 头部内联 copy；沿用调用点的 model 快照应用）。 */
+internal fun markDlsitePlayLoading(model: AlbumDetailModel): AlbumDetailModel {
+    return model.copy(
+        isLoadingDlsitePlay = true,
+        hasResolvedDlsitePlayContent = false
+    )
+}
+
+/** 域 J：dlsitePlay 成功树装载（原 ensureDlsitePlayLoaded 成功分支内联 copy；pickedWorkno 空白归一随迁）。 */
+internal fun finishDlsitePlayLoad(
+    model: AlbumDetailModel,
+    tree: List<AsmrOneTrackNodeResponse>,
+    pickedWorkno: String?
+): AlbumDetailModel {
+    return model.copy(
+        dlsitePlayTree = tree,
+        dlsitePlayWorkno = pickedWorkno?.trim().orEmpty(),
+        hasResolvedDlsitePlayContent = true,
+        isLoadingDlsitePlay = false
+    )
+}
+
+/** 域 J：dlsitePlay 失败收口（原 ensureDlsitePlayLoaded catch 分支内联 copy；attemptKey 回滚副作用留在调用点）。 */
+internal fun markDlsitePlayLoadFailed(model: AlbumDetailModel): AlbumDetailModel {
+    return model.copy(
+        hasResolvedDlsitePlayContent = true,
+        isLoadingDlsitePlay = false
+    )
 }
