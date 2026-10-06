@@ -56,3 +56,9 @@ C7 service 层 God 拆解：`data/download/DownloadManager`（C7-1，1184→516+
 28. **`resetAsmrOneContent` 放弃 plan 草案的"形态二无条件版"**：invalidateAsmrOneEndpointState 的 keyRj 空白守卫挡的是赋值+重装载，refreshAsmrOneSection 的空白守卫挡的是 attemptedRj.remove/forget 副作用——空白判定留在调用点（副作用顺序保持原位），reducer 为纯无条件五字段重置；两处调用点共用同一 reducer。
 29. **reducer 表驱动测试零 Robolectric**：AlbumDetailModel/Album/Track/AsmrOneTrackNodeResponse/DlsiteRecommendations 全为带默认值纯数据类，测试 harness 一个 `model(可覆盖字段…)` 工厂即可；断言沿用 org.junit.Assert（坑 19）。
 30. **gradlew-local.bat 文件名无前导点**（坑复现）：AGENTS.md 的 `\.gradlew-local.bat` 写法有误导，实际是 `gradlew-local.bat`；后台 Shell 调用会被推后台且 exit 0 假象场景依旧，前台跑或后台+日志轮询均可。
+
+## C8-2 增量（域 G×2 + 域 J 尾段 reducer 收编，+5 测）
+
+31. **归一化语义逐字对齐要区分环节**：`finishDlsitePlayLoad` 原内联对 pickedWorkno 仅 `trim().orEmpty()` 不转大写——大写归一发生在候选推导处（editionWorknos `.uppercase()` / normalizeCandidates）。表驱动测试首轮误写期望 `"RJ456"`（ComparisonFailure），实际 `" rj456 "` → `"rj456"`。教训：copy 字段的归一化在哪个环节发生，测试期望就断言哪个环节的输出。
+32. **reducer 文件引入 data.remote 类型触发 ui-to-data-remote 守卫**：域 G 大重置与域 J 树装载的 copy 字段涉及 `AsmrOneTrackNodeResponse`（dlsitePlayTree）与 `DlsiteRecommendations`，AlbumDetailReducers.kt 新增两条 ui→data-remote import——C8-1"无新增 import 方向"的前提只对域 A-I 的 `Track`（domain.model，白名单方向）成立。处理：与同包 AlbumDetailViewModelSupport.kt / AlbumDetailDialogs.kt 先例同型，两条入 tools/import-direction-baseline.txt（守卫先报再入 baseline 的既有流程）。
+33. **`Measure-Object -Line` 不计空行**：size baseline 对齐口径是文件总行数，须用 `(Get-Content file).Count`；`Measure-Object -Line` 给出 2233（非空行），与真实 2402 差 ~170，直接拿去收缩 baseline 会误伤后续 ratchet。
