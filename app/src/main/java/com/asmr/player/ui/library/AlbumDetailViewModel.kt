@@ -101,6 +101,16 @@ import com.asmr.player.ui.library.albumdetail.collectSubtitleCandidates
 import com.asmr.player.ui.library.albumdetail.listenTogetherSummaryRj
 import com.asmr.player.ui.library.albumdetail.withPreservedListenTogetherListenerCount
 import com.asmr.player.ui.library.albumdetail.withUpdatedLocalCover
+import com.asmr.player.ui.library.albumdetail.updateListenTogetherListenerCount
+import com.asmr.player.ui.library.albumdetail.updateLocalTracks
+import com.asmr.player.ui.library.albumdetail.resetAsmrOneContent
+import com.asmr.player.ui.library.albumdetail.resetDlsitePlayAccess
+import com.asmr.player.ui.library.albumdetail.resetOnlineLoadingFlags
+import com.asmr.player.ui.library.albumdetail.markAsmrOneLoadFinished
+import com.asmr.player.ui.library.albumdetail.dlsiteTrialRequestWorkno
+import com.asmr.player.ui.library.albumdetail.setDlsiteTrialLoading
+import com.asmr.player.ui.library.albumdetail.finishDlsiteTrialLoad
+import com.asmr.player.ui.library.albumdetail.clearDlsiteTrialLoading
 import com.asmr.player.ui.library.albumdetail.withResolvedWorkIdentity
 import com.asmr.player.ui.library.albumdetail.buildAlbumDetailSimilarWorks
 import com.asmr.player.ui.library.albumdetail.buildDlsiteTrialDownloadTree
@@ -179,6 +189,18 @@ class AlbumDetailViewModel @Inject constructor(
     private val _cloudSyncSelectionDialogState = MutableStateFlow<CloudSyncSelectionDialogState?>(null)
     internal val cloudSyncSelectionDialogState: StateFlow<CloudSyncSelectionDialogState?> = _cloudSyncSelectionDialogState.asStateFlow()
     private var pendingCloudSyncSelection: CompletableDeferred<String?>? = null
+
+    /**
+     * Success 态统一应用器（C8-1）：消解各赋值点的 `as? Success` 守卫与
+     * `Success(model = ...)` 样板。transform 返回 null 表示守卫早退，不赋值；
+     * 返回 false 表示未产生赋值（非 Success 态或守卫早退）。
+     */
+    private fun updateSuccessModel(transform: (AlbumDetailModel) -> AlbumDetailModel?): Boolean {
+        val current = _uiState.value as? AlbumDetailUiState.Success ?: return false
+        val next = transform(current.model) ?: return false
+        _uiState.value = AlbumDetailUiState.Success(model = next)
+        return true
+    }
 
     val availableTags: StateFlow<List<TagWithCount>> = libraryReadRepository.observeTagsWithCounts(TagSource.USER)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -277,12 +299,7 @@ class AlbumDetailViewModel @Inject constructor(
                 listenTogetherRepository.getRjSummary(normalizedRj)
             }.getOrNull() ?: return
             val listenerCount = summary.listenerCount.coerceAtLeast(0)
-            val current = _uiState.value as? AlbumDetailUiState.Success ?: return
-            if (!current.model.listenTogetherSummaryRj().equals(normalizedRj, ignoreCase = true)) return
-            if (current.model.listenTogetherRjListenerCount == listenerCount) return
-            _uiState.value = AlbumDetailUiState.Success(
-                model = current.model.copy(listenTogetherRjListenerCount = listenerCount)
-            )
+            updateSuccessModel { updateListenTogetherListenerCount(it, normalizedRj, listenerCount) }
         } finally {
             listenTogetherRjSummaryInFlight.set(false)
         }
@@ -301,15 +318,7 @@ class AlbumDetailViewModel @Inject constructor(
         val shouldReload = current.model.isLoadingAsmrOne ||
             current.model.hasResolvedAsmrOneContent ||
             current.model.asmrOneTree.isNotEmpty()
-        _uiState.value = AlbumDetailUiState.Success(
-            model = current.model.copy(
-                asmrOneWorkId = null,
-                asmrOneSite = null,
-                asmrOneTree = emptyList(),
-                hasResolvedAsmrOneContent = false,
-                isLoadingAsmrOne = false
-            )
-        )
+        updateSuccessModel(::resetAsmrOneContent)
         if (shouldReload) ensureAsmrOneLoaded()
     }
 
@@ -513,35 +522,14 @@ class AlbumDetailViewModel @Inject constructor(
         dlsitePlayAttemptedRj.clear()
 
         if (!resetLoadingState) return
-        val current = _uiState.value as? AlbumDetailUiState.Success ?: return
-        _uiState.value = AlbumDetailUiState.Success(
-            model = current.model.copy(
-                isLoadingDlsite = false,
-                isLoadingDlsiteTrial = false,
-                isLoadingAsmrOne = false,
-                isLoadingDlsitePlay = false
-            )
-        )
+        updateSuccessModel(::resetOnlineLoadingFlags)
     }
 
     internal fun invalidateDlsitePlayAccess() {
         dlsitePlayLoadJob?.cancel()
         dlsitePlayLoadJob = null
         dlsitePlayAttemptedRj.clear()
-        val current = _uiState.value as? AlbumDetailUiState.Success ?: return
-        if (
-            current.model.dlsitePlayTree.isEmpty() &&
-            !current.model.hasResolvedDlsitePlayContent &&
-            !current.model.isLoadingDlsitePlay
-        ) return
-        _uiState.value = AlbumDetailUiState.Success(
-            model = current.model.copy(
-                dlsitePlayWorkno = "",
-                dlsitePlayTree = emptyList(),
-                hasResolvedDlsitePlayContent = false,
-                isLoadingDlsitePlay = false
-            )
-        )
+        updateSuccessModel(::resetDlsitePlayAccess)
     }
 
     suspend fun prepareDlsitePlayImagePreview(
@@ -726,22 +714,7 @@ class AlbumDetailViewModel @Inject constructor(
                 .flowOn(Dispatchers.Default)
                 .distinctUntilChanged()
                 .collect { tracks ->
-                    val current = _uiState.value as? AlbumDetailUiState.Success ?: return@collect
-                    val currentLocal = current.model.localAlbum ?: return@collect
-                    if (currentLocal.id != localId) return@collect
-
-                    val updatedLocal = currentLocal.copy(tracks = tracks)
-                    val updatedDisplay = if (current.model.displayAlbum.id == localId) {
-                        current.model.displayAlbum.copy(tracks = tracks)
-                    } else {
-                        current.model.displayAlbum
-                    }
-                    _uiState.value = AlbumDetailUiState.Success(
-                        model = current.model.copy(
-                            localAlbum = updatedLocal,
-                            displayAlbum = updatedDisplay
-                        )
-                    )
+                    updateSuccessModel { updateLocalTracks(it, localId, tracks) }
                 }
         }
     }
@@ -878,14 +851,13 @@ class AlbumDetailViewModel @Inject constructor(
     }
 
     private fun updateCurrentCoverState(albumId: Long, coverPath: String, coverThumbPath: String) {
-        val cur = _uiState.value as? AlbumDetailUiState.Success ?: return
-        _uiState.value = AlbumDetailUiState.Success(
-            model = cur.model.withUpdatedLocalCover(
+        updateSuccessModel {
+            it.withUpdatedLocalCover(
                 albumId = albumId,
                 coverPath = coverPath,
                 coverThumbPath = coverThumbPath
             )
-        )
+        }
     }
 
     private fun enqueueAlbumCoverThumbWork(albumId: Long) {
@@ -1207,33 +1179,18 @@ class AlbumDetailViewModel @Inject constructor(
             workId = current.model.asmrOneWorkId
         )
 
-        _uiState.value = AlbumDetailUiState.Success(
-            model = current.model.copy(
-                asmrOneWorkId = null,
-                asmrOneSite = null,
-                asmrOneTree = emptyList(),
-                hasResolvedAsmrOneContent = false,
-                isLoadingAsmrOne = false
-            )
-        )
+        updateSuccessModel(::resetAsmrOneContent)
         ensureAsmrOneLoaded()
     }
 
     private fun finishAsmrOneLoad(keyRj: String, resolved: Boolean, showFailureMessage: Boolean = false) {
         val updated = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return
-        val updatedKey = updated.rjCode.trim().uppercase()
-        if (updatedKey.equals(keyRj, ignoreCase = true)) {
-            if (showFailureMessage && updated.asmrOneTree.isEmpty()) {
-                albumDetailAsmrOneFailureMessage(isLocalLibraryDetail)
-                    ?.let(messageManager::showError)
-            }
-            _uiState.value = AlbumDetailUiState.Success(
-                model = updated.copy(
-                    isLoadingAsmrOne = false,
-                    hasResolvedAsmrOneContent = if (resolved) true else updated.hasResolvedAsmrOneContent
-                )
-            )
+        if (!updated.rjCode.trim().uppercase().equals(keyRj, ignoreCase = true)) return
+        if (showFailureMessage && updated.asmrOneTree.isEmpty()) {
+            albumDetailAsmrOneFailureMessage(isLocalLibraryDetail)
+                ?.let(messageManager::showError)
         }
+        updateSuccessModel { markAsmrOneLoadFinished(it, keyRj, resolved) }
     }
 
     fun refreshDlsiteTrialSection() {
@@ -1245,30 +1202,19 @@ class AlbumDetailViewModel @Inject constructor(
         val locale = dlsiteLocaleForLang(current.model.dlsiteSelectedLang)
         dlsiteTrialLoadJob?.cancel()
         dlsiteTrialLoadJob = viewModelScope.launch {
-            val latestBefore = _uiState.value as? AlbumDetailUiState.Success ?: return@launch
-            val latestWorkno = latestBefore.model.dlsiteWorkno.trim().uppercase().ifBlank { latestBefore.model.rjCode.trim().uppercase() }
-            if (!latestWorkno.equals(workno, ignoreCase = true)) return@launch
-            if (latestBefore.model.isLoadingDlsite || latestBefore.model.isLoadingDlsiteTrial) return@launch
-            _uiState.value = AlbumDetailUiState.Success(model = latestBefore.model.copy(isLoadingDlsiteTrial = true))
+            if (!updateSuccessModel { setDlsiteTrialLoading(it, workno) }) return@launch
             try {
                 val tracks = runCatching { dlsiteScraper.getTracks(workno, locale = locale) }.getOrDefault(emptyList())
-                val updated = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return@launch
-                val updatedWorkno = updated.dlsiteWorkno.trim().uppercase().ifBlank { updated.rjCode.trim().uppercase() }
-                if (token != dlsiteTrialLoadToken || !updatedWorkno.equals(workno, ignoreCase = true)) return@launch
-                _uiState.value = AlbumDetailUiState.Success(
-                    model = updated.copy(
-                        dlsiteTrialTracks = tracks,
-                        isLoadingDlsiteTrial = false
-                    )
-                )
+                if (token != dlsiteTrialLoadToken) return@launch
+                if (!updateSuccessModel { finishDlsiteTrialLoad(it, workno, tracks) }) return@launch
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                if (token != dlsiteTrialLoadToken) return@launch
                 val updated = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return@launch
-                val updatedWorkno = updated.dlsiteWorkno.trim().uppercase().ifBlank { updated.rjCode.trim().uppercase() }
-                if (token != dlsiteTrialLoadToken || !updatedWorkno.equals(workno, ignoreCase = true)) return@launch
+                if (!updated.dlsiteTrialRequestWorkno().equals(workno, ignoreCase = true)) return@launch
                 messageManager.showError("试听刷新失败，请稍后重试")
-                _uiState.value = AlbumDetailUiState.Success(model = updated.copy(isLoadingDlsiteTrial = false))
+                updateSuccessModel { clearDlsiteTrialLoading(it, workno) }
             }
         }
     }
