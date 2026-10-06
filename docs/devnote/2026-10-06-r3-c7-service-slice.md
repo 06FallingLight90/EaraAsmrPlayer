@@ -30,3 +30,12 @@ C7 service 层 God 拆解：`data/download/DownloadManager`（C7-1，1184→516+
 11. **编译器同型错误只报部分**：5 处 AUDIO_SERVICE 未限定只报了 4 处（CLIXML 错误流还有逐行截断换行）——修同型错误时按 grep 全量计数处理，勿按报错条数。
 12. **PowerShell `Set-Content -Encoding UTF8` 带 BOM**（总纲 §5 已录，本次实测复现）：行内正则替换后落盘引入 EF BB BF——用 `[IO.File]::WriteAllText($p, $t, (New-Object System.Text.UTF8Encoding($false)))` 重写消除。
 13. **区间删除后主文件残留连续空行**：函数区间被移除后其前后空行叠加成 2-6 连空——收尾按原文件风格（单空行）收敛 blank-run 到 1，纯空白变更不需重跑全量测试（括号平衡复查即可）。
+
+## C8-0a 增量（AlbumDetailViewModelTest 直测 harness，首次建立）
+
+14. **viewModelScope(Main.immediate) 在 Robolectric 的驱动方式（无 coroutines-test）**：Robolectric 测试线程即主线程——`vm.loadAlbum(...)` 内联执行协程至首个挂起点，之后的恢复经主 Looper 队列投递；以 `shadowOf(Looper.getMainLooper()).idle()` + `Thread.sleep(10)` 的泵循环 + 真实时间 5s 超时（`awaitUiState` 谓词等待）驱动至目标状态。**不能用 `runBlocking { loadAlbumAndAwait() }`**——runBlocking 阻塞主线程后，Main 队列永不泵送，join 永久死锁。runBlocking 只用于 DAO 种入（Room suspend insert）。
+15. **@ApplicationContext 参数在手工装配时必须显式传**：Hilt 构造在测试外注入，直接 new 时 `DlsitePlayWorkClient(OkHttpClient())` 报 "No value passed for parameter 'context'"——所有带 @ApplicationContext 的构造（DlsitePlayWorkClient/DownloadManager/LyricsLoader/AppCacheManager/ManualLyricsSourceRepository）都要补 context 实参；`DlsiteProductInfoClient(OkHttpClient())` 则无 context 参数（单参）。
+16. **Room DAO suspend insert 在种入 helper 里需 runBlocking 包裹**；`insertAlbum` 返回自增 id 供 track 的 albumId 使用。
+17. **AlbumDetailUiState/AlbumDetailModel 定义在 `ui/library/albumdetail` 子包**（Support 文件），VM 在 `ui/library`——测试 import 两个包名都要写全。
+18. **ImageCacheManager 可测构造**（CacheModule 同构）：MemoryCache(bytes)/DiskCache(dir,maxBytes,ttlMs)/CacheStats()/CacheConfig(cacheVersion="test")/ImageLoaderFacade(context,okHttp,Dispatchers.Default) 均为简单构造，无需 Coil 真实依赖。
+19. **Truth 不在测试类路径**：断言一律 org.junit.Assert（项目先例统一）。

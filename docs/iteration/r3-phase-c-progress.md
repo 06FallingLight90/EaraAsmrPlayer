@@ -1,8 +1,9 @@
-# R3 阶段 C 进度留档（2026-10-06：C1 + C3 + C4 + C7 全部完成——service 拆解 3/3：DownloadManager 1184→516+2、SubtitleTaskService 1430→204+4、PlaybackService 1471→765+5；下一片 C8）
+# R3 阶段 C 进度留档（2026-10-06：C1 + C3 + C4 + C7 全部完成；C8 启动——C8-0a VM 直测安全网落地（测试基线 945→951），下一片 C8-0b ensure* 时序钉测）
 
-> 状态：阶段 B 已闭环（tag `refactor-r3/phase-B`）；阶段 C 执行中——C1 六 holder 分治、C3 写仓拆族、C4 God 文件区块化（7/7）、C7 service 拆解（3/3）全部完成。
-> 基线：`refactor/architecture-cleanup`，阶段 B tag 之后 31 个提交（C1a..C1d、docs ×2、C3、C4-1..C4-7 及 docs、C7-1、C7-2、C7-3）。
+> 状态：阶段 B 已闭环（tag `refactor-r3/phase-B`）；阶段 C 执行中——C1 六 holder 分治、C3 写仓拆族、C4 God 文件区块化（7/7）、C7 service 拆解（3/3）全部完成；C8 前置安全网第一批已落地。
+> 基线：`refactor/architecture-cleanup`，阶段 B tag 之后 32 个提交（C1a..C1d、docs ×2、C3、C4-1..C4-7 及 docs、C7-1、C7-2、C7-3、C8-0a）。
 > 实机走查（B 阶段遗留 + C 阶段六族/写仓拆族/service 拆解）仍挂起待设备。
+> **测试基线更新：951/0/4（+6 AlbumDetailViewModelTest）**。
 
 ## 1. 已提交进度
 
@@ -26,6 +27,7 @@
 | `593431f` | C7-1 | DownloadManager 同包拆族（**1184 行单文件 → 主文件 516 + 2 同包主题文件** data/download）：DownloadArchiveFinalize 157（zip 字符集探测族 copyFrom/scoreZipEntryNames/ZipCharsetCandidate/useBestEffortZipFile/unzipIntoRootDirectory + 两个 finalizeDlsiteLosslessArchive* 收尾，逐字搬移）/ DownloadLibraryUpsert 519（upsertDownloadedAlbumToLibrary 本地版 + 私有 DocumentTree 版随迁 + replaceMatchedOnlineTracksWithLocalTracks + 封面挑选族，事务体逐字不变）；主文件保留 DownloadManager 类（enqueueBatch/enqueueRequests/enqueueDownloadLocked/ensureTask）与 staging/mime/字幕匹配顶层符号；顺带清 11 条 stale import（DlsiteAuthStore/NetworkHeaders/coroutines×5/kotlin.math.max/AlbumEntity/TrackKeyNormalizer）；外部调用点（DownloadWorker/DownloadQueueCoordinator/DownloadQueueRepository/DownloadLibraryMergeTest）走 FQN import **零改动**；size baseline 无 DownloadManager pin；三绿 945/0/4 |
 | `24ccbd1` | C7-2 | SubtitleTaskService 同包拆族（**1430 行单文件 → 主文件 204 + 4 同包主题文件** subtitle）：SubtitleTaskEngine 856（调度循环/控制对账/转录/翻译/导出/润色/提交与清算/引擎管理/配额刷新全链 + 3 个私有 Gson/entity 映射扩展随迁）/ SubtitleTaskNotifications 99（前台通知族 + stopWhenIdle）/ SubtitleTaskScriptSupport 156（脚本上下文 + SAF/PDF 提取族，ScriptFileRef 随迁 private→internal）/ SubtitleTaskModels 69（GeneratedTranslationLayout 族顶层模型）；**机制：类成员函数转同包顶层扩展函数（调用点文本零改动）+ 21 字段/18 companion 常量/2 留守函数 private→internal + 搬移体内常量 `SubtitleTaskService.` 限定（字符串感知替换）**；主文件保留 Service 壳（ServiceEntryPoint/lifecycle/interruptAndStop/signalWake/companion）；wake/requestPolishAlbum 外部入口零改动；SubtitleProgressivePublishTest 同包零改动；三绿 945/0/4。踩坑见 devnote 2026-10-06（字符串模板 `$CONST` 漏 import 推导、继承常量 STOP_FOREGROUND_REMOVE 需 Service. 限定、lateinit 放宽正则、companion 缩进限定） |
 | `aae5ba6` | C7-3 | PlaybackService 同包拆族（**1471 行单文件 → 主文件 765 + 5 同包主题文件** service）：PlaybackServiceAudioFocus 154（音频焦点请求/放弃 + 播放恢复调度/取消 + 路由监听注册/注销 + findHttpStatusCode 文件私有顶层扩展随迁）/ PlaybackServiceSession 314（buildMediaSession + 通知刷新/控制器注册/命令同步族 + 视频输出开关族 + 通知渠道 + createContentIntent + releaseMediaSession）/ PlaybackServiceMediaContent 105（封面补全 + 歌词加载 + 悬浮歌词 tick，KDoc 逐字随迁）/ PlaybackServiceStats 123（markCurrentAlbumPlayed/currentListeningTrackContext/流量 flush/进度持久化）/ PlaybackServiceEffects 60（startEffectLoops 处理器链 + 音量百分比同步）；**机制同 C7-2：35 字段 private→internal + 2 companion 常量（LYRICS_CHANNEL_ID/MEDIA_NOTIFICATION_CONTROLLER_HINT）限定+放宽 + 继承常量 AUDIO_SERVICE 需 Context. 限定（坑②同型）**；主文件保留类壳与全部字段、3 监听器字段及其初始化 lambda 调用的 4 个 handler（留守成员，规避属性初始化器接收者解析风险）、updateSpectrumVisualDelay（同因留守）、onCreate 编排体、生命周期 override 族、companion、PlaybackStatsTick/PlaybackServiceController；外部引用面零改动（MainContainerRuntime/Main*Ui/PlaybackModule/androidTest 仅引用类与 companion 出口）；import baseline 无变化；四绿 945/0/4。**C7 至此 3/3 收官** |
+| `ac39746` | C8-0a | **AlbumDetailViewModelTest 前置安全网（C8 硬性前置①）**——VM 本体首个直测（此前零直测）：Robolectric + in-memory Room + MockWebServer（未入队仅供构造）+ InMemoryPreferencesDataStore，**VM 全部 15 个构造依赖手工装配**（DownloadManager/DirectoryCoordinator/StorageGateway/LyricsLoader/AppCacheManager/ImageCacheManager 等按 DI 模块同构构造，无新增依赖）；**驱动机制：viewModelScope=Main.immediate，Robolectric 测试线程即主线程——协程内联执行至首挂起点，恢复经主 Looper 队列，用 `shadowOf(mainLooper).idle()` 泵循环 + 真实时间 5s 超时 awaitUiState 驱动**（不引入 coroutines-test，runBlocking 仅用于 DAO 种入）；首批 6 测钉住：初始态 Success 空壳语义 / initialIntroSettled 读写 / 本地可用装载（localAlbum/tracks/rjCode 解析/hasCachedAlbum 翻转）/ **同请求键非强重复加载走复用不做可用性复查（源消失仍 Success）而 force=true 才完整复查并发出 Removed** / 本地缺失从零加载发 Removed / 切换专辑键后旧键缓存判定失效；测试基线 945→**951/0/4** |
 
 ### C1b-ii 附带清账（调用点清单安全网）
 
@@ -45,7 +47,7 @@
 
 1. **C4**：God 文件区块化——**✅ 全部收官（7/7）**：~~AlbumDetailDirectorySupport 2698~~✅C4-1 / ~~DownloadsScreen 2281~~✅C4-2 / ~~AlbumDetailDlsiteTabs 1932~~✅C4-3 / ~~LibraryScreen 1582~~✅C4-4 / ~~AlbumDetailScreen 1518~~✅C4-5 / ~~SettingsScreen 1270~~✅C4-6 / ~~EqualizerPanel 1190~~✅C4-7；SearchScreen 2186 的完整重写归 C9（不区块化）。
 2. **C7**：service 层拆解——**✅ 全部收官（3/3）**：~~DownloadManager 1184~~✅C7-1（516+2）/ ~~SubtitleTaskService 1430~~✅C7-2（204+4）/ ~~PlaybackService 1471~~✅C7-3（765+5）。
-3. **C8**（条件式重写，前置 AlbumDetailViewModelTest + 行为档案）——**下一片** / **C9**（搜索重写，前置四分支 seam 测试）。
+3. **C8**（条件式重写，前置 AlbumDetailViewModelTest + 行为档案）——**执行中**：✅C8-0a 直测安全网（6 测，951/0/4）→ 下一片 C8-0b：三路 ensure*Loaded（Dlsite/AsmrOne/DlsitePlay）时序/幂等/去重/token 竞态钉测 + ensureDlsitePlayLoaded attemptedRj 去重集语义 → C8-1..N reducer 重写（新旧并存暗影比对 → 逐 tab 切换 → 删旧路径）。/ **C9**（搜索重写，前置四分支 seam 测试）。
 4. **C5** ratchet 分级收紧（>1500 清零 → 1000-1500 区间 14 文件 → 降 SIZE_LIMIT）→ **C6** 结构收尾 → 门禁（全量测试双绿 + 子代理审查 + 实机走查）→ tag `refactor-r3/phase-C`。
 
 ## 4. 阶段 C 踩坑（增量）
