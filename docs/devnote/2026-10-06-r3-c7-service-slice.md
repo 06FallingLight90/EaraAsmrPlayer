@@ -62,3 +62,9 @@ C7 service 层 God 拆解：`data/download/DownloadManager`（C7-1，1184→516+
 31. **归一化语义逐字对齐要区分环节**：`finishDlsitePlayLoad` 原内联对 pickedWorkno 仅 `trim().orEmpty()` 不转大写——大写归一发生在候选推导处（editionWorknos `.uppercase()` / normalizeCandidates）。表驱动测试首轮误写期望 `"RJ456"`（ComparisonFailure），实际 `" rj456 "` → `"rj456"`。教训：copy 字段的归一化在哪个环节发生，测试期望就断言哪个环节的输出。
 32. **reducer 文件引入 data.remote 类型触发 ui-to-data-remote 守卫**：域 G 大重置与域 J 树装载的 copy 字段涉及 `AsmrOneTrackNodeResponse`（dlsitePlayTree）与 `DlsiteRecommendations`，AlbumDetailReducers.kt 新增两条 ui→data-remote import——C8-1"无新增 import 方向"的前提只对域 A-I 的 `Track`（domain.model，白名单方向）成立。处理：与同包 AlbumDetailViewModelSupport.kt / AlbumDetailDialogs.kt 先例同型，两条入 tools/import-direction-baseline.txt（守卫先报再入 baseline 的既有流程）。
 33. **`Measure-Object -Line` 不计空行**：size baseline 对齐口径是文件总行数，须用 `(Get-Content file).Count`；`Measure-Object -Line` 给出 2233（非空行），与真实 2402 差 ~170，直接拿去收缩 baseline 会误伤后续 ratchet。
+
+## C8-3 增量（域 F 全域 reducer 收编，+10 测）
+
+34. **target resolve 段的 `targetChanged` 双别名在参数化时收拢**：原内联 `val targetChanged = shouldReload...; val mustReloadAsmrOne = targetChanged` 两个 val 指同一值，reducer 化时合并为单参数 `mustReloadAsmrOne`；`keepAsmrOneContentDuringTargetSwitch` 推导留在调用点（因 token++/attemptedRj.clear 副作用以它为门控）。注意一处"看似不一致但是原状"：`displayAlbum` 重合并的 asmrOneWorkId 参数只感知 mustReload（为 null）不感知 keep——keep 时 workId 保留在 model 字段但合并走 null，表驱动测试按原语义钉死，勿"顺手统一"。
+35. **import baseline 一次片内可双向变动**：域 F 把 VM 局部函数 `mergePreferNonBlank` 下沉到 Reducers.kt 后，VM 的 `DlsiteRecommendedWork` import 失效删除 → guard 的失效条目检测会报 baseline 死条目须同步移除；同时 Reducers.kt 新增同型条目（坑 32 先例）。净零变动，但两处都必须同片完成，漏掉任一侧 guard 即失败。
+36. **`python tools/guard-selftest` 不是可执行入口**：guard-selftest/ 是反例夹具目录（无 `__main__`），规则自检已内置 ci_guard.py（运行输出"架构守护通过（含规则自检）"即覆盖）；AGENTS.md 该行已修正。夹具组按规则名组织（如 ui-to-data-remote/），改规则时在那里加反例。
