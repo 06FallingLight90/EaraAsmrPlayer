@@ -15,6 +15,7 @@
 | [2026-10-03-r2-phase-c2-finish.md](2026-10-03-r2-phase-c2-finish.md) | R2 阶段 C2 收官：NowPlayingScreen 2902→836 拆分、七文件职责表、P0 路由条件修复教训、分支体提取技法沉淀 | 拆分多分支组合函数 / 核对 C2 审查结论时 |
 | [2026-10-03-r2-phase-c3-finish.md](2026-10-03-r2-phase-c3-finish.md) | R2 阶段 C3 收官：SettingsScreen 2675→1270 拆分、屏蔽词域下沉消双向引用、死 import 清理教训 | 拆分设置分区 / 核对 C3 审查结论时 |
 | [2026-10-04-r2-phase-c-finish.md](2026-10-04-r2-phase-c-finish.md) | R2 阶段 C 收官：C1–C5 全程（三 God 组合函数拆分、3 环消除、4 类 repository 下沉、两 God VM 2996→2510 / 2641→2521）、门禁审查 P1 闭环、CI baselineprofile 门禁修复 | 核对阶段 C 成果 / 下沉 repository 边界 / CI 门禁踩坑时 |
+| [2026-10-06-r3-c7-service-slice.md](2026-10-06-r3-c7-service-slice.md) | R3-C7 service 拆解：DownloadManager / SubtitleTaskService 切片脚本、扩展函数转换机制与踩坑（heredoc、lateinit 正则、字符串模板常量、继承常量限定） | 拆分 Service/Manager 类 / 复用切片脚本时 |
 | [agent-collab.md](agent-collab.md) | **agent 协作总纲（唯一）**：硬规则与 git 纪律、入库可移植性、构建验证循环、重构任务循环与范围纪律、阶段门禁三件套、行为档案机制、守护修改流程 | agent 开始改代码前（重构任务亦然，§6-§9） |
 
 ## 记录约定
