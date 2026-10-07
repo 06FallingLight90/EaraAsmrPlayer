@@ -1,2 +1,2 @@
-app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt: 2298
+app/src/main/java/com/asmr/player/ui/library/AlbumDetailViewModel.kt: 2255
 app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt: 2186

@@ -98,7 +98,6 @@ import com.asmr.player.ui.library.albumdetail.AsmrOneLeafDownload
 import com.asmr.player.ui.library.albumdetail.asmrOneTrackRjCandidates
 import com.asmr.player.ui.library.albumdetail.collectSubtitleCandidates
 import com.asmr.player.ui.library.albumdetail.listenTogetherSummaryRj
-import com.asmr.player.ui.library.albumdetail.withPreservedListenTogetherListenerCount
 import com.asmr.player.ui.library.albumdetail.withUpdatedLocalCover
 import com.asmr.player.ui.library.albumdetail.updateListenTogetherListenerCount
 import com.asmr.player.ui.library.albumdetail.updateLocalTracks
@@ -125,11 +124,15 @@ import com.asmr.player.ui.library.albumdetail.applyDlsiteContentLoaded
 import com.asmr.player.ui.library.albumdetail.applyDlsiteRecommendationEnrich
 import com.asmr.player.ui.library.albumdetail.markDlsiteLoadFailed
 import com.asmr.player.ui.library.albumdetail.mergeDlsiteRecommendations
+import com.asmr.player.ui.library.albumdetail.createInitialAlbumDetailModel
+import com.asmr.player.ui.library.albumdetail.initialAlbumDetailState
+import com.asmr.player.ui.library.albumdetail.applyAlbumDetailLoaded
+import com.asmr.player.ui.library.albumdetail.albumDetailLoadErrorState
+import com.asmr.player.ui.library.albumdetail.localAlbumRemovedState
 import com.asmr.player.ui.library.albumdetail.withResolvedWorkIdentity
 import com.asmr.player.ui.library.albumdetail.buildAlbumDetailSimilarWorks
 import com.asmr.player.ui.library.albumdetail.buildDlsiteTrialDownloadTree
 import com.asmr.player.ui.library.albumdetail.collectLocalSelectionFiles
-import com.asmr.player.ui.library.albumdetail.defaultDlsiteEditions
 import com.asmr.player.ui.library.albumdetail.flattenAsmrOneLeafDownloads
 import com.asmr.player.domain.model.isDownloadableTreeFileType
 import com.asmr.player.domain.model.isLibraryResourceSavableTreeFileType
@@ -659,13 +662,11 @@ class AlbumDetailViewModel @Inject constructor(
         val initialRj = normalizedRj.ifBlank { initialHint?.rjCode.orEmpty() }
         val initialHintAlbum = albumFromInitialHint(initialRj, initialHint)
         if (force || current == null || isAlbumSwitch) {
-            _uiState.value = AlbumDetailUiState.Success(
-                model = createInitialAlbumDetailModel(
-                    rj = initialRj,
-                    displayAlbum = initialHintAlbum,
-                    dlsiteInfo = initialHintAlbum.takeIf { shouldPreserveHeaderAlbumMetadata(initialHint) },
-                    preserveHeaderAlbumMetadata = shouldPreserveHeaderAlbumMetadata(initialHint)
-                )
+            _uiState.value = initialAlbumDetailState(
+                rj = initialRj,
+                displayAlbum = initialHintAlbum,
+                dlsiteInfo = initialHintAlbum.takeIf { shouldPreserveHeaderAlbumMetadata(initialHint) },
+                preserveHeaderAlbumMetadata = shouldPreserveHeaderAlbumMetadata(initialHint)
             )
         }
         albumLoadJob = viewModelScope.launch {
@@ -697,20 +698,14 @@ class AlbumDetailViewModel @Inject constructor(
                     dlsiteInfo = dlsiteInfo,
                     preserveHeaderAlbumMetadata = preserveHeaderAlbumMetadata
                 )
-                val currentModel = (_uiState.value as? AlbumDetailUiState.Success)?.model
-                val loadedModel = initialLoadedModel.withPreservedListenTogetherListenerCount(currentModel)
-                if (loadedModel != currentModel) {
-                    _uiState.value = AlbumDetailUiState.Success(
-                        model = loadedModel
-                    )
-                }
+                applyAlbumDetailLoaded(_uiState.value, initialLoadedModel)?.let { _uiState.value = it }
                 val localId = localAlbum?.id ?: 0L
                 observeLocalTracks(localId)
                 completedAlbumKey = key
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.value = AlbumDetailUiState.Error(e.message ?: "加载失败")
+                _uiState.value = albumDetailLoadErrorState(e.message)
             }
         }
     }
@@ -1452,44 +1447,6 @@ class AlbumDetailViewModel @Inject constructor(
         )
     }
 
-    private fun createInitialAlbumDetailModel(
-        rj: String,
-        displayAlbum: Album,
-        localAlbum: Album? = null,
-        dlsiteInfo: Album? = null,
-        preserveHeaderAlbumMetadata: Boolean = false
-    ): AlbumDetailModel {
-        return AlbumDetailModel(
-            baseRjCode = rj,
-            rjCode = rj,
-            listenTogetherRjListenerCount = null,
-            displayAlbum = displayAlbum,
-            localAlbum = localAlbum,
-            dlsiteInfo = dlsiteInfo,
-            dlsiteGalleryUrls = emptyList(),
-            dlsiteTrialTracks = emptyList(),
-            dlsiteRecommendations = DlsiteRecommendations(),
-            dlsiteWorkno = rj,
-            dlsitePlayWorkno = "",
-            dlsiteEditions = defaultDlsiteEditions(rj),
-            dlsiteSelectedLang = "JPN",
-            hasResolvedInitialDlsiteTarget = false,
-            hasLoadedInitialDlsiteContent = false,
-            hasResolvedAsmrOneContent = false,
-            hasResolvedDlsitePlayContent = false,
-            preserveHeaderAlbumMetadata = preserveHeaderAlbumMetadata,
-            isDlsiteLanguageUserSelected = false,
-            asmrOneWorkId = null,
-            asmrOneSite = null,
-            asmrOneTree = emptyList(),
-            dlsitePlayTree = emptyList(),
-            isLoadingDlsite = false,
-            isLoadingDlsiteTrial = false,
-            isLoadingAsmrOne = false,
-            isLoadingDlsitePlay = false
-        )
-    }
-
     private sealed interface LocalAlbumLoadResult {
         data class Available(val album: Album) : LocalAlbumLoadResult
         data object Removed : LocalAlbumLoadResult
@@ -1523,7 +1480,7 @@ class AlbumDetailViewModel @Inject constructor(
     }
 
     private fun notifyLocalAlbumRemoved(albumId: Long, mediaIds: Set<String>) {
-        _uiState.value = AlbumDetailUiState.Removed(albumId = albumId, mediaIds = mediaIds)
+        _uiState.value = localAlbumRemovedState(albumId, mediaIds)
         messageManager.showInfo("作品已被删除")
     }
 

@@ -412,3 +412,86 @@ private fun mergePreferNonBlank(
     val appended = secondary.filter { it.rjCode.trim().uppercase() !in existing }
     return (merged + appended).distinctBy { it.rjCode.trim().uppercase() }
 }
+
+/**
+ * 域 D/K（C8-5）：loadAlbum 与 notifyLocalAlbumRemoved 的赋值点是**整态替换**而非
+ * Success.copy 变换（初始种入/主装载构造新 model，Error/Removed/Loading 换态），
+ * 收编为 UiState 级纯函数；token/job 编排与挂起点仍留 VM 调用点。
+ */
+
+/** 域 D：初始 model 种入（原 VM 私有 createInitialAlbumDetailModel 逐字随迁下沉）。 */
+internal fun createInitialAlbumDetailModel(
+    rj: String,
+    displayAlbum: Album,
+    localAlbum: Album? = null,
+    dlsiteInfo: Album? = null,
+    preserveHeaderAlbumMetadata: Boolean = false
+): AlbumDetailModel {
+    return AlbumDetailModel(
+        baseRjCode = rj,
+        rjCode = rj,
+        listenTogetherRjListenerCount = null,
+        displayAlbum = displayAlbum,
+        localAlbum = localAlbum,
+        dlsiteInfo = dlsiteInfo,
+        dlsiteGalleryUrls = emptyList(),
+        dlsiteTrialTracks = emptyList(),
+        dlsiteRecommendations = DlsiteRecommendations(),
+        dlsiteWorkno = rj,
+        dlsitePlayWorkno = "",
+        dlsiteEditions = defaultDlsiteEditions(rj),
+        dlsiteSelectedLang = "JPN",
+        hasResolvedInitialDlsiteTarget = false,
+        hasLoadedInitialDlsiteContent = false,
+        hasResolvedAsmrOneContent = false,
+        hasResolvedDlsitePlayContent = false,
+        preserveHeaderAlbumMetadata = preserveHeaderAlbumMetadata,
+        isDlsiteLanguageUserSelected = false,
+        asmrOneWorkId = null,
+        asmrOneSite = null,
+        asmrOneTree = emptyList(),
+        dlsitePlayTree = emptyList(),
+        isLoadingDlsite = false,
+        isLoadingDlsiteTrial = false,
+        isLoadingAsmrOne = false,
+        isLoadingDlsitePlay = false
+    )
+}
+
+/** 域 D：初始种入态（原 loadAlbum 内联 Success 包裹：列表点击进详情时按入口 hint 造空壳 Success）。 */
+internal fun initialAlbumDetailState(
+    rj: String,
+    displayAlbum: Album,
+    dlsiteInfo: Album?,
+    preserveHeaderAlbumMetadata: Boolean
+): AlbumDetailUiState {
+    return AlbumDetailUiState.Success(
+        model = createInitialAlbumDetailModel(
+            rj = rj,
+            displayAlbum = displayAlbum,
+            dlsiteInfo = dlsiteInfo,
+            preserveHeaderAlbumMetadata = preserveHeaderAlbumMetadata
+        )
+    )
+}
+
+/** 域 D：主装载回写（原 loadAlbum launch 内联守卫：装载模型保留 listenTogether 计数合并，与当前 model 相同则不赋值；当前非 Success 态时整体替换为 Success）。 */
+internal fun applyAlbumDetailLoaded(
+    state: AlbumDetailUiState,
+    initialLoadedModel: AlbumDetailModel
+): AlbumDetailUiState? {
+    val currentModel = (state as? AlbumDetailUiState.Success)?.model
+    val loadedModel = initialLoadedModel.withPreservedListenTogetherListenerCount(currentModel)
+    if (loadedModel == currentModel) return null
+    return AlbumDetailUiState.Success(model = loadedModel)
+}
+
+/** 域 D：装载失败终态（原 loadAlbum catch 内联构造：message 空白回退默认文案）。 */
+internal fun albumDetailLoadErrorState(message: String?): AlbumDetailUiState {
+    return AlbumDetailUiState.Error(message ?: "加载失败")
+}
+
+/** 域 K：本地专辑移除终态（原 notifyLocalAlbumRemoved 内联构造）。 */
+internal fun localAlbumRemovedState(albumId: Long, mediaIds: Set<String>): AlbumDetailUiState {
+    return AlbumDetailUiState.Removed(albumId = albumId, mediaIds = mediaIds)
+}

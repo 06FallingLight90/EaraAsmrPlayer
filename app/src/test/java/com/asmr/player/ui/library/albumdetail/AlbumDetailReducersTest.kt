@@ -759,4 +759,95 @@ class AlbumDetailReducersTest {
         // RJ5 仅在 secondary → 追加
         assertEquals(DlsiteRecommendedWork(rjCode = "RJ5", title = "f5", coverUrl = "cv5", ribbon = null), mergedWorks[2])
     }
+
+    // ------------------------------------------------------------ 域 D/K 整态替换（C8-5）
+
+    @Test
+    fun `createInitialAlbumDetailModel seeds default empty model`() {
+        val display = album(id = 1L, title = "entry")
+        val seeded = createInitialAlbumDetailModel(rj = "RJ123", displayAlbum = display)
+        assertEquals("RJ123", seeded.baseRjCode)
+        assertEquals("RJ123", seeded.rjCode)
+        assertEquals("RJ123", seeded.dlsiteWorkno)
+        assertEquals(display, seeded.displayAlbum)
+        assertNull(seeded.localAlbum)
+        assertNull(seeded.dlsiteInfo)
+        assertNull(seeded.listenTogetherRjListenerCount)
+        assertEquals("JPN", seeded.dlsiteSelectedLang)
+        // 默认版本列表由 defaultDlsiteEditions 种入
+        assertEquals(defaultDlsiteEditions("RJ123"), seeded.dlsiteEditions)
+        assertFalse(seeded.hasResolvedInitialDlsiteTarget)
+        assertFalse(seeded.hasLoadedInitialDlsiteContent)
+        assertFalse(seeded.hasResolvedAsmrOneContent)
+        assertFalse(seeded.hasResolvedDlsitePlayContent)
+        assertFalse(seeded.isDlsiteLanguageUserSelected)
+        assertFalse(seeded.preserveHeaderAlbumMetadata)
+        assertNull(seeded.asmrOneWorkId)
+        assertNull(seeded.asmrOneSite)
+        assertTrue(seeded.asmrOneTree.isEmpty())
+        assertTrue(seeded.dlsitePlayTree.isEmpty())
+        assertFalse(seeded.isLoadingDlsite)
+        assertFalse(seeded.isLoadingDlsiteTrial)
+        assertFalse(seeded.isLoadingAsmrOne)
+        assertFalse(seeded.isLoadingDlsitePlay)
+    }
+
+    @Test
+    fun `initialAlbumDetailState wraps seeded model in Success`() {
+        val display = album(id = 1L, title = "entry")
+        val info = album(id = 9L, title = "hint-info")
+        val state = initialAlbumDetailState(
+            rj = "RJ123",
+            displayAlbum = display,
+            dlsiteInfo = info,
+            preserveHeaderAlbumMetadata = true
+        )
+        val seeded = (state as AlbumDetailUiState.Success).model
+        assertEquals("RJ123", seeded.rjCode)
+        assertSame(info, seeded.dlsiteInfo)
+        assertTrue(seeded.preserveHeaderAlbumMetadata)
+    }
+
+    @Test
+    fun `applyAlbumDetailLoaded preserves listener count and skips when equal`() {
+        // 当前 Success 的 listenTogether 计数保留到装载模型
+        val current = model(listenTogetherRjListenerCount = 5)
+        val loaded = createInitialAlbumDetailModel(rj = "RJ123", displayAlbum = album(id = 1L))
+        val updated = applyAlbumDetailLoaded(AlbumDetailUiState.Success(model = current), loaded)
+        val updatedModel = (updated as AlbumDetailUiState.Success).model
+        assertEquals(5, updatedModel.listenTogetherRjListenerCount)
+        // 与当前 model 不同 → 返回新 Success
+        assertEquals(loaded.displayAlbum, updatedModel.displayAlbum)
+        assertNull(updatedModel.localAlbum)
+
+        // 装载模型与当前完全相同 → null 不赋值
+        val same = applyAlbumDetailLoaded(
+            AlbumDetailUiState.Success(model = model(listenTogetherRjListenerCount = 5)),
+            model(listenTogetherRjListenerCount = 5)
+        )
+        assertNull(same)
+
+        // 当前非 Success（Loading/Error/Removed）→ 整体替换为 Success，无计数可保留
+        val fromLoading = applyAlbumDetailLoaded(AlbumDetailUiState.Loading, loaded)
+        val loadingModel = (fromLoading as AlbumDetailUiState.Success).model
+        assertNull(loadingModel.listenTogetherRjListenerCount)
+    }
+
+    @Test
+    fun `albumDetailLoadErrorState falls back to default message`() {
+        assertEquals(
+            AlbumDetailUiState.Error("加载失败"),
+            albumDetailLoadErrorState(null)
+        )
+        assertEquals(
+            AlbumDetailUiState.Error("网络超时"),
+            albumDetailLoadErrorState("网络超时")
+        )
+    }
+
+    @Test
+    fun `localAlbumRemovedState builds Removed terminal state`() {
+        val state = localAlbumRemovedState(albumId = 7L, mediaIds = setOf("m1", "m2"))
+        assertEquals(AlbumDetailUiState.Removed(albumId = 7L, mediaIds = setOf("m1", "m2")), state)
+    }
 }
