@@ -2,18 +2,12 @@ package com.asmr.player.ui.search
 
 import com.asmr.player.ui.translation.PageTranslationHost
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.MutatePriority
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,7 +50,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import com.asmr.player.ui.common.core.isCompactWidth
 import androidx.compose.runtime.Composable
@@ -64,7 +57,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,19 +67,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -132,7 +119,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.runtime.snapshotFlow
-import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
 internal const val SEARCH_INPUT_TAG = "search_input"
@@ -153,23 +139,7 @@ internal const val SEARCH_NEXT_BUTTON_TAG = "search_next_button"
 internal const val SEARCH_PAGINATION_TAG = "search_pagination"
 internal const val SEARCH_CHROME_TAG = "search_chrome"
 private val SearchChromeContentGap = 16.dp
-private const val SearchPullRefreshFollowRatio = 0.86f
 internal val SearchPageHorizontalPadding = 8.dp
-private val SearchPullRefreshSettleDistance = 68.dp
-private val SearchPullRefreshMaxDistance = 112.dp
-private const val SearchPullRefreshMinFeedbackMillis = 420L
-private val SearchPullActionHintHeight = 58.dp
-private const val SearchPullNextPageDragResistance = 0.82f
-private const val SearchPullNextPageFollowRatio = 0.84f
-private const val SearchPullStretchExtraRatio = 0.28f
-private const val SearchPullNextPageVerticalBias = 1.25f
-private val SearchPullNextPageTriggerDistance = 96.dp
-private val SearchPullNextPageMaxDistance = 172.dp
-private val SearchPullNextPageMaxLift = 108.dp
-private val SearchPullNextPageReturnSpring = spring<Float>(
-    dampingRatio = Spring.DampingRatioNoBouncy,
-    stiffness = Spring.StiffnessMediumLow
-)
 internal fun searchResultScrollKey(success: SearchUiState.Success?): String {
     if (success == null) return "search-results:none"
     return buildString {
@@ -198,19 +168,6 @@ internal fun searchResultScrollKey(success: SearchUiState.Success?): String {
         append(':')
         append(success.locale.orEmpty())
     }
-}
-
-private fun searchRubberBandOffset(
-    dragPx: Float,
-    triggerPx: Float,
-    maxOffsetPx: Float,
-    followRatio: Float
-): Float {
-    val clampedDrag = dragPx.coerceAtLeast(0f)
-    val safeTrigger = triggerPx.coerceAtLeast(1f)
-    val base = clampedDrag.coerceAtMost(safeTrigger) * followRatio
-    val extra = (clampedDrag - safeTrigger).coerceAtLeast(0f) * SearchPullStretchExtraRatio
-    return (base + extra).coerceIn(0f, maxOffsetPx)
 }
 
 internal data class SearchChromeLockState(
@@ -580,164 +537,35 @@ private fun SearchScreenContent(
         chromeState.expand()
     }
 
-    val pullToRefreshState = rememberPullToRefreshState()
-    var pullRefreshStartedAtMs by remember { mutableLongStateOf(0L) }
-    val pullNextPageEnabled =
-        success?.results?.isNotEmpty() == true &&
+    val pullGesture = rememberSearchPullGestureState(
+        resultScrollKey = resultScrollKey,
+        viewMode = viewMode,
+        listState = listState,
+        gridState = gridState,
+        pullNextPageEnabledBase = success?.results?.isNotEmpty() == true &&
             canGoNext &&
-            !interactionLocked &&
-            !pullToRefreshState.isRefreshing
-    val pullNextPageTriggerDistancePx =
-        with(androidx.compose.ui.platform.LocalDensity.current) { SearchPullNextPageTriggerDistance.toPx() }
-    val pullNextPageMaxDistancePx =
-        with(androidx.compose.ui.platform.LocalDensity.current) { SearchPullNextPageMaxDistance.toPx() }
-    val pullNextPageMaxLiftPx =
-        with(androidx.compose.ui.platform.LocalDensity.current) { SearchPullNextPageMaxLift.toPx() }
-    var pullNextPageDragPx by remember(resultScrollKey, viewMode) { mutableFloatStateOf(0f) }
-    var pullNextPageGestureActive by remember(resultScrollKey, viewMode) { mutableStateOf(false) }
-    var pullNextPageReturnInProgress by remember(resultScrollKey, viewMode) { mutableStateOf(false) }
-    var pullNextPageRequestAfterReturn by remember(resultScrollKey, viewMode) { mutableStateOf(false) }
-    var searchPointerPressed by remember(resultScrollKey, viewMode) { mutableStateOf(false) }
-    val pullNextPageArmed = pullNextPageDragPx >= pullNextPageTriggerDistancePx
-    val pullNextPageGestureEnabled = pullNextPageEnabled && !pullNextPageReturnInProgress
-    val latestPullNextPageEnabled = rememberUpdatedState(pullNextPageGestureEnabled)
-    val latestIsAtBottom = rememberUpdatedState(
-        if (viewMode == 0) !listState.canScrollForward else !gridState.canScrollForward
+            !interactionLocked,
+        topPadding = topPadding,
+        requestNextPage = ::requestNextPage,
+        onHorizontalPagerScrollLockChanged = onHorizontalPagerScrollLockChanged
     )
-    val latestPullNextPageTriggerDistancePx = rememberUpdatedState(pullNextPageTriggerDistancePx)
-    val latestPullNextPageMaxDistancePx = rememberUpdatedState(pullNextPageMaxDistancePx)
-    val latestRequestNextPage = rememberUpdatedState { requestNextPage() }
-    val pullNextPageVisualTargetPx = remember(
-        pullNextPageDragPx,
-        pullNextPageTriggerDistancePx,
-        pullNextPageMaxDistancePx,
-        pullNextPageMaxLiftPx
-    ) {
-        searchRubberBandOffset(
-            dragPx = pullNextPageDragPx,
-            triggerPx = pullNextPageTriggerDistancePx,
-            maxOffsetPx = pullNextPageMaxLiftPx,
-            followRatio = SearchPullNextPageFollowRatio
-        )
-    }
-    val pullNextPageVisualOffsetPx by animateFloatAsState(
-        targetValue = pullNextPageVisualTargetPx,
-        animationSpec = if (pullNextPageGestureActive) {
-            snap()
-        } else {
-            SearchPullNextPageReturnSpring
-        },
-        finishedListener = { settledOffset ->
-            // 翻页请求必须等待回落动画完整结束，避免松手瞬间跳页。
-            if (settledOffset <= 0.5f && pullNextPageReturnInProgress) {
-                val shouldRequestNextPage = pullNextPageRequestAfterReturn
-                pullNextPageRequestAfterReturn = false
-                pullNextPageReturnInProgress = false
-                if (shouldRequestNextPage) {
-                    latestRequestNextPage.value()
-                }
-            }
-        },
-        label = "searchPullNextPageOffset"
-    )
-    val pullNextPageProgress =
-        (pullNextPageVisualOffsetPx / pullNextPageMaxLiftPx).coerceIn(0f, 1f)
-    val finishPullNextPageGesture = rememberUpdatedState finish@{
-        if (
-            pullNextPageReturnInProgress &&
-                !pullNextPageGestureActive &&
-                pullNextPageDragPx <= 0f
-        ) {
-            return@finish
-        }
-        val hasPullOffset = pullNextPageDragPx > 0f
-        val shouldTrigger =
-            hasPullOffset &&
-            latestPullNextPageEnabled.value &&
-                pullNextPageDragPx >= latestPullNextPageTriggerDistancePx.value
-        pullNextPageGestureActive = false
-        pullNextPageRequestAfterReturn = shouldTrigger
-        pullNextPageReturnInProgress = hasPullOffset
-        pullNextPageDragPx = 0f
-    }
-    val refreshGestureEnabled = !pullToRefreshState.isRefreshing
-    val topPaddingPx = with(androidx.compose.ui.platform.LocalDensity.current) { topPadding.toPx() }
-    val pullActionHintHeightPx =
-        with(androidx.compose.ui.platform.LocalDensity.current) { SearchPullActionHintHeight.toPx() }
-    val pullRefreshSettleDistancePx =
-        with(androidx.compose.ui.platform.LocalDensity.current) { SearchPullRefreshSettleDistance.toPx() }
-    val pullRefreshMaxDistancePx =
-        with(androidx.compose.ui.platform.LocalDensity.current) { SearchPullRefreshMaxDistance.toPx() }
-    val pullContentOffsetTargetPx = (
-        if (pullToRefreshState.isRefreshing) {
-            pullRefreshSettleDistancePx
-        } else {
-            searchRubberBandOffset(
-                dragPx = pullToRefreshState.verticalOffset,
-                triggerPx = pullToRefreshState.positionalThreshold
-                    .takeIf { it > 0f }
-                    ?: pullRefreshSettleDistancePx,
-                maxOffsetPx = pullRefreshMaxDistancePx,
-                followRatio = SearchPullRefreshFollowRatio
-            )
-        }
-        ).coerceIn(
-        minimumValue = 0f,
-        maximumValue = pullRefreshMaxDistancePx
-    )
-    val pullContentOffsetPx by animateFloatAsState(
-        targetValue = pullContentOffsetTargetPx,
-        animationSpec = if (
-            searchPointerPressed &&
-                pullToRefreshState.progress > 0f &&
-                !pullToRefreshState.isRefreshing
-        ) {
-            snap()
-        } else {
-            spring(
-                dampingRatio = 0.72f,
-                stiffness = Spring.StiffnessMediumLow
-            )
-        },
-        label = "searchPullContentOffset"
-    )
-    val pullRefreshProgress =
-        if (pullToRefreshState.isRefreshing) {
-            1f
-        } else {
-            val threshold = pullToRefreshState.positionalThreshold
-                .takeIf { it > 0f }
-                ?: pullRefreshSettleDistancePx
-            (pullContentOffsetPx / threshold).coerceIn(0f, 1f)
-        }
-    val pullRefreshArmed = pullToRefreshState.progress >= 1f
-    val pullRefreshHintVisible = pullContentOffsetPx > 1f || pullToRefreshState.isRefreshing
-    val pullNextPageHintVisible = pullNextPageVisualOffsetPx > 1f
-    val listStretchOffsetPx = pullContentOffsetPx - pullNextPageVisualOffsetPx
-    val pullRefreshHintHeightPx = pullContentOffsetPx.coerceIn(0f, pullActionHintHeightPx)
-    val pullRefreshHintHeight = with(androidx.compose.ui.platform.LocalDensity.current) {
-        pullRefreshHintHeightPx.toDp()
-    }
-    val pullNextRevealHeight = with(androidx.compose.ui.platform.LocalDensity.current) {
-        pullNextPageVisualOffsetPx.toDp()
-    }
-    val pullRefreshHintEdgeOffsetPx = topPaddingPx + pullContentOffsetPx - pullRefreshHintHeightPx
+    var pullRefreshStartedAtMs by remember { mutableLongStateOf(0L) }
     val latestKeyword by rememberUpdatedState(keyword)
-    val latestHorizontalPagerScrollLockChanged = rememberUpdatedState(onHorizontalPagerScrollLockChanged)
     fun stopActiveScroll() {
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
-            if (!pullNextPageReturnInProgress) {
-                pullNextPageDragPx = 0f
-                pullNextPageGestureActive = false
-                pullNextPageRequestAfterReturn = false
-                latestHorizontalPagerScrollLockChanged.value(false)
+            if (!pullGesture.pullNextPageReturnInProgress) {
+                pullGesture.pullNextPageDragPx = 0f
+                pullGesture.pullNextPageGestureActive = false
+                pullGesture.pullNextPageRequestAfterReturn = false
+                pullGesture.reportScrollLock(false)
             }
             runCatching { listState.stopScroll(MutatePriority.UserInput) }
             runCatching { gridState.stopScroll(MutatePriority.UserInput) }
         }
     }
-    LaunchedEffect(pullToRefreshState.isRefreshing) {
-        if (!pullToRefreshState.isRefreshing) {
+
+    LaunchedEffect(pullGesture.pullToRefreshState.isRefreshing) {
+        if (!pullGesture.pullToRefreshState.isRefreshing) {
             pullRefreshStartedAtMs = 0L
             return@LaunchedEffect
         }
@@ -745,7 +573,7 @@ private fun SearchScreenContent(
         when (val state = uiState) {
             is SearchUiState.Success -> {
                 if (state.isBusy) {
-                    pullToRefreshState.endRefresh()
+                    pullGesture.pullToRefreshState.endRefresh()
                 } else {
                     viewModel.refreshPage()
                 }
@@ -756,7 +584,7 @@ private fun SearchScreenContent(
         }
     }
     LaunchedEffect(uiState) {
-        if (!pullToRefreshState.isRefreshing) return@LaunchedEffect
+        if (!pullGesture.pullToRefreshState.isRefreshing) return@LaunchedEffect
         val canEnd = when (val state = uiState) {
             is SearchUiState.Success -> !state.isBusy
             is SearchUiState.Loading -> false
@@ -767,36 +595,10 @@ private fun SearchScreenContent(
             val remainingFeedbackMillis =
                 (SearchPullRefreshMinFeedbackMillis - elapsedMillis).coerceAtLeast(0L)
             if (remainingFeedbackMillis > 0L) delay(remainingFeedbackMillis)
-            if (pullToRefreshState.isRefreshing) pullToRefreshState.endRefresh()
+            if (pullGesture.pullToRefreshState.isRefreshing) pullGesture.pullToRefreshState.endRefresh()
         }
     }
-    LaunchedEffect(resultScrollKey, pullNextPageEnabled) {
-        if (!pullNextPageEnabled) {
-            pullNextPageDragPx = 0f
-            pullNextPageGestureActive = false
-            pullNextPageRequestAfterReturn = false
-            pullNextPageReturnInProgress = false
-            latestHorizontalPagerScrollLockChanged.value(false)
-        }
-    }
-    LaunchedEffect(
-        pullNextPageDragPx > 0f,
-        pullNextPageGestureActive,
-        pullNextPageReturnInProgress
-    ) {
-        latestHorizontalPagerScrollLockChanged.value(
-            pullNextPageDragPx > 0f ||
-                pullNextPageGestureActive ||
-                pullNextPageReturnInProgress
-        )
-    }
-    LaunchedEffect(Unit) {
-        try {
-            kotlinx.coroutines.awaitCancellation()
-        } finally {
-            latestHorizontalPagerScrollLockChanged.value(false)
-        }
-    }
+
     LaunchedEffect(chromeResetKey) {
         if (lastChromeResetKey != chromeResetKey) {
             chromeState.expand()
@@ -825,10 +627,10 @@ private fun SearchScreenContent(
     }
     LaunchedEffect(scrollToTopSignal) {
         if (scrollToTopSignal == 0L) return@LaunchedEffect
-        pullNextPageDragPx = 0f
-        pullNextPageGestureActive = false
-        pullNextPageRequestAfterReturn = false
-        pullNextPageReturnInProgress = false
+        pullGesture.pullNextPageDragPx = 0f
+        pullGesture.pullNextPageGestureActive = false
+        pullGesture.pullNextPageRequestAfterReturn = false
+        pullGesture.pullNextPageReturnInProgress = false
         when (viewMode) {
             0 -> {
                 runCatching { listState.stopScroll(MutatePriority.PreventUserInput) }
@@ -841,17 +643,18 @@ private fun SearchScreenContent(
         }
         chromeState.expand()
     }
+
     LaunchedEffect(isActive, viewMode) {
         if (isActive) return@LaunchedEffect
         when (viewMode) {
             0 -> listState.stopScroll(MutatePriority.PreventUserInput)
             else -> gridState.stopScroll(MutatePriority.PreventUserInput)
         }
-        pullNextPageDragPx = 0f
-        pullNextPageGestureActive = false
-        pullNextPageRequestAfterReturn = false
-        pullNextPageReturnInProgress = false
-        latestHorizontalPagerScrollLockChanged.value(false)
+        pullGesture.pullNextPageDragPx = 0f
+        pullGesture.pullNextPageGestureActive = false
+        pullGesture.pullNextPageRequestAfterReturn = false
+        pullGesture.pullNextPageReturnInProgress = false
+        pullGesture.reportScrollLock(false)
     }
 
     Scaffold(
@@ -913,127 +716,17 @@ private fun SearchScreenContent(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .pointerInput(resultScrollKey, viewMode) {
-                                awaitEachGesture {
-                                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                                    searchPointerPressed = true
-                                    var trackedPointerId = down.id
-                                    var previousPosition = down.position
-                                    var dragFromDown = Offset.Zero
-                                    var pullNextGestureActive = false
-                                    var horizontalGestureActive = false
-                                    val touchSlop = viewConfiguration.touchSlop
-                                    do {
-                                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                                        val change =
-                                            event.changes.firstOrNull { it.id == trackedPointerId }
-                                                ?: event.changes.firstOrNull()
-                                        if (change != null) {
-                                            trackedPointerId = change.id
-                                            val positionDelta = change.position - previousPosition
-                                            previousPosition = change.position
-                                            if (!pullNextGestureActive && !horizontalGestureActive) {
-                                                dragFromDown += positionDelta
-                                                val isPastTouchSlop = dragFromDown.getDistance() > touchSlop
-                                                if (isPastTouchSlop) {
-                                                    horizontalGestureActive =
-                                                        dragFromDown.x.absoluteValue >=
-                                                            dragFromDown.y.absoluteValue * SearchPullNextPageVerticalBias
-                                                    pullNextGestureActive =
-                                                        !horizontalGestureActive &&
-                                                            dragFromDown.y < 0f &&
-                                                            dragFromDown.y.absoluteValue >=
-                                                            dragFromDown.x.absoluteValue * SearchPullNextPageVerticalBias &&
-                                                            latestIsAtBottom.value &&
-                                                            latestPullNextPageEnabled.value
-                                                    if (pullNextGestureActive) {
-                                                        pullNextPageGestureActive = true
-                                                        latestHorizontalPagerScrollLockChanged.value(true)
-                                                    }
-                                                }
-                                            }
-                                            val deltaY = positionDelta.y
-                                            when {
-                                                horizontalGestureActive -> Unit
-
-                                                !latestPullNextPageEnabled.value -> {
-                                                    if (pullNextPageDragPx != 0f) {
-                                                        pullNextPageDragPx = 0f
-                                                    }
-                                                    pullNextPageGestureActive = false
-                                                }
-
-                                                deltaY < 0f && latestIsAtBottom.value && pullNextGestureActive -> {
-                                                    val delta = (-deltaY) * SearchPullNextPageDragResistance
-                                                    pullNextPageDragPx =
-                                                        (pullNextPageDragPx + delta)
-                                                            .coerceIn(0f, latestPullNextPageMaxDistancePx.value)
-                                                    latestHorizontalPagerScrollLockChanged.value(true)
-                                                    change.consume()
-                                                }
-
-                                                deltaY > 0f && (pullNextPageDragPx > 0f || pullNextGestureActive) -> {
-                                                    pullNextPageDragPx =
-                                                        (pullNextPageDragPx - deltaY).coerceAtLeast(0f)
-                                                    if (pullNextPageDragPx == 0f) {
-                                                        pullNextGestureActive = false
-                                                        pullNextPageGestureActive = false
-                                                        latestHorizontalPagerScrollLockChanged.value(false)
-                                                    }
-                                                    change.consume()
-                                                }
-
-                                                pullNextGestureActive -> {
-                                                    change.consume()
-                                                }
-
-                                                !latestIsAtBottom.value && pullNextPageDragPx > 0f -> {
-                                                    pullNextPageDragPx = 0f
-                                                    pullNextPageGestureActive = false
-                                                }
-                                            }
-                                        }
-                                    } while (event.changes.any { it.pressed })
-                                    searchPointerPressed = false
-                                    finishPullNextPageGesture.value()
-                                }
-                            }
-                            .then(
-                                if (refreshGestureEnabled) {
-                                    Modifier.nestedScroll(pullToRefreshState.nestedScrollConnection)
-                                } else {
-                                    Modifier
-                                }
-                            )
-                                .clipToBounds()
+                                .then(pullGesture.dragModifier(resultScrollKey, viewMode))
                         ) {
-                        if (pullRefreshHintVisible) {
-                            SearchPullActionHint(
-                                progress = pullRefreshProgress,
-                                active = pullToRefreshState.isRefreshing,
-                                armed = pullRefreshArmed,
-                                direction = if (pullRefreshArmed) {
-                                    SearchPullActionDirection.Up
-                                } else {
-                                    SearchPullActionDirection.Down
-                                },
-                                idleText = "下拉刷新",
-                                armedText = "松手刷新",
-                                activeText = "正在刷新",
-                                height = pullRefreshHintHeight,
-                                modifier = Modifier
-                                    .align(Alignment.TopCenter)
-                                    .graphicsLayer {
-                                        alpha = pullRefreshProgress.coerceIn(0f, 1f)
-                                        translationY = pullRefreshHintEdgeOffsetPx
-                                    }
-                            )
-                        }
+                        SearchPullRefreshHintOverlay(
+                            state = pullGesture,
+                            modifier = Modifier.align(Alignment.TopCenter)
+                        )
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .clearFocusOnTapOutside()
-                                .graphicsLayer { translationY = listStretchOffsetPx }
+                                .graphicsLayer { translationY = pullGesture.listStretchOffsetPx }
                         ) {
                             SearchResultsContent(
                                 state = uiState,
@@ -1050,34 +743,10 @@ private fun SearchScreenContent(
                             )
                         }
 
-                        if (pullNextPageHintVisible) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(bottom = LocalBottomOverlayPadding.current)
-                                    .fillMaxWidth()
-                                    .height(pullNextRevealHeight)
-                                    .clipToBounds()
-                                    .graphicsLayer {
-                                        alpha = pullNextPageProgress.coerceIn(0f, 1f)
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                SearchPullActionHint(
-                                    progress = pullNextPageProgress,
-                                    active = pullNextPageRequestAfterReturn,
-                                    armed = pullNextPageArmed,
-                                    direction = if (pullNextPageArmed) {
-                                        SearchPullActionDirection.Down
-                                    } else {
-                                        SearchPullActionDirection.Up
-                                    },
-                                    idleText = "上拉下一页",
-                                    armedText = "松手翻页",
-                                    activeText = "正在翻页"
-                                )
-                            }
-                        }
+                        SearchPullNextPageHintOverlay(
+                            state = pullGesture,
+                            modifier = Modifier.align(Alignment.BottomCenter)
+                        )
                         }
                     }
 
@@ -1187,83 +856,6 @@ private fun SearchScreenContent(
     }
 }
 
-
-private enum class SearchPullActionDirection {
-    Down,
-    Up
-}
-
-@Composable
-private fun SearchPullActionHint(
-    progress: Float,
-    active: Boolean,
-    armed: Boolean,
-    direction: SearchPullActionDirection,
-    idleText: String,
-    armedText: String,
-    activeText: String,
-    height: Dp = SearchPullActionHintHeight,
-    modifier: Modifier = Modifier
-) {
-    val colorScheme = AsmrTheme.colorScheme
-    val resolvedProgress = progress.coerceIn(0f, 1f)
-    val iconScale by animateFloatAsState(
-        targetValue = if (armed || active) 1.08f else 0.88f + resolvedProgress * 0.12f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
-        label = "search_pull_action_icon_scale"
-    )
-    val tint = if (armed || active) colorScheme.primary else colorScheme.textSecondary
-    val label = when {
-        active -> activeText
-        armed -> armedText
-        else -> idleText
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(height),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (active) {
-                EaraLogoLoadingIndicator(
-                    size = 18.dp,
-                    tint = colorScheme.primary,
-                    glowColor = colorScheme.primarySoft,
-                    showGlow = false
-                )
-            } else {
-                val icon = when (direction) {
-                    SearchPullActionDirection.Down -> Icons.Rounded.KeyboardArrowDown
-                    SearchPullActionDirection.Up -> Icons.Rounded.KeyboardArrowUp
-                }
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = tint,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .graphicsLayer {
-                            scaleX = iconScale
-                            scaleY = iconScale
-                        }
-                )
-            }
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = tint
-            )
-        }
-    }
-}
 
 @Composable
 internal fun SearchChrome(
