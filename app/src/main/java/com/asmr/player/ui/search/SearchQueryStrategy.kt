@@ -71,6 +71,39 @@ internal data class SearchPageResult(
     val resolvedDetailRjCodes: Set<String> = emptySet()
 )
 
+/**
+ * R3-C9-3：搜索请求状态（取代 VM 内 9 个 mutable var：order/collectedSort/四个互斥
+ * 过滤开关/hasSubtitle/allAges/locale）。
+ * 归一化语义与原 normalizeSearchFilters 逐字等价：已购 > 中文 > 预售 > 已收录 的
+ * 互斥优先级，排在前面的开关为 true 时后面的强制 false。
+ */
+internal data class SearchRequestState(
+    val order: SearchSortOption = SearchSortOption.Trend,
+    val collectedSort: SearchCollectedSortOption = SearchCollectedSortOption.ReleaseNew,
+    val purchasedOnly: Boolean = false,
+    val presaleOnly: Boolean = false,
+    val chineseTranslatedOnly: Boolean = false,
+    val collectedOnly: Boolean = true,
+    val hasSubtitle: Boolean = false,
+    val allAges: Boolean = false,
+    val locale: String? = "ja_JP"
+) {
+    fun normalized(): SearchRequestState {
+        val normalizedPurchasedOnly = purchasedOnly
+        val normalizedChineseTranslatedOnly = !normalizedPurchasedOnly && chineseTranslatedOnly
+        val normalizedPresaleOnly =
+            !normalizedPurchasedOnly && !normalizedChineseTranslatedOnly && presaleOnly
+        val normalizedCollectedOnly =
+            !normalizedPurchasedOnly && !normalizedChineseTranslatedOnly && !normalizedPresaleOnly && collectedOnly
+        return copy(
+            purchasedOnly = normalizedPurchasedOnly,
+            presaleOnly = normalizedPresaleOnly,
+            chineseTranslatedOnly = normalizedChineseTranslatedOnly,
+            collectedOnly = normalizedCollectedOnly
+        )
+    }
+}
+
 internal suspend fun executeSearchQuery(
     port: SearchQueryPort,
     request: SearchQueryRequest

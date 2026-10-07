@@ -6,4 +6,5 @@
 # 实测口径：仅统计 app/src/main/java 下的包级 import 边（自环不计），
 # 用 import FQ 名的最长已知包前缀解析目标包。
 # 基线确立：R3-B0（refactor-r3/phase-A 之后），当前为 1 个 50 包巨型连通团。
-max_scc_size=41
+# R3-C9 时点实测收缩为 40 包（随阶段 C 收缩下调）。
+max_scc_size=40
