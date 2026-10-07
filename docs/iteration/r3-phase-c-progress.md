@@ -1,9 +1,9 @@
-# R3 阶段 C 进度留档（2026-10-07：C1 + C3 + C4 + C7 全部完成；C8 reducer 收编 5 片全部落地（测试基线 945→994，plan 30 处赋值点全收编），下一节点：分区 sub-state + LoadPhase 单独决策或 C5 ratchet 收紧）
+# R3 阶段 C 进度留档（2026-10-07：C1 + C3 + C4 + C7 + C8 全部完成（C8 止步 reducer 收编，sub-state 维持现状否决）；C5 降级仅第一级达标；下一节点 C6 结构收尾 → 门禁）
 
-> 状态：阶段 B 已闭环（tag `refactor-r3/phase-B`）；阶段 C 执行中——C1 六 holder 分治、C3 写仓拆族、C4 God 文件区块化（7/7）、C7 service 拆解（3/3）全部完成；C8 前置安全网两批 + reducer 收编五片（C8-1..C8-5）全部落地。
-> 基线：`refactor/architecture-cleanup`，阶段 B tag 之后 44 个提交（C1a..C1d、docs ×2、C3、C4-1..C4-7 及 docs、C7-1、C7-2、C7-3、C8-0a 及 docs、C8-0b、C8-1..C8-4 及 docs、C8-5）。
-> 实机走查（B 阶段遗留 + C 阶段六族/写仓拆族/service 拆解）仍挂起待设备。
-> **测试基线更新：994/0/4（+5 AlbumDetailReducersTest 域 D/K 表驱动，累计 +34 测）**。
+> 状态：阶段 B 已闭环（tag `refactor-r3/phase-B`）；阶段 C 执行中——C1 六 holder 分治、C3 写仓拆族、C4 God 文件区块化（7/7）、C7 service 拆解（3/3）、C8 reducer 收编五片全部落地；**C5/C8 遗留决策已拍板（2026-10-07，见 devnote 2026-10-07-r3-c8-close.md）**。
+> 基线：`refactor/architecture-cleanup`，阶段 B tag 之后 45 提交已 push 且 **CI 双绿**（至 11d7feb；决策记录 docs 提交另计）。
+> 实机走查（B 阶段遗留 + C 阶段六族/写仓拆族/service 拆解）仍挂起待设备（门禁硬前置）。
+> **测试基线：994/0/4（C8 系列累计 +34 测）**。
 
 ## 1. 已提交进度
 
@@ -53,8 +53,8 @@
 
 1. **C4**：God 文件区块化——**✅ 全部收官（7/7）**：~~AlbumDetailDirectorySupport 2698~~✅C4-1 / ~~DownloadsScreen 2281~~✅C4-2 / ~~AlbumDetailDlsiteTabs 1932~~✅C4-3 / ~~LibraryScreen 1582~~✅C4-4 / ~~AlbumDetailScreen 1518~~✅C4-5 / ~~SettingsScreen 1270~~✅C4-6 / ~~EqualizerPanel 1190~~✅C4-7；SearchScreen 2186 的完整重写归 C9（不区块化）。
 2. **C7**：service 层拆解——**✅ 全部收官（3/3）**：~~DownloadManager 1184~~✅C7-1（516+2）/ ~~SubtitleTaskService 1430~~✅C7-2（204+4）/ ~~PlaybackService 1471~~✅C7-3（765+5）。
-3. **C8**（条件式重写，前置 AlbumDetailViewModelTest + 行为档案）——**执行中**：✅C8-0a 直测安全网（6 测）→ ✅C8-0b 三路 ensure*Loaded 时序/幂等/去重/token 钉测（9 测，951→960/0/4；A 组 Dlsite 幂等/兜底/语言切换重装载，B 组 AsmrOne 解析装载/未收录终态/refresh 恢复，C 组 DlsitePlay 无 cookie/sign 失败可重试/成功幂等/NotAvailable 不可重试）→ ✅C8-1 首批低复杂度域收编（+10 测，960→970；域 A/B/C×2/D/E/I×4/H-finish 共 11 处）→ ✅C8-2 域 G×2 + 域 J 尾段（+5 测，970→975；selectDlsiteLanguage 22 字段大重置 + 尾部本地重装载，dlsitePlay 开载置位/成功树装载/catch 收口）→ ✅C8-3 域 F 全域（+10 测，975→985；ensureDlsiteLoaded 7 处：开载置位/target resolve 推进/workno 空早退×2/抓取合并/enrich 回写/catch 收口，mergePreferNonBlank 下沉 mergeDlsiteRecommendations）→ ✅C8-4 域 H 主体（+4 测，985→989；ensureAsmrOneLoaded 开载置位/树装载闭包参数化/详情中间合并——域 H 全域收官）→ ✅C8-5 域 D 主体 + K（+5 测，989→994；整态替换切 UiState 级 reducer：初始种入/主装载/Error/Removed——**plan 30 处赋值点全部收编完毕**）→ 下一节点：**分区 sub-state + LoadPhase 单独决策**（方案 §3 末行，最高风险项，收编已就位后评估；manualSetRjAndSync 的 Loading 换态为同类整态换态留待彼时）→ C5 ratchet 分级收紧 → C6 结构收尾 → 门禁 → tag `refactor-r3/phase-C`。/ **C9**（搜索重写，前置四分支 seam 测试）。
-4. **C5** ratchet 分级收紧（>1500 清零 → 1000-1500 区间 14 文件 → 降 SIZE_LIMIT）→ **C6** 结构收尾 → 门禁（全量测试双绿 + 子代理审查 + 实机走查）→ tag `refactor-r3/phase-C`。
+3. **C8**（条件式重写，前置 AlbumDetailViewModelTest + 行为档案）——**执行中**：✅C8-0a 直测安全网（6 测）→ ✅C8-0b 三路 ensure*Loaded 时序/幂等/去重/token 钉测（9 测，951→960/0/4；A 组 Dlsite 幂等/兜底/语言切换重装载，B 组 AsmrOne 解析装载/未收录终态/refresh 恢复，C 组 DlsitePlay 无 cookie/sign 失败可重试/成功幂等/NotAvailable 不可重试）→ ✅C8-1 首批低复杂度域收编（+10 测，960→970；域 A/B/C×2/D/E/I×4/H-finish 共 11 处）→ ✅C8-2 域 G×2 + 域 J 尾段（+5 测，970→975；selectDlsiteLanguage 22 字段大重置 + 尾部本地重装载，dlsitePlay 开载置位/成功树装载/catch 收口）→ ✅C8-3 域 F 全域（+10 测，975→985；ensureDlsiteLoaded 7 处：开载置位/target resolve 推进/workno 空早退×2/抓取合并/enrich 回写/catch 收口，mergePreferNonBlank 下沉 mergeDlsiteRecommendations）→ ✅C8-4 域 H 主体（+4 测，985→989；ensureAsmrOneLoaded 开载置位/树装载闭包参数化/详情中间合并——域 H 全域收官）→ ✅C8-5 域 D 主体 + K（+5 测，989→994；整态替换切 UiState 级 reducer：初始种入/主装载/Error/Removed——**plan 30 处赋值点全部收编完毕**）→ **✅C8 单独决策已拍板（2026-10-07）：分区 sub-state + LoadPhase 重写维持现状不实施**（取证：跨域事件/跨域身份键/头部共享容器三类内聚是本质的，写跨域证据 E1-E9 见 devnote 2026-10-07-r3-c8-close.md 及 .dev-data 本机取证 HTML；C8 收官于 reducer 收编形态）。
+4. **C5** ratchet 分级收紧——**✅ 降级达标（2026-10-07 决策）**：只取第一级且视为达标；第二级（1000-1500 区间 + 降 SIZE_LIMIT）与第三级（800）不做。现存两 pin 各有去向：AlbumDetailViewModel 2255 由 C8 收编持续收缩、SearchScreen 2186 归 C9 完整重写，均不在 C5 强行达成。→ 下一任务 **C6 结构收尾**（walkTree/scanFromDocumentTree 拆函数、Chrome 概念归包 main 与 ui/nav/BottomChrome、dao 投影 DTO 归位）→ 门禁（全量测试双绿 + 子代理审查 + 实机走查）→ tag `refactor-r3/phase-C`。/ **C9**（搜索重写，前置四分支 seam 测试；与门禁顺序待 C6 后确认）。
 
 ## 4. 阶段 C 踩坑（增量）
 
