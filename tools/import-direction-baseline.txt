@@ -113,8 +113,6 @@ app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailViewModelSup
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailViewModelSupport.kt com.asmr.player.data.remote.dlsite.parseDlsitePlayImageSeed
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailViewModelSupport.kt com.asmr.player.data.remote.scraper.DlsiteRecommendations
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailViewModelSupport.kt com.asmr.player.ui.nav.AlbumCoverHint
-app/src/main/java/com/asmr/player/ui/nav/BottomChrome.kt com.asmr.player.ui.player.MiniPlayer
-app/src/main/java/com/asmr/player/ui/nav/BottomChrome.kt com.asmr.player.ui.player.MiniPlayerDisplayMode
 app/src/main/java/com/asmr/player/ui/search/SearchAssistViewModel.kt com.asmr.player.data.remote.api.AsmrOneAvailabilityApi
 app/src/main/java/com/asmr/player/ui/search/SearchAssistViewModel.kt com.asmr.player.data.remote.api.AsmrOneRecommendationCursorExpiredException
 app/src/main/java/com/asmr/player/ui/search/SearchAssistViewModel.kt com.asmr.player.data.remote.api.AsmrOneRecommendationItem

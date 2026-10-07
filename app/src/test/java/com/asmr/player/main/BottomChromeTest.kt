@@ -1,4 +1,4 @@
-package com.asmr.player.ui.nav
+package com.asmr.player.main
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import com.asmr.player.ui.nav.Routes
 import com.asmr.player.ui.player.MiniPlayerDisplayMode
 import com.asmr.player.ui.theme.AsmrPlayerTheme
 import org.junit.Rule

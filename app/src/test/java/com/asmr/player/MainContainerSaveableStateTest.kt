@@ -22,7 +22,7 @@ import androidx.compose.material3.Text
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.asmr.player.main.PRIMARY_PAGER_SAVEABLE_KEY
 import com.asmr.player.main.primaryRouteSaveableKey
-import com.asmr.player.ui.nav.bottomChromeNavItems
+import com.asmr.player.main.bottomChromeNavItems
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

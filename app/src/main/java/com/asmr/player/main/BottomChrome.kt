@@ -1,4 +1,6 @@
-package com.asmr.player.ui.nav
+package com.asmr.player.main
+
+import com.asmr.player.ui.nav.Routes
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform

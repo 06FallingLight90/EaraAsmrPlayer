@@ -1,4 +1,4 @@
-package com.asmr.player.ui.nav
+package com.asmr.player.main
 
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals

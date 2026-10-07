@@ -161,13 +161,7 @@ import com.asmr.player.ui.drawer.SiteStatus
 import com.asmr.player.ui.drawer.SiteStatusType
 import com.asmr.player.ui.nav.AlbumCoverHintStore
 import com.asmr.player.ui.nav.AppNavigator
-import com.asmr.player.ui.nav.BottomChrome
-import com.asmr.player.ui.nav.BottomChromeNavItem
 import com.asmr.player.ui.nav.Routes
-import com.asmr.player.ui.nav.bottomChromeNavItems
-import com.asmr.player.ui.nav.bottomChromeOverlayHeight
-import com.asmr.player.ui.nav.isPrimaryRoute
-import com.asmr.player.ui.nav.resolvePrimaryRoute
 import com.asmr.player.ui.common.list.LocalBottomOverlayPadding
 import com.asmr.player.ui.common.list.rememberCalmScrollableFlingBehavior
 import com.asmr.player.ui.splash.EaraSplashOverlay

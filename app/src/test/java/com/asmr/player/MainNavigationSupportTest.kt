@@ -6,9 +6,9 @@ import android.os.Bundle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.asmr.player.data.local.db.entities.PlaylistItemEntity
-import com.asmr.player.ui.nav.bottomChromeNavItems
-import com.asmr.player.ui.nav.isPrimaryRoute
-import com.asmr.player.ui.nav.resolvePrimaryRoute
+import com.asmr.player.main.bottomChromeNavItems
+import com.asmr.player.main.isPrimaryRoute
+import com.asmr.player.main.resolvePrimaryRoute
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith

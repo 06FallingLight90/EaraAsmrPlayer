@@ -40,9 +40,6 @@ import com.asmr.player.ui.library.AlbumDetailViewModel
 import com.asmr.player.performance.UiFrameWorkCoordinator
 import com.asmr.player.ui.common.core.EaraTopBarIconButton
 import com.asmr.player.ui.common.core.resolveMainPageBackgroundColor
-import com.asmr.player.ui.nav.BottomChrome
-import com.asmr.player.ui.nav.BottomChromeNavItem
-import com.asmr.player.ui.nav.bottomChromeNavItems
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import com.asmr.player.ui.theme.AsmrTheme
 import android.os.Build

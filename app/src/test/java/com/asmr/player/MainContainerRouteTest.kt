@@ -12,7 +12,7 @@ import com.asmr.player.main.MainNavGraph
 import com.asmr.player.main.MainNavGraphContents
 import com.asmr.player.main.navigateSingleTop
 import com.asmr.player.ui.nav.Routes
-import com.asmr.player.ui.nav.isPrimaryRoute
+import com.asmr.player.main.isPrimaryRoute
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
