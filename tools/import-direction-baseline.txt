@@ -94,6 +94,7 @@ app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailLocalTab.kt 
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailLocalTab.kt com.asmr.player.ui.dlsite.DlsitePlayViewModel
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailLocalTab.kt com.asmr.player.ui.playlists.PlaylistPickerScreen
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailReducers.kt com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
+app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailReducers.kt com.asmr.player.data.remote.api.WorkDetailsResponse
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailReducers.kt com.asmr.player.data.remote.scraper.DlsiteRecommendations
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailReducers.kt com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailScreenSupport.kt com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse

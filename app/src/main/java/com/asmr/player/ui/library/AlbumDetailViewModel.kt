@@ -106,6 +106,9 @@ import com.asmr.player.ui.library.albumdetail.resetAsmrOneContent
 import com.asmr.player.ui.library.albumdetail.resetDlsitePlayAccess
 import com.asmr.player.ui.library.albumdetail.resetOnlineLoadingFlags
 import com.asmr.player.ui.library.albumdetail.markAsmrOneLoadFinished
+import com.asmr.player.ui.library.albumdetail.markAsmrOneLoading
+import com.asmr.player.ui.library.albumdetail.finishAsmrOneTreeLoad
+import com.asmr.player.ui.library.albumdetail.applyAsmrOneResolvedDetails
 import com.asmr.player.ui.library.albumdetail.dlsiteTrialRequestWorkno
 import com.asmr.player.ui.library.albumdetail.setDlsiteTrialLoading
 import com.asmr.player.ui.library.albumdetail.finishDlsiteTrialLoad
@@ -137,7 +140,6 @@ import com.asmr.player.data.local.tree.loadOrBuildLocalTreeIndex
 import com.asmr.player.ui.library.albumdetail.LocalIncrementalSelectionPaths
 import com.asmr.player.ui.library.albumdetail.LocalSourceAvailability
 import com.asmr.player.data.local.tree.localTreeSourcesForAlbum
-import com.asmr.player.ui.library.albumdetail.mergeAsmrOneHeaderAlbum
 import com.asmr.player.ui.library.albumdetail.RemoteSelectionFileRef
 import com.asmr.player.ui.library.albumdetail.resolveAlbumDetailRj
 import com.asmr.player.ui.library.albumdetail.resolveAsmrOneTrackWorkId
@@ -1136,10 +1138,7 @@ class AlbumDetailViewModel @Inject constructor(
                 return@launch
             }
             _uiState.value = AlbumDetailUiState.Success(
-                model = latestBefore.model.copy(
-                    isLoadingAsmrOne = true,
-                    hasResolvedAsmrOneContent = false
-                )
+                model = markAsmrOneLoading(latestBefore.model)
             )
             try {
                 val latest = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return@launch
@@ -1170,32 +1169,13 @@ class AlbumDetailViewModel @Inject constructor(
                     tree: List<AsmrOneTrackNodeResponse>,
                     resolvedDetails: WorkDetailsResponse? = null
                 ): Boolean {
-                    val updated = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return true
+                    if (_uiState.value !is AlbumDetailUiState.Success) return true
                     if (token != asmrOneLoadToken) {
                         asmrOneAttemptedRj.remove(keyRj)
                         finishAsmrOneLoad(keyRj, resolved = false)
                         return true
                     }
-                    val resolvedWorkId = workId?.trim().orEmpty().ifBlank { updated.asmrOneWorkId.orEmpty() }
-                    val displayAlbum = mergeAsmrOneHeaderAlbum(
-                        currentDisplayAlbum = updated.displayAlbum,
-                        localAlbum = updated.localAlbum,
-                        fetchedDlsiteInfo = updated.dlsiteInfo,
-                        resolvedAsmrOneDetails = resolvedDetails,
-                        rjCode = updated.rjCode,
-                        asmrOneWorkId = resolvedWorkId.takeIf { it.isNotBlank() } ?: updated.asmrOneWorkId,
-                        preserveHeaderAlbumMetadata = updated.preserveHeaderAlbumMetadata
-                    )
-                    _uiState.value = AlbumDetailUiState.Success(
-                        model = updated.copy(
-                            displayAlbum = displayAlbum,
-                            asmrOneWorkId = resolvedWorkId.takeIf { it.isNotBlank() } ?: updated.asmrOneWorkId,
-                            asmrOneSite = site,
-                            asmrOneTree = tree,
-                            hasResolvedAsmrOneContent = true,
-                            isLoadingAsmrOne = false
-                        )
-                    )
+                    updateSuccessModel { finishAsmrOneTreeLoad(it, workId, site, tree, resolvedDetails) }
                     return true
                 }
 
@@ -1302,26 +1282,13 @@ class AlbumDetailViewModel @Inject constructor(
                     ?: runCatching { asmrOneCrawler.getDetails(originalWorkId) }.getOrNull()
 
                 if (originalDetails != null) {
-                    val updated = (_uiState.value as? AlbumDetailUiState.Success)?.model ?: return@launch
+                    if (_uiState.value !is AlbumDetailUiState.Success) return@launch
                     if (token != asmrOneLoadToken) {
                         asmrOneAttemptedRj.remove(keyRj)
                         finishAsmrOneLoad(keyRj, resolved = false)
                         return@launch
                     }
-                    _uiState.value = AlbumDetailUiState.Success(
-                        model = updated.copy(
-                            displayAlbum = mergeAsmrOneHeaderAlbum(
-                                currentDisplayAlbum = updated.displayAlbum,
-                                localAlbum = updated.localAlbum,
-                                fetchedDlsiteInfo = updated.dlsiteInfo,
-                                resolvedAsmrOneDetails = originalDetails,
-                                rjCode = updated.rjCode,
-                                asmrOneWorkId = originalWorkId,
-                                preserveHeaderAlbumMetadata = updated.preserveHeaderAlbumMetadata
-                            ),
-                            asmrOneWorkId = originalWorkId
-                        )
-                    )
+                    updateSuccessModel { applyAsmrOneResolvedDetails(it, originalWorkId, originalDetails) }
                 }
 
                 val workId = resolveAsmrOneTrackWorkId(

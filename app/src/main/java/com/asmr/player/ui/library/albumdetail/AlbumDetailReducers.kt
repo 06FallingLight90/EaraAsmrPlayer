@@ -1,6 +1,7 @@
 package com.asmr.player.ui.library.albumdetail
 
 import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
+import com.asmr.player.data.remote.api.WorkDetailsResponse
 import com.asmr.player.data.remote.scraper.DlsiteRecommendations
 import com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 import com.asmr.player.domain.model.Album
@@ -96,6 +97,61 @@ internal fun markAsmrOneLoadFinished(
     return model.copy(
         isLoadingAsmrOne = false,
         hasResolvedAsmrOneContent = if (resolved) true else model.hasResolvedAsmrOneContent
+    )
+}
+
+/** 域 H：asmrOne 开载置位（原 ensureAsmrOneLoaded launch 头部内联 copy；沿用调用点的 model 快照应用）。 */
+internal fun markAsmrOneLoading(model: AlbumDetailModel): AlbumDetailModel {
+    return model.copy(
+        isLoadingAsmrOne = true,
+        hasResolvedAsmrOneContent = false
+    )
+}
+
+/** 域 H：asmrOne 树装载收尾（原 finishWithResolvedAsmrOneTree 闭包内联 copy；workId 空白回退既有 workId；闭包的 Success 读守卫、token 判定与 attemptedRj 回滚副作用留在调用点）。 */
+internal fun finishAsmrOneTreeLoad(
+    model: AlbumDetailModel,
+    workId: String?,
+    site: Int?,
+    tree: List<AsmrOneTrackNodeResponse>,
+    resolvedDetails: WorkDetailsResponse?
+): AlbumDetailModel {
+    val resolvedWorkId = workId?.trim().orEmpty().ifBlank { model.asmrOneWorkId.orEmpty() }
+    return model.copy(
+        displayAlbum = mergeAsmrOneHeaderAlbum(
+            currentDisplayAlbum = model.displayAlbum,
+            localAlbum = model.localAlbum,
+            fetchedDlsiteInfo = model.dlsiteInfo,
+            resolvedAsmrOneDetails = resolvedDetails,
+            rjCode = model.rjCode,
+            asmrOneWorkId = resolvedWorkId.takeIf { it.isNotBlank() } ?: model.asmrOneWorkId,
+            preserveHeaderAlbumMetadata = model.preserveHeaderAlbumMetadata
+        ),
+        asmrOneWorkId = resolvedWorkId.takeIf { it.isNotBlank() } ?: model.asmrOneWorkId,
+        asmrOneSite = site,
+        asmrOneTree = tree,
+        hasResolvedAsmrOneContent = true,
+        isLoadingAsmrOne = false
+    )
+}
+
+/** 域 H：asmrOne 详情中间合并（原 originalDetails 分支内联 copy；仅按详情重合并 displayAlbum 并写 workId，不动 site/tree/loading）。 */
+internal fun applyAsmrOneResolvedDetails(
+    model: AlbumDetailModel,
+    workId: String,
+    resolvedDetails: WorkDetailsResponse
+): AlbumDetailModel {
+    return model.copy(
+        displayAlbum = mergeAsmrOneHeaderAlbum(
+            currentDisplayAlbum = model.displayAlbum,
+            localAlbum = model.localAlbum,
+            fetchedDlsiteInfo = model.dlsiteInfo,
+            resolvedAsmrOneDetails = resolvedDetails,
+            rjCode = model.rjCode,
+            asmrOneWorkId = workId,
+            preserveHeaderAlbumMetadata = model.preserveHeaderAlbumMetadata
+        ),
+        asmrOneWorkId = workId
     )
 }
 

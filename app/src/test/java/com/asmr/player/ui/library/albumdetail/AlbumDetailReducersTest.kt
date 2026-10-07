@@ -3,6 +3,7 @@ package com.asmr.player.ui.library.albumdetail
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.Track
 import com.asmr.player.data.remote.api.AsmrOneTrackNodeResponse
+import com.asmr.player.data.remote.api.WorkDetailsResponse
 import com.asmr.player.data.remote.scraper.DlsiteRecommendedWork
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -224,6 +225,125 @@ class AlbumDetailReducersTest {
         )!!
         assertFalse(resolvedKeep.isLoadingAsmrOne)
         assertTrue(resolvedKeep.hasResolvedAsmrOneContent)
+    }
+
+    // ------------------------------------------------------------ 域 H 主体（C8-4）
+
+    private fun workDetails(
+        id: Int = 7,
+        title: String = "asmr-details"
+    ): WorkDetailsResponse = WorkDetailsResponse(
+        id = id,
+        source_id = "src-$id",
+        title = title,
+        circle = null,
+        vas = null,
+        tags = null,
+        duration = 0,
+        mainCoverUrl = "",
+        dl_count = 0,
+        price = 0
+    )
+
+    @Test
+    fun `markAsmrOneLoading sets loading and clears resolved`() {
+        val base = model(hasResolvedAsmrOneContent = true, isLoadingAsmrOne = false)
+        val updated = markAsmrOneLoading(base)
+        assertTrue(updated.isLoadingAsmrOne)
+        assertFalse(updated.hasResolvedAsmrOneContent)
+        // 域外字段不动
+        assertEquals(base.asmrOneWorkId, updated.asmrOneWorkId)
+        assertEquals(base.asmrOneTree, updated.asmrOneTree)
+        assertEquals(base.displayAlbum, updated.displayAlbum)
+    }
+
+    @Test
+    fun `finishAsmrOneTreeLoad writes tree and closes loading`() {
+        val tree = listOf(AsmrOneTrackNodeResponse(title = "n1"))
+        val details = workDetails()
+        val base = model(isLoadingAsmrOne = true, hasResolvedAsmrOneContent = false)
+        val updated = finishAsmrOneTreeLoad(
+            model = base,
+            workId = " w-9 ",
+            site = 200,
+            tree = tree,
+            resolvedDetails = details
+        )
+        assertEquals("w-9", updated.asmrOneWorkId)
+        assertEquals(200, updated.asmrOneSite)
+        assertEquals(tree, updated.asmrOneTree)
+        assertTrue(updated.hasResolvedAsmrOneContent)
+        assertFalse(updated.isLoadingAsmrOne)
+        // displayAlbum = 按 resolvedDetails + trimmed workId 重合并（锚定 mergeAsmrOneHeaderAlbum 参数接线，其自身语义由 Support 覆盖）
+        assertEquals(
+            mergeAsmrOneHeaderAlbum(
+                currentDisplayAlbum = base.displayAlbum,
+                localAlbum = base.localAlbum,
+                fetchedDlsiteInfo = base.dlsiteInfo,
+                resolvedAsmrOneDetails = details,
+                rjCode = base.rjCode,
+                asmrOneWorkId = "w-9",
+                preserveHeaderAlbumMetadata = base.preserveHeaderAlbumMetadata
+            ),
+            updated.displayAlbum
+        )
+    }
+
+    @Test
+    fun `finishAsmrOneTreeLoad blank workId falls back to existing`() {
+        val tree = listOf(AsmrOneTrackNodeResponse(title = "n2"))
+        // workId=null → 回退既有 workId
+        val nullWorkId = finishAsmrOneTreeLoad(
+            model = model(asmrOneWorkId = "w-keep"),
+            workId = null,
+            site = null,
+            tree = tree,
+            resolvedDetails = null
+        )
+        assertEquals("w-keep", nullWorkId.asmrOneWorkId)
+        assertNull(nullWorkId.asmrOneSite)
+        // workId 空白 → 同样回退
+        val blankWorkId = finishAsmrOneTreeLoad(
+            model = model(asmrOneWorkId = "w-keep"),
+            workId = "  ",
+            site = 0,
+            tree = emptyList(),
+            resolvedDetails = null
+        )
+        assertEquals("w-keep", blankWorkId.asmrOneWorkId)
+        assertEquals(0, blankWorkId.asmrOneSite)
+    }
+
+    @Test
+    fun `applyAsmrOneResolvedDetails merges header and writes workId only`() {
+        val details = workDetails()
+        val tree = listOf(AsmrOneTrackNodeResponse(title = "n3"))
+        val base = model(
+            asmrOneWorkId = "w-old",
+            asmrOneSite = 0,
+            asmrOneTree = tree,
+            isLoadingAsmrOne = true,
+            hasResolvedAsmrOneContent = false
+        )
+        val updated = applyAsmrOneResolvedDetails(base, workId = "w-new", resolvedDetails = details)
+        assertEquals("w-new", updated.asmrOneWorkId)
+        // site/tree/loading/hasResolved 原样（中间合并不收口装载）
+        assertEquals(0, updated.asmrOneSite)
+        assertEquals(tree, updated.asmrOneTree)
+        assertTrue(updated.isLoadingAsmrOne)
+        assertFalse(updated.hasResolvedAsmrOneContent)
+        assertEquals(
+            mergeAsmrOneHeaderAlbum(
+                currentDisplayAlbum = base.displayAlbum,
+                localAlbum = base.localAlbum,
+                fetchedDlsiteInfo = base.dlsiteInfo,
+                resolvedAsmrOneDetails = details,
+                rjCode = base.rjCode,
+                asmrOneWorkId = "w-new",
+                preserveHeaderAlbumMetadata = base.preserveHeaderAlbumMetadata
+            ),
+            updated.displayAlbum
+        )
     }
 
     // ------------------------------------------------------------ 域 I trial 族
