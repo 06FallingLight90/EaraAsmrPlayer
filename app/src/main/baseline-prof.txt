@@ -36821,7 +36821,7 @@ Lcom/asmr/player/data/local/db/dao/DownloadDao_Impl$7;
 Lcom/asmr/player/data/local/db/dao/DownloadDao_Impl$8;
 Lcom/asmr/player/data/local/db/dao/DownloadDao_Impl$9;
 Lcom/asmr/player/data/local/db/dao/DownloadDao_Impl;
-Lcom/asmr/player/data/local/db/dao/DownloadTaskWithItems;
+Lcom/asmr/player/data/local/db/projection/DownloadTaskWithItems;
 Lcom/asmr/player/data/local/db/dao/LibraryTrackAlbumHeaderRow;
 Lcom/asmr/player/data/local/db/dao/LocalTreeCacheDao;
 Lcom/asmr/player/data/local/db/dao/LocalTreeCacheDao_Impl$1;
@@ -51045,10 +51045,10 @@ SPLcom/asmr/player/data/local/db/dao/DownloadDao_Impl;->getRequiredConverters()L
 SPLcom/asmr/player/data/local/db/dao/DownloadDao_Impl;->insertTask(Lcom/asmr/player/data/local/db/entities/DownloadTaskEntity;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 SPLcom/asmr/player/data/local/db/dao/DownloadDao_Impl;->observeTasksWithItems()Lkotlinx/coroutines/flow/Flow;
 SPLcom/asmr/player/data/local/db/dao/DownloadDao_Impl;->upsertItem(Lcom/asmr/player/data/local/db/entities/DownloadItemEntity;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-SPLcom/asmr/player/data/local/db/dao/DownloadTaskWithItems;-><clinit>()V
-SPLcom/asmr/player/data/local/db/dao/DownloadTaskWithItems;-><init>(Lcom/asmr/player/data/local/db/entities/DownloadTaskEntity;Ljava/util/List;)V
-SPLcom/asmr/player/data/local/db/dao/DownloadTaskWithItems;->getItems()Ljava/util/List;
-SPLcom/asmr/player/data/local/db/dao/DownloadTaskWithItems;->getTask()Lcom/asmr/player/data/local/db/entities/DownloadTaskEntity;
+SPLcom/asmr/player/data/local/db/projection/DownloadTaskWithItems;-><clinit>()V
+SPLcom/asmr/player/data/local/db/projection/DownloadTaskWithItems;-><init>(Lcom/asmr/player/data/local/db/entities/DownloadTaskEntity;Ljava/util/List;)V
+SPLcom/asmr/player/data/local/db/projection/DownloadTaskWithItems;->getItems()Ljava/util/List;
+SPLcom/asmr/player/data/local/db/projection/DownloadTaskWithItems;->getTask()Lcom/asmr/player/data/local/db/entities/DownloadTaskEntity;
 SPLcom/asmr/player/data/local/db/dao/LibraryTrackAlbumHeaderRow;-><clinit>()V
 SPLcom/asmr/player/data/local/db/dao/LibraryTrackAlbumHeaderRow;-><init>(JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IDJ)V
 SPLcom/asmr/player/data/local/db/dao/LocalTreeCacheDao_Impl;->getRequiredConverters()Ljava/util/List;

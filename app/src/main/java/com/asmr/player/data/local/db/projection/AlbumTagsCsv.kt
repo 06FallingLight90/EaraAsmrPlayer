@@ -1,4 +1,4 @@
-package com.asmr.player.data.local.db.dao
+package com.asmr.player.data.local.db.projection
 
 data class AlbumTagsCsv(
     val albumId: Long,

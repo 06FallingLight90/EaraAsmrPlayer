@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.asmr.player.data.local.db.entities.TrackTagEntity
+import com.asmr.player.data.local.db.projection.TrackTagsCsv
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -55,8 +56,3 @@ interface TrackTagDao {
     )
     suspend fun getTrackTagsCsvOnce(trackId: Long, source: Int): String?
 }
-
-data class TrackTagsCsv(
-    val trackId: Long,
-    val tagsCsv: String?
-)

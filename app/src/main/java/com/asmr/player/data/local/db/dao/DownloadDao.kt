@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import com.asmr.player.data.local.db.entities.DownloadItemEntity
 import com.asmr.player.data.local.db.entities.DownloadTaskEntity
+import com.asmr.player.data.local.db.projection.DownloadTaskWithItems
 import kotlinx.coroutines.flow.Flow
 
 @Dao

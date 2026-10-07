@@ -1,4 +1,4 @@
-package com.asmr.player.data.local.db.dao
+package com.asmr.player.data.local.db.projection
 
 import androidx.room.Embedded
 import androidx.room.Relation

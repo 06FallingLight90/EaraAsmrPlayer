@@ -2,7 +2,7 @@ package com.asmr.player.data.repository
 
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.domain.model.AlbumListeningRow
-import com.asmr.player.data.local.db.dao.HourDurationRow
+import com.asmr.player.data.local.db.projection.HourDurationRow
 import com.asmr.player.data.local.db.entities.ListeningSessionEntity
 import com.asmr.player.util.ListeningDay
 import kotlinx.coroutines.Dispatchers
