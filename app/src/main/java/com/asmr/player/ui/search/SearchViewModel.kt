@@ -80,6 +80,55 @@ class SearchViewModel @Inject constructor(
     private val hotKeywordsRequested = AtomicBoolean(false)
     private var searchResultRevision: Long = 0L
 
+    private val searchQueryPort = object : SearchQueryPort {
+        override suspend fun searchPurchased(
+            keyword: String,
+            page: Int,
+            pageSize: Int
+        ): SearchRepository.PurchasedPage = searchRepository.searchPurchased(keyword, page, pageSize)
+
+        override suspend fun searchCollected(
+            keyword: String,
+            limit: Int,
+            offset: Int,
+            sort: String,
+            hasSubtitle: Boolean,
+            allAges: Boolean
+        ): SearchRepository.CollectedPage = searchRepository.searchCollected(
+            keyword = keyword,
+            limit = limit,
+            offset = offset,
+            sort = sort,
+            hasSubtitle = hasSubtitle,
+            allAges = allAges
+        )
+
+        override suspend fun getWorkInfoWithLocaleFallback(
+            workNo: String,
+            preferredLocale: String?
+        ): Album? = searchRepository.getWorkInfoWithLocaleFallback(workNo, preferredLocale)
+
+        override suspend fun searchDlsite(
+            keyword: String,
+            page: Int,
+            order: String,
+            locale: String?,
+            presaleOnly: Boolean,
+            chineseTranslatedOnly: Boolean,
+            hasSubtitle: Boolean,
+            allAges: Boolean
+        ): SearchRepository.DlsitePage = searchRepository.searchDlsite(
+            keyword = keyword,
+            page = page,
+            order = order,
+            locale = locale,
+            presaleOnly = presaleOnly,
+            chineseTranslatedOnly = chineseTranslatedOnly,
+            hasSubtitle = hasSubtitle,
+            allAges = allAges
+        )
+    }
+
     private val _uiState = MutableStateFlow<SearchUiState>(SearchUiState.Idle)
     val uiState = _uiState.asStateFlow()
     private val _hotKeywordTerms = MutableStateFlow<List<SearchHotKeywordTerm>>(emptyList())
@@ -522,90 +571,24 @@ class SearchViewModel @Inject constructor(
         hasSubtitle: Boolean,
         allAges: Boolean
     ): SearchPageResult {
-        val selectedFilter = SearchFilterOption.fromState(
-            purchasedOnly = purchasedOnly,
-            presaleOnly = presaleOnly,
-            chineseTranslatedOnly = chineseTranslatedOnly,
-            collectedOnly = collectedOnly
-        )
-        val appliedHasSubtitle = hasSubtitle && selectedFilter.supportsWorkFilters
-        val appliedAllAges = allAges && selectedFilter.supportsWorkFilters
-        if (purchasedOnly) {
-            val resp = searchRepository.searchPurchased(keyword, page, pageSize)
-            return SearchPageResult(items = resp.items, canGoNext = resp.canGoNext)
-        }
-        val keywordWithBlockedTerms = appendBlockedKeywordsForOnlineSearch(
-            keyword = keyword,
-            blockedKeywords = settingsRepository.searchBlockedKeywords.first()
-        )
-        if (collectedOnly) {
-            val offset = (page.coerceAtLeast(1) - 1) * pageSize
-            val resp = searchRepository.searchCollected(
-                keyword = keywordWithBlockedTerms,
-                limit = pageSize,
-                offset = offset,
-                sort = collectedSort.backendSort,
-                hasSubtitle = appliedHasSubtitle,
-                allAges = appliedAllAges
+        return executeSearchQuery(
+            port = searchQueryPort,
+            request = SearchQueryRequest(
+                keyword = keyword,
+                page = page,
+                pageSize = pageSize,
+                order = order,
+                collectedSort = collectedSort,
+                purchasedOnly = purchasedOnly,
+                presaleOnly = presaleOnly,
+                chineseTranslatedOnly = chineseTranslatedOnly,
+                collectedOnly = collectedOnly,
+                hasSubtitle = hasSubtitle,
+                allAges = allAges,
+                locale = currentLocale,
+                blockedKeywordsProvider = { settingsRepository.searchBlockedKeywords.first() }
             )
-            val mappedItems = resp.items
-            val directWorkNo = DlsiteWorkNo.normalizeWorkNo(keyword, minimumDigits = 6)
-            val items = mappedItems.ifEmpty {
-                directWorkNo.takeIf { it.isNotBlank() }?.let { workNo ->
-                    listOf(
-                        Album(
-                            title = workNo,
-                            path = "",
-                            workId = workNo,
-                            rjCode = workNo,
-                            hasAsmrOne = true
-                        )
-                    )
-                }.orEmpty()
-            }
-            val total = resp.total.coerceAtLeast(0)
-            val responseOffset = resp.offset.coerceAtLeast(offset)
-            return SearchPageResult(
-                items = items,
-                canGoNext = responseOffset + items.size < total,
-                resolvedDetailRjCodes = items
-                    .mapNotNull { it.rjCode.ifBlank { it.workId }.trim().uppercase().takeIf(String::isNotBlank) }
-                    .toSet()
-            )
-        }
-        val normalizedKeyword = keyword.trim()
-        val normalizedWorkNo = DlsiteWorkNo.normalizeWorkNo(normalizedKeyword, minimumDigits = 6)
-        if (
-            keywordWithBlockedTerms == normalizedKeyword &&
-            !presaleOnly &&
-            !chineseTranslatedOnly &&
-            !appliedHasSubtitle &&
-            !appliedAllAges &&
-            page == 1 &&
-            normalizedWorkNo.isNotBlank()
-        ) {
-            val preferred = currentLocale
-            val info = searchRepository.getWorkInfoWithLocaleFallback(normalizedWorkNo, preferred)
-            if (info != null) {
-                val album = info.copy(workId = normalizedWorkNo, rjCode = normalizedWorkNo)
-                return SearchPageResult(
-                    items = listOf(album),
-                    canGoNext = false,
-                    resolvedDetailRjCodes = setOf(normalizedWorkNo)
-                )
-            }
-        }
-        val result = searchRepository.searchDlsite(
-            keyword = keywordWithBlockedTerms,
-            page = page,
-            order = order.dlsiteOrder,
-            locale = resolveSearchRequestLocale(currentLocale, chineseTranslatedOnly),
-            presaleOnly = presaleOnly,
-            chineseTranslatedOnly = chineseTranslatedOnly,
-            hasSubtitle = appliedHasSubtitle,
-            allAges = appliedAllAges
         )
-        return SearchPageResult(items = result.items, canGoNext = result.canGoNext)
     }
 
     private fun startEnrichDlsiteDetails(
@@ -1188,12 +1171,6 @@ private data class SearchFilterFlags(
     val presaleOnly: Boolean,
     val chineseTranslatedOnly: Boolean,
     val collectedOnly: Boolean
-)
-
-private data class SearchPageResult(
-    val items: List<Album>,
-    val canGoNext: Boolean,
-    val resolvedDetailRjCodes: Set<String> = emptySet()
 )
 
 internal fun mergeSearchAlbumDetail(
