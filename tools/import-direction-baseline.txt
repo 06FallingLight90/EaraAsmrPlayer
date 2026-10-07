@@ -121,9 +121,9 @@ app/src/main/java/com/asmr/player/ui/search/SearchAssistViewModel.kt com.asmr.pl
 app/src/main/java/com/asmr/player/ui/search/SearchRecommendationSessionCache.kt com.asmr.player.data.remote.api.AsmrOneRecommendationResponse
 app/src/main/java/com/asmr/player/ui/search/SearchRecommendationSessionCache.kt com.asmr.player.data.remote.api.normalizeRecommendationRjs
 app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt com.asmr.player.ui.groups.AlbumGroupsViewModel
-app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt com.asmr.player.ui.library.AlbumGridItem
-app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt com.asmr.player.ui.library.AlbumGridItemSpacing
-app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt com.asmr.player.ui.library.AlbumItem
+app/src/main/java/com/asmr/player/ui/search/SearchResultsContent.kt com.asmr.player.ui.library.AlbumGridItem
+app/src/main/java/com/asmr/player/ui/search/SearchResultsContent.kt com.asmr.player.ui.library.AlbumGridItemSpacing
+app/src/main/java/com/asmr/player/ui/search/SearchResultsContent.kt com.asmr.player.ui.library.AlbumItem
 app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt com.asmr.player.ui.library.AlbumMetaActionDialog
 app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt com.asmr.player.ui.library.rememberAlbumMetaCopyAction
 app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt com.asmr.player.ui.playlists.PlaylistsViewModel
