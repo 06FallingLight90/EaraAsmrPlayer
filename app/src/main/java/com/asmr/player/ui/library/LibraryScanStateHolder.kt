@@ -525,128 +525,168 @@ internal class LibraryScanStateHolder(
                 isScannableLocalDirectoryName(child.displayName) &&
                 (!requireCompletionMarker || queryChildren(uri, child.documentId).any { it.displayName == ".download_complete" })
         }
-        val audioExtensions = setOf("mp3", "flac", "wav", "m4a", "ogg", "aac", "opus")
-        val subtitleExtensions = setOf("lrc", "srt", "vtt")
         val foundAlbumPaths = LinkedHashSet<String>()
 
         children.forEach { albumDir ->
             currentCoroutineContext().ensureActive()
-            val albumUri = DocumentsContract.buildDocumentUriUsingTree(uri, albumDir.documentId)
-            val albumPath = albumUri.toString()
-            foundAlbumPaths.add(albumPath)
-            val title = albumDir.displayName.ifBlank { "album" }
-            val rj = extractWorkNo(title)
-            val albumChildren = queryChildren(uri, albumDir.documentId)
-            val coverPath = pickCoverNode(albumChildren, uri, albumDir.documentId)
-
-            onAlbumScanned?.invoke(title)
-            val existing = resolveAndMergeAlbumForRj(
-                rj = rj,
-                fallbackPath = albumPath,
-                fallbackTitle = title,
-                localPath = if (asDownloadRoot) null else albumPath,
-                downloadPath = if (asDownloadRoot) albumPath else null,
+            foundAlbumPaths.add(
+                scanSingleDocumentAlbum(uri, albumDir, asDownloadRoot, onAlbumScanned)
             )
-
-            val all = walkTree(uri, albumDir.documentId).filter { it.mimeType != DocumentsContract.Document.MIME_TYPE_DIR }
-            val audioFiles = all.filter { audioExtensions.contains(it.displayName.substringAfterLast('.', "").lowercase()) }
-            val subtitleNodes = all.filter { subtitleExtensions.contains(it.displayName.substringAfterLast('.', "").lowercase()) }
-            val subtitleCandidates = subtitleNodes.mapNotNull { node ->
-                val candidate = SubtitleMatchSupport.inferCandidate(node.relativePath, node.documentId) ?: return@mapNotNull null
-                candidate to node
-            }
-            val subtitleCandidateList = subtitleCandidates.map { it.first }
-
-            val trackSpecs = ArrayList<ScanTrackSpec>(audioFiles.size)
-            val audioRelativeBaseByPath = LinkedHashMap<String, String>(audioFiles.size)
-            audioFiles.sortedBy { it.documentId }.forEach { audio ->
-                currentCoroutineContext().ensureActive()
-                taskCoordinator.maybeUpdateBulkCurrentFile(audio.displayName)
-                val audioUri = DocumentsContract.buildDocumentUriUsingTree(uri, audio.documentId)
-                val trackTitle = audio.displayName.substringBeforeLast('.').ifBlank { "track" }
-                val group = if (audio.relativePath.contains("/")) audio.relativePath.substringBeforeLast('/').substringAfterLast('/') else ""
-                val relativeBase = audio.relativePath.substringBeforeLast('.')
-                trackSpecs.add(
-                    ScanTrackSpec(
-                        title = trackTitle,
-                        path = audioUri.toString(),
-                        group = group
-                    )
-                )
-                audioRelativeBaseByPath[audioUri.toString()] = relativeBase
-            }
-
-            val subtitlesByAudioPath: Map<String, List<SubtitleEntry>> = trackSpecs.associate { spec ->
-                val key = audioRelativeBaseByPath[spec.path].orEmpty()
-                val matched = if (key.isBlank()) null else SubtitleMatchSupport.matchBest(key, subtitleCandidateList)
-                val node = matched?.let { hit -> subtitleCandidates.firstOrNull { it.first.sourceRef == hit.sourceRef }?.second }
-                val entries = node?.let { readSubtitleFromUri(uri, it.documentId, it.displayName) }.orEmpty()
-                spec.path to entries
-            }
-
-            val entity = AlbumEntity(
-                id = existing?.id ?: 0L,
-                title = existing?.title?.takeIf { it.isNotBlank() && it != title } ?: title,
-                path = existing?.path?.takeIf { it.isNotBlank() } ?: albumPath,
-                localPath = if (asDownloadRoot) existing?.localPath else albumPath,
-                downloadPath = if (asDownloadRoot) albumPath else existing?.downloadPath,
-                circle = existing?.circle ?: "",
-                cv = existing?.cv ?: "",
-                tags = existing?.tags ?: "",
-                coverUrl = existing?.coverUrl ?: "",
-                coverPath = coverPath.ifBlank { existing?.coverPath.orEmpty() },
-                coverThumbPath = existing?.coverThumbPath.orEmpty(),
-                workId = existing?.workId?.takeIf { it.isNotBlank() } ?: rj,
-                rjCode = existing?.rjCode?.takeIf { it.isNotBlank() } ?: rj,
-                description = existing?.description ?: ""
-            )
-            val leaves = all.asSequence()
-                .mapNotNull { node ->
-                    val t = treeFileTypeForName(node.displayName)
-                    if (t == TreeFileType.Other) return@mapNotNull null
-                    val abs = DocumentsContract.buildDocumentUriUsingTree(uri, node.documentId).toString()
-                    ScanCacheLeaf(relativePath = node.relativePath, absolutePath = abs, fileType = t)
-                }
-                .distinctBy { it.relativePath }
-                .toList()
-
-            val scanResult = writeRepository.upsertScannedDocumentAlbum(
-                entity = entity,
-                scanRootPath = albumPath,
-                trackSpecs = trackSpecs,
-                subtitlesByAudioPath = subtitlesByAudioPath,
-                cacheLeaves = leaves,
-                fileSizeQuery = { path -> queryTrackFileSize(context, path) },
-                stampProvider = { paths -> computePathsStamp(paths) },
-            )
-            val insertedAlbumId = scanResult.albumId
-            if (scanResult.wroteAnySubtitles) {
-                playerConnection.requestLyricsReload()
-            }
-            runCatching {
-                val persisted = readRepository.getAlbumById(insertedAlbumId)
-                val needCover = persisted?.coverPath?.trim().orEmpty().isBlank()
-                if (needCover) {
-                    val firstAudio = trackSpecs.firstOrNull()?.path
-                    if (!firstAudio.isNullOrBlank()) {
-                        val bmp = EmbeddedMediaExtractor.extractArtwork(context, firstAudio)
-                        if (bmp != null) {
-                            val saved = EmbeddedMediaExtractor.saveArtworkToCache(context, insertedAlbumId, bmp)
-                            if (!saved.isNullOrBlank()) {
-                                val updated = persisted!!.copy(coverPath = saved)
-                                writeRepository.updateAlbum(updated)
-                            }
-                        }
-                    }
-                }
-            }
-            enqueueAlbumCoverThumbWork(insertedAlbumId)
-            enqueueTrackDurationWork(insertedAlbumId)
         }
         if (asDownloadRoot) {
             pruneMissingDocumentDownloadAlbums(rootUriString = uriString, foundAlbumPaths = foundAlbumPaths)
         } else {
             pruneMissingDocumentAlbums(rootUriString = uriString, foundAlbumPaths = foundAlbumPaths)
+        }
+    }
+
+    /** C6-1（原 scanFromDocumentTree forEach 体逐字随迁）：扫描单个 SAF 目录专辑，返回其 albumPath 供 prune 对账。 */
+    private suspend fun scanSingleDocumentAlbum(
+        uri: Uri,
+        albumDir: SafDocNode,
+        asDownloadRoot: Boolean,
+        onAlbumScanned: ((String) -> Unit)?,
+    ): String {
+        val albumUri = DocumentsContract.buildDocumentUriUsingTree(uri, albumDir.documentId)
+        val albumPath = albumUri.toString()
+        val title = albumDir.displayName.ifBlank { "album" }
+        val rj = extractWorkNo(title)
+        val albumChildren = queryChildren(uri, albumDir.documentId)
+        val coverPath = pickCoverNode(albumChildren, uri, albumDir.documentId)
+
+        onAlbumScanned?.invoke(title)
+        val existing = resolveAndMergeAlbumForRj(
+            rj = rj,
+            fallbackPath = albumPath,
+            fallbackTitle = title,
+            localPath = if (asDownloadRoot) null else albumPath,
+            downloadPath = if (asDownloadRoot) albumPath else null,
+        )
+
+        val all = walkTree(uri, albumDir.documentId).filter { it.mimeType != DocumentsContract.Document.MIME_TYPE_DIR }
+        val audioFiles = all.filter { documentAudioExtensions().contains(it.displayName.substringAfterLast('.', "").lowercase()) }
+        val subtitleNodes = all.filter { documentSubtitleExtensions().contains(it.displayName.substringAfterLast('.', "").lowercase()) }
+        val subtitleCandidates = subtitleNodes.mapNotNull { node ->
+            val candidate = SubtitleMatchSupport.inferCandidate(node.relativePath, node.documentId) ?: return@mapNotNull null
+            candidate to node
+        }
+        val subtitleCandidateList = subtitleCandidates.map { it.first }
+
+        val (trackSpecs, audioRelativeBaseByPath) = buildDocumentTrackSpecs(uri, audioFiles)
+
+        val subtitlesByAudioPath: Map<String, List<SubtitleEntry>> = trackSpecs.associate { spec ->
+            val key = audioRelativeBaseByPath[spec.path].orEmpty()
+            val matched = if (key.isBlank()) null else SubtitleMatchSupport.matchBest(key, subtitleCandidateList)
+            val node = matched?.let { hit -> subtitleCandidates.firstOrNull { it.first.sourceRef == hit.sourceRef }?.second }
+            val entries = node?.let { readSubtitleFromUri(uri, it.documentId, it.displayName) }.orEmpty()
+            spec.path to entries
+        }
+
+        val entity = buildDocumentAlbumEntity(existing, title, albumPath, asDownloadRoot, rj, coverPath)
+        val leaves = all.asSequence()
+            .mapNotNull { node ->
+                val t = treeFileTypeForName(node.displayName)
+                if (t == TreeFileType.Other) return@mapNotNull null
+                val abs = DocumentsContract.buildDocumentUriUsingTree(uri, node.documentId).toString()
+                ScanCacheLeaf(relativePath = node.relativePath, absolutePath = abs, fileType = t)
+            }
+            .distinctBy { it.relativePath }
+            .toList()
+
+        val scanResult = writeRepository.upsertScannedDocumentAlbum(
+            entity = entity,
+            scanRootPath = albumPath,
+            trackSpecs = trackSpecs,
+            subtitlesByAudioPath = subtitlesByAudioPath,
+            cacheLeaves = leaves,
+            fileSizeQuery = { path -> queryTrackFileSize(context, path) },
+            stampProvider = { paths -> computePathsStamp(paths) },
+        )
+        val insertedAlbumId = scanResult.albumId
+        if (scanResult.wroteAnySubtitles) {
+            playerConnection.requestLyricsReload()
+        }
+        backfillDocumentAlbumCover(insertedAlbumId, trackSpecs)
+        enqueueAlbumCoverThumbWork(insertedAlbumId)
+        enqueueTrackDurationWork(insertedAlbumId)
+        return albumPath
+    }
+
+    private fun documentAudioExtensions(): Set<String> = setOf("mp3", "flac", "wav", "m4a", "ogg", "aac", "opus")
+
+    private fun documentSubtitleExtensions(): Set<String> = setOf("lrc", "srt", "vtt")
+
+    /** C6-1（原 scanFromDocumentTree 内联段逐字随迁）：音轨扫描规格 + 音轨路径→无扩展名相对基名映射。 */
+    private suspend fun buildDocumentTrackSpecs(
+        uri: Uri,
+        audioFiles: List<SafDocNode>,
+    ): Pair<List<ScanTrackSpec>, LinkedHashMap<String, String>> {
+        val trackSpecs = ArrayList<ScanTrackSpec>(audioFiles.size)
+        val audioRelativeBaseByPath = LinkedHashMap<String, String>(audioFiles.size)
+        audioFiles.sortedBy { it.documentId }.forEach { audio ->
+            currentCoroutineContext().ensureActive()
+            taskCoordinator.maybeUpdateBulkCurrentFile(audio.displayName)
+            val audioUri = DocumentsContract.buildDocumentUriUsingTree(uri, audio.documentId)
+            val trackTitle = audio.displayName.substringBeforeLast('.').ifBlank { "track" }
+            val group = if (audio.relativePath.contains("/")) audio.relativePath.substringBeforeLast('/').substringAfterLast('/') else ""
+            val relativeBase = audio.relativePath.substringBeforeLast('.')
+            trackSpecs.add(
+                ScanTrackSpec(
+                    title = trackTitle,
+                    path = audioUri.toString(),
+                    group = group
+                )
+            )
+            audioRelativeBaseByPath[audioUri.toString()] = relativeBase
+        }
+        return trackSpecs to audioRelativeBaseByPath
+    }
+
+    /** C6-1（原 scanFromDocumentTree 内联段逐字随迁）：合并既有元数据构造待落库实体。 */
+    private fun buildDocumentAlbumEntity(
+        existing: AlbumEntity?,
+        title: String,
+        albumPath: String,
+        asDownloadRoot: Boolean,
+        rj: String,
+        coverPath: String,
+    ): AlbumEntity {
+        return AlbumEntity(
+            id = existing?.id ?: 0L,
+            title = existing?.title?.takeIf { it.isNotBlank() && it != title } ?: title,
+            path = existing?.path?.takeIf { it.isNotBlank() } ?: albumPath,
+            localPath = if (asDownloadRoot) existing?.localPath else albumPath,
+            downloadPath = if (asDownloadRoot) albumPath else existing?.downloadPath,
+            circle = existing?.circle ?: "",
+            cv = existing?.cv ?: "",
+            tags = existing?.tags ?: "",
+            coverUrl = existing?.coverUrl ?: "",
+            coverPath = coverPath.ifBlank { existing?.coverPath.orEmpty() },
+            coverThumbPath = existing?.coverThumbPath.orEmpty(),
+            workId = existing?.workId?.takeIf { it.isNotBlank() } ?: rj,
+            rjCode = existing?.rjCode?.takeIf { it.isNotBlank() } ?: rj,
+            description = existing?.description ?: ""
+        )
+    }
+
+    /** C6-1（原 scanFromDocumentTree 内联段逐字随迁）：封面缺失时从首个音轨提取内嵌封面回填。 */
+    private suspend fun backfillDocumentAlbumCover(albumId: Long, trackSpecs: List<ScanTrackSpec>) {
+        runCatching {
+            val persisted = readRepository.getAlbumById(albumId)
+            val needCover = persisted?.coverPath?.trim().orEmpty().isBlank()
+            if (needCover) {
+                val firstAudio = trackSpecs.firstOrNull()?.path
+                if (!firstAudio.isNullOrBlank()) {
+                    val bmp = EmbeddedMediaExtractor.extractArtwork(context, firstAudio)
+                    if (bmp != null) {
+                        val saved = EmbeddedMediaExtractor.saveArtworkToCache(context, albumId, bmp)
+                        if (!saved.isNullOrBlank()) {
+                            val updated = persisted!!.copy(coverPath = saved)
+                            writeRepository.updateAlbum(updated)
+                        }
+                    }
+                }
+            }
         }
     }
 
