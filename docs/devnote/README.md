@@ -18,6 +18,7 @@
 | [2026-10-06-r3-c7-service-slice.md](2026-10-06-r3-c7-service-slice.md) | R3-C7 service 拆解：DownloadManager / SubtitleTaskService 切片脚本、扩展函数转换机制与踩坑（heredoc、lateinit 正则、字符串模板常量、继承常量限定）；附录 C8-1..C8-5 reducer 收编踩坑 26-40 | 拆分 Service/Manager 类 / 复用切片脚本 / reducer 收编时 |
 | [2026-10-07-r3-c8-close.md](2026-10-07-r3-c8-close.md) | R3-C8 收官决策：sub-state + LoadPhase 维持现状（否决，取证产物在 .dev-data 本机 HTML）、C5 降级仅第一级达标（两 pin 去去向留档）、CI 双绿确认；后续转 C6 | 了解 C8 为何止步 reducer 收编 / 重提 sub-state 时 |
 | [2026-10-07-r3-c6-structure-finish.md](2026-10-07-r3-c6-structure-finish.md) | R3-C6 结构收尾三片：scanFromDocumentTree 拆函数（walkTree 已消化）、BottomChrome 归包 main（同包隐式可见/FQN 内联引用两个移包坑）、dao 投影 DTO 归位 projection/（baseline-prof FQ 同步坑） | 移包 / 拆扫描函数 / 核对 C6 时 |
+| [2026-10-07-r3-c9-search-rewrite.md](2026-10-07-r3-c9-search-rewrite.md) | R3-C9 搜索编排重写收官：四分支策略层 + SearchQueryPort seam 测试 16 测、SearchRequestState 状态收敛、SearchScreen 2186→1517 两刀区块化（渲染/手势）、chrome 调用点不抽决策、混合行尾与手术锚点坑 | 改搜索 UI/编排 / 复用 seam 测试手法 / 手势状态机 holder 化时 |
 | [agent-collab.md](agent-collab.md) | **agent 协作总纲（唯一）**：硬规则与 git 纪律、入库可移植性、构建验证循环、重构任务循环与范围纪律、阶段门禁三件套、行为档案机制、守护修改流程 | agent 开始改代码前（重构任务亦然，§6-§9） |
 
 ## 记录约定
