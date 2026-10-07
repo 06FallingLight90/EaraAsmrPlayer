@@ -38,7 +38,14 @@
 6. **PowerShell 无 heredoc（再次踩）**：`<<'PYEOF'` 不支持——行号手术脚本必须写临时 .py 文件执行（C7 已录，本次复发）。
 7. **grep 子串误报**：删除 import 后查残留引用会命中子串（`LazyListState@384`=rememberSaveablePrefetchedLazyListState、`Offset@625`=firstVisibleItemScrollOffset、listStretchOffsetPx）——逐行人工核对后再定死码。
 
-## 4. 遗留与后续
+## 4. 门禁审查与 P1 修复（2026-10-07）
+
+子代理审查 `git diff refactor-r3/phase-B..HEAD`（105 文件）结论：**P0 无；P1 一条（已修）；P2 三条备忘**；抽查 6 点（executeSearchQuery 四分支/SearchRequestState.normalized/applyResolvedCloudSync title 覆盖/AlbumDetailReducers 守卫族/selectDlsiteLanguage 副作用顺序/requestPage 回滚）未发现语义漂移；baseline 自洽（SCC/size/import 实测 guard 全过）。
+
+- **P1（C9-4b 引入的静默语义变化，已修）**：旧版存在双层门控——`pullNextPageEnabled`（base+!isRefreshing）与 `pullNextPageGestureEnabled`（再 && !returnInProgress，翻页回落动画窗口内禁止再次拉起/触发）；holder 化时 `isPullNextPageEnabled` 只收了第一层，手势体 arm 判定/禁用分支/finish shouldTrigger 三处误用第一层 → 回落中连拉可连续翻页。**修复**：holder 补 `isPullNextPageGestureEnabled` getter（= isPullNextPageEnabled && !pullNextPageReturnInProgress），三处使用点切换；remember 工厂的 `LaunchedEffect(resultScrollKey, isPullNextPageEnabled)` 保持不动——旧版该 effect 键就用的不含门控的 `pullNextPageEnabled`（门控值变化由 scroll-lock effect 键覆盖）。
+- **P2 备忘（不修）**：①TaskProgressMeta（DownloadTaskCards.kt:556）/LibraryActionItem（LibraryScreen.kt:144）确认全仓零引用，与清账声明一致；②isAtBottom 由 rememberUpdatedState 改 getter 实时读 canScrollForward，仅一帧时序差；③import baseline 末尾多空行/EOF 无换行，琐碎。
+
+## 5. 遗留与后续
 
 - SearchViewModel.kt（49KB/~1300 行）本轮未动行数——15 var 收敛到 7 已消解"四分支交织"的维护痛点；进一步拆分（如 Screen 侧 rememberSaveable 族下沉）无计划需求，留待后续真实痛点驱动。
 - 实机走查搜索四态（列表/网格/已购/已收录）归阶段门禁，需用户配合切前台到播放器。

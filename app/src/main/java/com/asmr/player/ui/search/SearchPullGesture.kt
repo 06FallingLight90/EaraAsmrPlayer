@@ -119,6 +119,9 @@ internal class SearchPullGestureState(
     // —— 派生读侧（等价于原 rememberUpdatedState + 派生 val）——
     val isPullNextPageEnabled: Boolean
         get() = pullNextPageEnabledBase && !pullToRefreshState.isRefreshing
+    // 原版 pullNextPageGestureEnabled：翻页回落动画窗口内禁止再次拉起/触发（门禁审查 P1 补回）。
+    val isPullNextPageGestureEnabled: Boolean
+        get() = isPullNextPageEnabled && !pullNextPageReturnInProgress
     val isAtBottom: Boolean
         get() = if (currentViewMode == 0) !listState.canScrollForward else !gridState.canScrollForward
     val pullNextPageArmed: Boolean
@@ -193,7 +196,7 @@ internal class SearchPullGestureState(
         val hasPullOffset = pullNextPageDragPx > 0f
         val shouldTrigger =
             hasPullOffset &&
-            isPullNextPageEnabled &&
+            isPullNextPageGestureEnabled &&
                 pullNextPageDragPx >= pullNextPageTriggerDistancePx
         pullNextPageGestureActive = false
         pullNextPageRequestAfterReturn = shouldTrigger
@@ -234,7 +237,7 @@ internal class SearchPullGestureState(
                                         dragFromDown.y.absoluteValue >=
                                         dragFromDown.x.absoluteValue * SearchPullNextPageVerticalBias &&
                                         isAtBottom &&
-                                        isPullNextPageEnabled
+                                        isPullNextPageGestureEnabled
                                 if (pullNextGestureActive) {
                                     pullNextPageGestureActive = true
                                     reportScrollLock(true)
@@ -245,7 +248,7 @@ internal class SearchPullGestureState(
                         when {
                             horizontalGestureActive -> Unit
 
-                            !isPullNextPageEnabled -> {
+                            !isPullNextPageGestureEnabled -> {
                                 if (pullNextPageDragPx != 0f) {
                                     pullNextPageDragPx = 0f
                                 }
