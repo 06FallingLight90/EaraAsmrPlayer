@@ -68,3 +68,8 @@ C7 service 层 God 拆解：`data/download/DownloadManager`（C7-1，1184→516+
 34. **target resolve 段的 `targetChanged` 双别名在参数化时收拢**：原内联 `val targetChanged = shouldReload...; val mustReloadAsmrOne = targetChanged` 两个 val 指同一值，reducer 化时合并为单参数 `mustReloadAsmrOne`；`keepAsmrOneContentDuringTargetSwitch` 推导留在调用点（因 token++/attemptedRj.clear 副作用以它为门控）。注意一处"看似不一致但是原状"：`displayAlbum` 重合并的 asmrOneWorkId 参数只感知 mustReload（为 null）不感知 keep——keep 时 workId 保留在 model 字段但合并走 null，表驱动测试按原语义钉死，勿"顺手统一"。
 35. **import baseline 一次片内可双向变动**：域 F 把 VM 局部函数 `mergePreferNonBlank` 下沉到 Reducers.kt 后，VM 的 `DlsiteRecommendedWork` import 失效删除 → guard 的失效条目检测会报 baseline 死条目须同步移除；同时 Reducers.kt 新增同型条目（坑 32 先例）。净零变动，但两处都必须同片完成，漏掉任一侧 guard 即失败。
 36. **`python tools/guard-selftest` 不是可执行入口**：guard-selftest/ 是反例夹具目录（无 `__main__`），规则自检已内置 ci_guard.py（运行输出"架构守护通过（含规则自检）"即覆盖）；AGENTS.md 该行已修正。夹具组按规则名组织（如 ui-to-data-remote/），改规则时在那里加反例。
+
+## C8-4 增量（域 H 主体 reducer 收编，+4 测）
+
+37. **闭包拆参数化的首读守卫等价改写**：原 `finishWithResolvedAsmrOneTree` 闭包首行 `val updated = ... ?: return true` 承担"非 Success 提前返回且不触发 token 副作用"语义，reducer 化后 `updated` 不再被 copy 使用——改写为 `if (_uiState.value !is AlbumDetailUiState.Success) return true`（同为提前 return true、跳过 token 判定，语义逐位等价，且消未使用变量警告）；直接赋值 `_uiState.value = ...copy(...)` 换 `updateSuccessModel { reducer }` 后，二次读状态与原快照无挂起点间隔，等价。
+38. **失效条目检测只覆盖"曾在 baseline 的键"**：域 H 拆闭包使 VM 的 `mergeAsmrOneHeaderAlbum` import 失效删除，但它是 ui→ui 同 feature 方向本就不在 baseline——无需清理也不会报死条目；而 Reducers.kt 新增 `WorkDetailsResponse` import 则必须 +1 条 baseline（ui-to-data-remote 同型第三条，坑 32/35 同族）。即：**跨 feature 方向的增删都过 baseline，同 feature 方向的增删完全不经 baseline**，判断依据是方向而非文件新旧。
