@@ -73,3 +73,8 @@ C7 service 层 God 拆解：`data/download/DownloadManager`（C7-1，1184→516+
 
 37. **闭包拆参数化的首读守卫等价改写**：原 `finishWithResolvedAsmrOneTree` 闭包首行 `val updated = ... ?: return true` 承担"非 Success 提前返回且不触发 token 副作用"语义，reducer 化后 `updated` 不再被 copy 使用——改写为 `if (_uiState.value !is AlbumDetailUiState.Success) return true`（同为提前 return true、跳过 token 判定，语义逐位等价，且消未使用变量警告）；直接赋值 `_uiState.value = ...copy(...)` 换 `updateSuccessModel { reducer }` 后，二次读状态与原快照无挂起点间隔，等价。
 38. **失效条目检测只覆盖"曾在 baseline 的键"**：域 H 拆闭包使 VM 的 `mergeAsmrOneHeaderAlbum` import 失效删除，但它是 ui→ui 同 feature 方向本就不在 baseline——无需清理也不会报死条目；而 Reducers.kt 新增 `WorkDetailsResponse` import 则必须 +1 条 baseline（ui-to-data-remote 同型第三条，坑 32/35 同族）。即：**跨 feature 方向的增删都过 baseline，同 feature 方向的增删完全不经 baseline**，判断依据是方向而非文件新旧。
+
+## C8-5 增量（域 D 主体 + K 整态替换收编，+5 测）
+
+39. **域 D/K 的赋值点不是 Success.copy 而是整态替换**：loadAlbum 初始种入/主装载是构造新 model 整体换入 Success，Error/Removed 是换态——Model 级 `(Model, …) -> Model?` 形态不适用，收编切到 **UiState 级 `(AlbumDetailUiState, …) -> AlbumDetailUiState?`**；`createInitialAlbumDetailModel` 随之下沉 Reducers.kt 顶层（原 VM private，逐字随迁）。C8-1..4 的"全部 30 处赋值点收编"至此完成，但 **manualSetRjAndSync 的 `_uiState.value = Loading` 是同类整态换态而不在 plan 30 点清单**——按范围纪律未动，留作 sub-state/LoadPhase 重写时的同类收编对象。
+40. **整态替换 reducer 吸收局部合并逻辑后，调用点残留 val 必须同步删**：`applyAlbumDetailLoaded` 吸收 withPreservedListenTogetherListenerCount 合并与相等守卫后，VM 调用点的 currentModel/loadedModel 两个局部 val 变死代码——未使用变量仅是 warning 不挡构建，容易漏删；切换赋值点后应立即重读调用点上下文而非只看编译结果。
