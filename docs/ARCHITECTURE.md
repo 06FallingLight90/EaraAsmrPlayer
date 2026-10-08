@@ -1,7 +1,8 @@
-# ARCHITECTURE — EaraAsmrPlayer 架构说明
+# ARCHITECTURE — Eara Player（原 EaraAsmrPlayer）架构说明
 
 > 范围：`refactor/architecture-cleanup` 分支（v1.2.3 之后：死代码清理、去版本号重命名、阶段 1–3 结构重构、第二轮重构 R2 阶段 A/B，见第 7 节偿还状态）。
 > 文中包名、类名、行数均于 2026-10-02 直接从代码核实（readlines 口径，含文件末尾空行）；行数为约数。
+> **二开（2026-10-08 起）**：`redevelop` 分支以本分支头部为基展开「Eara Player」二次开发，需求基线见 [REQUIREMENTS.md](REQUIREMENTS.md)，目标架构、ADR 与风险登记见**第 8 节**；第 1–7 节为重构后基线现状，阶段一共存期仍有效。
 
 ## 1. 技术栈与模块
 
@@ -182,3 +183,80 @@ UI（ui/player/PlayerViewModel.kt 等）
 - ~~沿用：`LibraryViewModel.walkTree` / `scanFromDocumentTree` 拆函数、Chrome 概念归包（main 与 ui/nav）、dao 包投影 DTO 归位~~（R3-C6 已全部偿还）。
 
 快速读懂本工程的建议顺序：`MainActivity` → `main/MainContainer`（导航骨架）→ `ui/library`（库页与详情家族）→ `playback/PlayerConnection` → `service/PlaybackService`（播放落地）。
+
+## 8. 二开目标架构（Eara Player，2026-10-08 设计）
+
+> 依据 [REQUIREMENTS.md](REQUIREMENTS.md) v1.1（已冻结）+ 2026-10-08 代码取证（行号为当日实测）。时序遵循需求 §2 三阶段绞杀者：先建新（阶段一）→ 切入口（阶段二）→ 删旧码（阶段三）。
+
+### 8.1 技术栈声明
+
+沿用现有栈零新依赖（Kotlin 1.9.22 / Compose / Media3 1.8.0 / Hilt / Room 2.6.1 / DataStore / Retrofit+OkHttp / WorkManager / Paging 3）。元数据解析用平台 `MediaMetadataRetriever`（minSdk 24，实机 Android 14 覆盖主流格式），经 seam 隔离可后续换 media3-extractor 而不动调用方。
+
+### 8.2 信息架构与路由映射
+
+现状 BottomChrome 8 页签（本地库/在线搜索/热门收听/收藏/列表/分组/ASMR看板/设置，`main/BottomChrome.kt:309-318`）→ 目标 5 页签：
+
+| 目标页签 | 承载 | 改造方式 |
+|---|---|---|
+| 库 | 现 LibraryScreen + 新「全部歌曲」入口 | 保留，加入口 |
+| 歌单 | 现 playlists 页 | 改名/文案（列表→歌单） |
+| 合集 | 现 groups 页 | 改造为默认三类 + 可扩展（见 8.5） |
+| 已购 | **新** `ui/purchased/` | 从搜索过滤项独立成页（见 8.3） |
+| 设置 | 现 SettingsScreen | 删 asmr.one/热门/搜索相关区块 |
+
+删除的页签路由：搜索、热门收听、收藏、ASMR看板（日历）。Routes 收口在 `ui/nav/AppNavigator.kt`。
+
+### 8.3 新增/改造包规划（新文件一律落对应目录，>1500 行 CI 拦截）
+
+- `data/local/metadata/`：`AudioMetadataReader`（接口）+ `MediaMetadataRetrieverReader`（实现，Hilt 绑定入 di/）——读 artist/album/title/内嵌封面；调用点唯一：扫描入库链（`LibraryScanWriteSupport`）。
+- `ui/library/allsongs/`：`AllSongsScreen` + `AllSongsViewModel`——全库单曲平铺（文件名展示 + SQL LIKE 过滤 + 排序 + 批量加入歌单/合集），数据出口 `LibraryReadRepository` 新增 PagingSource 查询（tracks join albums）。
+- `ui/purchased/`：`PurchasedScreen` + `PurchasedViewModel`——已购曲库浏览 + 登录入口 + 下载管理入口；复用 `DlsitePlayLibraryClient` → `SearchRepository.searchPurchased`（阶段二原样搬线，阶段三随搜索编排删除把该能力收进 purchased 域内）。
+- `data/work/`：`LibraryScanWorker`（WorkManager）——把 `LibraryScanStateHolder.scanAllRoots` 的扫描核心下沉为 data 层协调器后由 Worker 调度，holder 转薄触发壳；满足万级增量后台扫描（NFR-01）。
+- 导航改造点：`main/BottomChrome.kt`、`main/MainNavGraph.kt`、`main/MainRouteContents.kt`、`ui/nav/AppNavigator.kt`。
+
+### 8.4 数据模型增量（Room 31 → 32，仅 ADD COLUMN，零破坏迁移）
+
+| 表 | 新列 | 用途 |
+|---|---|---|
+| tracks | `artist`（TEXT NULL） | 本地音乐艺术家（US-01，详情页展示） |
+| tracks | `albumTag`（TEXT NULL） | ID3 专辑名（≠目录专辑，仅详情页展示） |
+| albums | `source`（TEXT NULL） | 来源归类：`dlsite_download` / `local_scan`，合集三类自动归类依据（US-03） |
+
+- 迁移仅 `ALTER TABLE ADD COLUMN`，旧版本覆盖安装安全（NFR-03）；schemas/32.json 导出入库。
+- 现有列利用：来源亦可由 `downloadPath`/`path` 推断，`source` 列为显式化冗余，扫描/下载入库时回填。
+- displayTitle 已有标题/文件名双轨，标签缺失回退文件名（US-02）零改动。
+
+### 8.5 功能复用映射表（新增需求 → 现有机制，禁止重写）
+
+| 需求 | 现有机制（证据） | 增量 |
+|---|---|---|
+| 歌词（.lrc + 内嵌） | `data/lyrics/LyricsLoader` 优先级链（手动导入 > 内嵌标签 > SubtitleEntity > 本地补导入 > 远端），扫描管线已做 lrc/srt/vtt 同名匹配落库（LibraryScanStateHolder.kt:617） | 无需新模块，确认本地音乐 track 走通该链 |
+| 封面（内嵌优先→文件夹图） | 扫描内嵌图回填封面（LibraryScanStateHolder.kt:673）+ coverPath/coverThumbPath | MetadataReader 补内嵌图源 |
+| 歌单/合集存储 | playlists（PlaylistEntity+Item）与 groups（AlbumGroupEntity+Item）均以 mediaId 关联 | 语义更名；不建新表 |
+| 合集默认三类 | 新建 AlbumGroup 三条 seed + 按 albums.source 自动归类 | 归类规则 + seed 逻辑 |
+| 批量加入 | 现有多选/选择队列组件（删除/标签事务族同源） | 复用，扩目标为歌单/合集 |
+| 播放/音效/切片/进度记忆 | PlayerConnection/PlaybackService/track_playback_progress | 零改动（播放链无 asmr.one 直接引用） |
+| 字幕/翻译 LLM | subtitle/ 包 + 设置页 LLM 区块 | 零改动 |
+
+### 8.6 ADR 简表
+
+| # | 决策 | 理由与代价 |
+|---|---|---|
+| ADR-1 | 三阶段绞杀者时序（先建新→切入口→删旧码） | 需求 §2 冻结；任何时点可构建可日用；代价是共存期双代码路径，阶段三必须收干净 |
+| ADR-2 | 零新依赖；元数据经 `AudioMetadataReader` seam，首发 MediaMetadataRetriever | 用户重构原则；seam 代价一个接口，换 extractor 不动调用方 |
+| ADR-3 | DLsite 作品与本地音乐共用 Album/Track 模型，仅加 3 列（Room 31→32） | 避免双模型分裂与播放链分叉；代价 albums.source 为显式冗余 |
+| ADR-4 | 歌单/合集复用 playlists/groups 表，合集默认三类由 seed + source 归类 | 零迁移；代价 groups 语义由「分组」转「合集」，文案与归类规则需钉测试 |
+| ADR-5 | 已购独立成 `ui/purchased/`，阶段二搬 SearchRepository.searchPurchased 线，阶段三 SearchQueryStrategy/SearchScreen 整体删除 | 已购为唯一内容入口必须独立存活；搜索编排无存活价值 |
+| ADR-6 | 扫描核心从 LibraryScanStateHolder 下沉 data 层 + WorkManager 调度 | 万级曲库后台增量（NFR-01）；holder 已 1158 行，顺带减负 |
+| ADR-7 | 包名 com.asmr.player 不动，仅改 launcher 显示名与文案 | MediaSession 组件声明/覆盖安装/数据迁移零风险（需求 A1） |
+
+### 8.7 风险登记表
+
+| # | 风险 | 缓解措施 | 触发信号 |
+|---|---|---|---|
+| R1 | asmr.one 删除波及超预期：AlbumDetailViewModel 三路 ensure（L1112 起）、DlsiteTabs/Header/Dialogs 的 ONE 页签耦合、Reducers 状态重置（albumdetail/AlbumDetailReducers.kt:32-39）联动 | 阶段三才删、按依赖族叶子向上、每族全量测试 + ci_guard；先删 UI 页签再收 VM 状态机 | 单族删除引发跨族编译断链 |
+| R2 | 万级曲库全量 walk 性能（SAF DocumentFile 遍历慢，现无 Worker） | ADR-6 下沉 + WorkManager 后台 + 现有 path diff 增量写；批事务入库 | 全量扫描 >10min 或扫描期 UI 掉帧 |
+| R3 | 标签解析覆盖差异（minSdk 24 上 ogg/opus/flac 的 MediaMetadataRetriever 字段不全） | US-02 文件名兜底已内置；AudioMetadataReader seam 可换实现 | 格式样例实测字段缺失率高 |
+| R4 | 合集来源归类误判（albums.source 回填遗漏导致新音频不进三类） | 扫描/下载入库单点回填 + 默认「其它音频」兜底归类 + 归类规则钉测试 | 实机走查发现未归类专辑 |
+| R5 | 覆盖安装兼容（Room 迁移、被删统计表回写点移除） | 8.4 仅加列；统计表保留不写入（需求 A2）；覆盖安装实测列入门禁 | 覆盖安装启动崩溃或迁移异常 |
+| R6 | 歌单/合集改名引发隐性行为回归（playlists/groups 相关行为档案未建） | 改造前先补行为档案（仿 docs/behavior-notes/ 机制）+ 钉测试先行 | 改名后批量添加/排序行为差异 |
