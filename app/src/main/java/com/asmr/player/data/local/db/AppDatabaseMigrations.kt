@@ -579,6 +579,14 @@ object AppDatabaseMigrations {
         }
     }
 
+    val MIGRATION_31_32: Migration = object : Migration(31, 32) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE tracks ADD COLUMN `artist` TEXT")
+            db.execSQL("ALTER TABLE tracks ADD COLUMN `albumTag` TEXT")
+            db.execSQL("ALTER TABLE albums ADD COLUMN `source` TEXT")
+        }
+    }
+
     private fun createItemChildTable(
         db: SupportSQLiteDatabase,
         table: String,

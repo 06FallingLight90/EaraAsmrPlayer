@@ -2,7 +2,10 @@ package com.asmr.player.data.local.db
 
 import android.app.Application
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import com.asmr.player.data.local.db.entities.AlbumEntity
+import com.asmr.player.data.local.db.entities.TrackEntity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -388,5 +391,71 @@ class AppDatabaseMigrationsTest {
         File(dbFile.absolutePath).delete()
         File(dbFile.absolutePath + "-wal").delete()
         File(dbFile.absolutePath + "-shm").delete()
+    }
+
+    @Test
+    fun migration31To32_addsNullableArtistAlbumTagAndSourceColumns() {
+        val context = RuntimeEnvironment.getApplication()
+        val dbName = "migration-test-${System.nanoTime()}.db"
+        val dbFile = context.getDatabasePath(dbName)
+        dbFile.parentFile?.mkdirs()
+        if (dbFile.exists()) dbFile.delete()
+
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            androidx.sqlite.db.SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(dbName)
+                .callback(object : androidx.sqlite.db.SupportSQLiteOpenHelper.Callback(31) {
+                    override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                        db.execSQL(
+                            "CREATE TABLE tracks (" +
+                                "`id` INTEGER NOT NULL PRIMARY KEY, `title` TEXT NOT NULL)"
+                        )
+                        db.execSQL(
+                            "CREATE TABLE albums (" +
+                                "`id` INTEGER NOT NULL PRIMARY KEY, `title` TEXT NOT NULL)"
+                        )
+                        db.execSQL("INSERT INTO tracks(id, title) VALUES(7, '晚安音声')")
+                        db.execSQL("INSERT INTO albums(id, title) VALUES(1, '作品集')")
+                    }
+
+                    override fun onUpgrade(
+                        db: androidx.sqlite.db.SupportSQLiteDatabase,
+                        oldVersion: Int,
+                        newVersion: Int
+                    ) = Unit
+                })
+                .build()
+        )
+        val db = helper.writableDatabase
+
+        AppDatabaseMigrations.MIGRATION_31_32.migrate(db)
+
+        db.query("SELECT artist, albumTag FROM tracks WHERE id = 7").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertTrue(cursor.isNull(0))
+            assertTrue(cursor.isNull(1))
+        }
+        db.query("SELECT source FROM albums WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertTrue(cursor.isNull(0))
+        }
+
+        db.close()
+        helper.close()
+        File(dbFile.absolutePath).delete()
+        File(dbFile.absolutePath + "-wal").delete()
+        File(dbFile.absolutePath + "-shm").delete()
+    }
+
+    @Test
+    fun entityDefaults_newTrackAndAlbumColumnsDefaultToNull() {
+        val track = TrackEntity(albumId = 1L, title = "晚安音声", path = "/tmp/a.mp3")
+        assertNull(track.artist)
+        assertNull(track.albumTag)
+
+        val album = AlbumEntity(title = "作品集", path = "/tmp/album")
+        assertNull(album.source)
+        assertEquals("dlsite_download", AlbumEntity.SOURCE_DLSITE_DOWNLOAD)
+        assertEquals("local_scan", AlbumEntity.SOURCE_LOCAL_SCAN)
     }
 }

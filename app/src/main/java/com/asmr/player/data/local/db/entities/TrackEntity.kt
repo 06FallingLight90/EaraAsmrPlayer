@@ -15,6 +15,8 @@ data class TrackEntity(
     val displayTitle: String = "",
     val path: String,
     val duration: Double = 0.0,
-    val group: String = ""
+    val group: String = "",
+    val artist: String? = null,
+    val albumTag: String? = null
 )
 

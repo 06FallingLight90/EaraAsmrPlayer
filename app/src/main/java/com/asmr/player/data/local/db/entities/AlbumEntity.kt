@@ -22,5 +22,11 @@ data class AlbumEntity(
     val description: String = "",
     val audioTrackCount: Int = 0,
     val audioTotalDuration: Double = 0.0,
-    val audioTotalSizeBytes: Long = 0L
-)
+    val audioTotalSizeBytes: Long = 0L,
+    val source: String? = null
+) {
+    companion object {
+        const val SOURCE_DLSITE_DOWNLOAD = "dlsite_download"
+        const val SOURCE_LOCAL_SCAN = "local_scan"
+    }
+}
