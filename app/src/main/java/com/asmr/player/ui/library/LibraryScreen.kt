@@ -9,10 +9,8 @@ import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -92,8 +90,6 @@ import com.asmr.player.ui.library.LibraryUiState
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
@@ -110,7 +106,6 @@ import com.asmr.player.ui.common.core.SearchBlockedKeywordsViewModel
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material.icons.automirrored.rounded.Label
 import androidx.compose.material.icons.rounded.Label
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -138,48 +133,6 @@ private const val LibraryTrackPagingHintDistance = 10
 private fun Album.withUserTags(userTags: List<String>): Album {
     if (userTags.isEmpty()) return this
     return copy(tags = (tags + userTags).distinct())
-}
-
-@Composable
-private fun LibraryActionItem(
-    title: String,
-    icon: ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    subtitle: String? = null
-) {
-    val colorScheme = AsmrTheme.colorScheme
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(colorScheme.surface.copy(alpha = 0.5f))
-            .clickable(onClick = onClick)
-            .padding(16.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = colorScheme.textPrimary
-                )
-                if (subtitle != null) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colorScheme.textSecondary
-                    )
-                }
-            }
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)

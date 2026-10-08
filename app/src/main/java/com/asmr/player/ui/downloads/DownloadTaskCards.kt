@@ -551,30 +551,3 @@ private fun formatSpeed(bytesPerSec: Long): String {
         else -> "$bytesPerSec B/s"
     }
 }
-
-@Composable
-internal fun TaskProgressMeta(
-    progressFraction: Float?,
-    hasUnknownTotalRunning: Boolean,
-    state: DownloadItemState,
-    emphasizeProgress: Boolean = false
-) {
-    val colors = AsmrTheme.colorScheme
-    val text = when {
-        progressFraction != null -> "${(progressFraction * 100).toInt()}%"
-        hasUnknownTotalRunning -> "下载中"
-        else -> downloadItemStateLabel(state)
-    }
-    val color = when (state) {
-        DownloadItemState.FAILED -> colors.danger
-        DownloadItemState.RUNNING, DownloadItemState.ENQUEUED, DownloadItemState.SUCCEEDED -> if (emphasizeProgress) colors.textSecondary else colors.primary
-        else -> colors.textSecondary
-    }
-
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-        color = color,
-        maxLines = 1
-    )
-}
