@@ -177,7 +177,7 @@ UI（ui/player/PlayerViewModel.kt 等）
 - 已定（R3 用户决策）：`ensureAlbumCoverSaved` 双实现**保留现状、仅记录**（LibraryViewModel 旧版仅网络/2048/ARGB_8888，repo 版支持本地来源/1280/RGB_565——统一属行为变更，见 r2-phase-C-review.md）。
 - R3-B 开工前评估结论（详见 R3 计划 §3.0）：`ui.player↔ui.player.nowplaying` 为**同 feature 合法子包、非违规**，不做；环 `ui.library↔albumdetail`（同 feature 账面环）与 `data.download↔data.remote.download`（需抽共享下载内核）**缓做**，留 backlog。
 - R3-C8 决策（2026-10-07）：详情页分区 sub-state + LoadPhase 重写**维持现状不实施**（跨域事件/跨域身份键/头部共享容器三类内聚是本质的，证据见 devnote 2026-10-07-r3-c8-close.md）；C8 收官于 reducer 收编形态。
-- 待清死码（R3 门禁审查确认零引用）：`DownloadTaskCards.kt` TaskProgressMeta、`LibraryScreen.kt` LibraryActionItem。
+- ~~待清死码（R3 门禁审查确认零引用）：`DownloadTaskCards.kt` TaskProgressMeta、`LibraryScreen.kt` LibraryActionItem~~（2026-10-08 已删：LibraryScreen -47 行含 5 个连带孤儿 import、DownloadTaskCards -27 行）。
 - ~~沿用：`LibraryViewModel.walkTree` / `scanFromDocumentTree` 拆函数、Chrome 概念归包（main 与 ui/nav）、dao 包投影 DTO 归位~~（R3-C6 已全部偿还）。
 
 快速读懂本工程的建议顺序：`MainActivity` → `main/MainContainer`（导航骨架）→ `ui/library`（库页与详情家族）→ `playback/PlayerConnection` → `service/PlaybackService`（播放落地）。
