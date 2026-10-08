@@ -21,7 +21,7 @@
 | [2026-10-07-r3-c9-search-rewrite.md](2026-10-07-r3-c9-search-rewrite.md) | R3-C9 搜索编排重写收官：四分支策略层 + SearchQueryPort seam 测试 16 测、SearchRequestState 状态收敛、SearchScreen 2186→1517 两刀区块化（渲染/手势）、chrome 调用点不抽决策、混合行尾与手术锚点坑 | 改搜索 UI/编排 / 复用 seam 测试手法 / 手势状态机 holder 化时 |
 | [2026-10-07-r3-phase-c-finish.md](2026-10-07-r3-phase-c-finish.md) | R3 阶段 C 闭环：CI 双绿确认（tag phase-C @ cba2a04）、ARCHITECTURE.md 同步清单（家族表 23 文件回填/§5 搜索编排/§6 基线 1010/§7.2 R3 记录/§7.4 清账）、阶段 C 终态快照表；Measure-Object -Line 跳空行坑 | 核对 R3 收官数字 / 下轮文档同步时 |
 | [2026-10-07-r3-phase-c-gate.md](../iteration/r3-phase-c-gate-walkthrough.md) | R3 阶段 C 门禁实机走查报告：搜索四态/手势全链（P1 修复实机验证）、C8 详情页、C1/C7 累积面 smoke、crash 零记录；环境限制（dlsite 不可达）下的结论解读 | 复核阶段 C 门禁 / 下轮实机走查方法参照时 |
-| [agent-collab.md](agent-collab.md) | **agent 协作总纲（唯一）**：硬规则与 git 纪律、入库可移植性、构建验证循环、重构任务循环与范围纪律、阶段门禁三件套、行为档案机制、守护修改流程 | agent 开始改代码前（重构任务亦然，§6-§9） |
+| [agent-collab.md](../../../agent-collab.md) | **agent 协作总纲（唯一）**：硬规则与 git 纪律、入库可移植性、构建验证循环、重构任务循环与范围纪律、阶段门禁三件套、行为档案机制、守护修改流程 | agent 开始改代码前（重构任务亦然，§6-§9） |
 
 ## 记录约定
 

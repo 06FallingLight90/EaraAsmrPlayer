@@ -9,7 +9,7 @@
 
 ## 2. 文档同步清单（本次提交）
 
-[docs/ARCHITECTURE.md](../ARCHITECTURE.md)：
+[docs/ARCHITECTURE.md](../../../ARCHITECTURE.md)：
 
 - **§3 AlbumDetail 家族职责表**：14 文件/14 829 行 → **23 文件/约 13 782 行**（补 Reducers/DialogHosts/HeroScrollConnection/Directory 拆族 7 文件；逐文件行数按磁盘实测回填——VM 2255、Screen 1102、DlsiteTabs 616 等）。⚠️ 实测工具坑：PowerShell `Measure-Object -Line` 跳过空行（2088 vs 物理行 2255），行数回填必须用 `(Get-Content file).Count`。
 - **§2** PlaybackService 图注 1465→约 765 行 + 5 同包主题文件。

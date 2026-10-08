@@ -1,0 +1,636 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2420" height="4876" viewBox="0 0 2420 4876" font-family="Segoe UI, Microsoft YaHei, sans-serif">
+<rect width="2420" height="4876" fill="#f6f7f9"/>
+<rect x="0" y="0" width="2420" height="64" fill="#1f2937"/>
+<text x="24" y="30" font-size="20" font-weight="700" fill="#fff">EaraAsmrPlayer 重构前后目录结构对照图（左：重构前 → 右：重构后）</text>
+<text x="24" y="50" font-size="12.5" fill="#9ca3af">main @ b76ebab（2026-09-27 release/v1.2.3）⇆ refactor/architecture-cleanup @ HEAD（R2+R3 两轮 · 192 提交）· 范围 app/src/main/java · 矢量图可无损放大</text>
+<rect x="24" y="74" width="150" height="30" rx="6" fill="#fff" stroke="#e3e6ea"/>
+<text x="34" y="94" font-size="12.5" fill="#6a737d">重构前文件</text>
+<text x="164" y="95" font-size="15" font-weight="700" fill="#374151" text-anchor="end">419</text>
+<rect x="182" y="74" width="150" height="30" rx="6" fill="#fff" stroke="#e3e6ea"/>
+<text x="192" y="94" font-size="12.5" fill="#6a737d">重构后文件</text>
+<text x="322" y="95" font-size="15" font-weight="700" fill="#374151" text-anchor="end">537</text>
+<rect x="340" y="74" width="150" height="30" rx="6" fill="#fff" stroke="#e3e6ea"/>
+<text x="350" y="94" font-size="12.5" fill="#6a737d">修改</text>
+<text x="480" y="95" font-size="15" font-weight="700" fill="#d48806" text-anchor="end">126</text>
+<rect x="498" y="74" width="150" height="30" rx="6" fill="#fff" stroke="#e3e6ea"/>
+<text x="508" y="94" font-size="12.5" fill="#6a737d">新增</text>
+<text x="638" y="95" font-size="15" font-weight="700" fill="#1a7f37" text-anchor="end">125</text>
+<rect x="656" y="74" width="150" height="30" rx="6" fill="#fff" stroke="#e3e6ea"/>
+<text x="666" y="94" font-size="12.5" fill="#6a737d">移动改名</text>
+<text x="796" y="95" font-size="15" font-weight="700" fill="#0969da" text-anchor="end">89</text>
+<rect x="814" y="74" width="150" height="30" rx="6" fill="#fff" stroke="#e3e6ea"/>
+<text x="824" y="94" font-size="12.5" fill="#6a737d">删除</text>
+<text x="954" y="95" font-size="15" font-weight="700" fill="#cf222e" text-anchor="end">7</text>
+<circle cx="30" cy="122" r="5" fill="#8b949e"/>
+<text x="40" y="126" font-size="12" fill="#6a737d">未变</text>
+<circle cx="202" cy="122" r="5" fill="#d48806"/>
+<text x="212" y="126" font-size="12" fill="#6a737d">修改（同路径）</text>
+<circle cx="374" cy="122" r="5" fill="#1a7f37"/>
+<text x="384" y="126" font-size="12" fill="#6a737d">新增（多为拆分产物）</text>
+<circle cx="546" cy="122" r="5" fill="#cf222e"/>
+<text x="556" y="126" font-size="12" fill="#6a737d">删除/被取代</text>
+<circle cx="718" cy="122" r="5" fill="#0969da"/>
+<text x="728" y="126" font-size="12" fill="#6a737d">移动改名（同源）</text>
+<text x="892" y="126" font-size="12" fill="#6a737d">· 行数 = 物理行实测 · 行格式：文件名 · N 行 · 功能标注 ·（移动来源/去向）</text>
+<rect x="0" y="198" width="2420" height="42" fill="#eef2f7"/>
+<text x="36" y="225" font-size="15" font-weight="700" fill="#374151">重构前 · main（419 文件）</text>
+<text x="1300" y="225" font-size="15" font-weight="700" fill="#374151">重构后 · 当前分支（537 文件）</text>
+<text x="1160" y="225" font-size="12" fill="#9aa4ad" text-anchor="middle">⟵ 同源映射 ⟶</text>
+<rect x="0" y="240" width="2420" height="366" fill="#ffffff" stroke="#e3e6ea"/>
+<text x="36" y="265" font-size="14.5" font-weight="700" fill="#111827">① MainContainer 路由闭包重写</text>
+<text x="556" y="265" font-size="12" fill="#6a737d">2360 行单文件 → 794 行外壳 + main 包路由族（R2-C1）</text>
+<circle cx="42" cy="287" r="4.5" fill="#d48806"/>
+<text x="54" y="291" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">MainContainer.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 3344 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  主界面组合根与骨架</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="287" r="4.5" fill="#d48806"/>
+<text x="1318" y="291" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">MainContainer.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 794 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  主界面组合根与骨架</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="311" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="315" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AutomaticUpdateEffects.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 101 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  自动更新副作用编排</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="335" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="339" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">MainContainerRuntime.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 440 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  主容器运行时状态与副作用</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="359" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="363" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">MainContainerSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 620 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  主容器辅助组件族</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="383" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="387" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">MainNavGraph.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 191 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  主导航图定义</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="407" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="411" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">MainNavigationRuntime.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 439 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  导航运行时副作用处理</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="431" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="435" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">MainOverlayUi.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 722 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  主界面悬浮层组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="455" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="459" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">MainPrimaryPagerUi.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 577 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  主分页 Pager 组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="479" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="483" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">MainRouteContents.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 329 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  主路由内容分发组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="503" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="507" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">MainSearchBridge.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 140 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  搜索条件回传桥接</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="527" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="531" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">MainSystemUiEffects.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 70 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  系统栏与系统 UI 副作用</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="551" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="555" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">MainTopBarUi.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 565 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  主界面顶栏组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="575" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="579" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">NowPlayingPresentation.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 116 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  播放页呈现状态簇持有者</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<rect x="0" y="606" width="2420" height="702" fill="#ffffff" stroke="#e3e6ea"/>
+<text x="36" y="631" font-size="14.5" font-weight="700" fill="#111827">② LibraryViewModel 状态持有者化（C1）</text>
+<text x="556" y="631" font-size="12" fill="#6a737d">2500 行 → 463 行外壳 + 5 个 StateHolder + TaskCoordinator</text>
+<circle cx="42" cy="653" r="4.5" fill="#cf222e"/>
+<text x="54" y="657" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">libraryviewmodel.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 3251 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库页状态与编排</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="653" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="657" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryViewModel.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 463 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库页状态与编排</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="677" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="681" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailDialogHosts.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 258 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页对话框宿主集合</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="701" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="705" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailHeroScrollConnection.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 192 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页 Hero 滚动联动</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="725" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="729" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryChrome.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 212 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库页顶栏与操作组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="749" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="753" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryCloudSyncStateHolder.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 435 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库云同步状态持有者</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="773" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="777" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryDeleteStateHolder.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 298 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库删除状态持有者</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="797" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="801" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryFilterStateHolder.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 165 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库筛选状态持有者</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="821" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="825" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryScanStateHolder.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 1158 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库扫描状态持有者</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="845" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="849" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryTagStateHolder.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 83 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库标签状态持有者</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="869" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="873" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryTaskCoordinator.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 119 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库批量任务协调持有者</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="893" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="897" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryTrackListSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 268 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库曲目列表项辅助组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="917" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="921" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailHeader.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 771 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页头部信息组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="941" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="945" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailHero.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 732 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页 Hero 主视觉区</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="965" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="969" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailLandscapeArtwork.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 971 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页横屏封面布局</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="989" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="993" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailReducers.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 497 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页纯状态归约函数</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1013" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1017" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailScreenSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 447 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页骨架辅助组件族</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1037" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1041" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDlsitePlayTab.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 348 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页 DLsite Play 页签</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1061" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1065" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDlsiteTabEmptyStates.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 266 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  DLsite 页签空状态组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1085" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1089" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDlsiteTabMotion.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 283 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  DLsite 页签动效组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1109" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1113" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDlsiteTabPlaceholders.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 412 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  DLsite 页签占位组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1133" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1137" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DirectoryBrowserModels.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 308 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  目录浏览数据模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1157" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1161" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DirectoryBrowserPanel.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 747 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  目录浏览面板组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1181" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1185" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DirectoryBrowserRows.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 642 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  目录浏览行组件族</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1205" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1209" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DirectoryFileTypeStyling.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 74 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  目录文件类型样式</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1229" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1233" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DirectorySelectionSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 202 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  目录选择文件收集辅助</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1253" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1257" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LocalTreeBrowserSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 247 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  本地目录树浏览辅助</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1277" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1281" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">RemoteTreeBrowserSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 475 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  远端目录树浏览辅助</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<rect x="0" y="1308" width="2420" height="438" fill="#ffffff" stroke="#e3e6ea"/>
+<text x="36" y="1333" font-size="14.5" font-weight="700" fill="#111827">③ AlbumDetail 详情页区块化 + Reducer 收编（C4/C8）</text>
+<text x="556" y="1333" font-size="12" fill="#6a737d">VM 2510→2255 + Reducers 纯函数族；Screen / DirectorySupport 拆族</text>
+<circle cx="42" cy="1355" r="4.5" fill="#d48806"/>
+<text x="54" y="1359" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailViewModel.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 3197 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  专辑详情页状态与编排</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="1379" r="4.5" fill="#d48806"/>
+<text x="54" y="1383" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailScreen.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 4038 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  专辑详情页主骨架</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="1403" r="4.5" fill="#cf222e"/>
+<text x="54" y="1407" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailDirectorySupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 4189 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页目录浏览辅助</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1355" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1359" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailHeader.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 771 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页头部信息组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1379" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1383" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailHero.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 732 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页 Hero 主视觉区</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1403" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1407" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailLandscapeArtwork.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 971 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页横屏封面布局</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1427" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1431" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailReducers.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 497 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页纯状态归约函数</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1451" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1455" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailScreenSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 447 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页骨架辅助组件族</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1475" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1479" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDlsitePlayTab.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 348 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页 DLsite Play 页签</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1499" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1503" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDlsiteTabEmptyStates.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 266 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  DLsite 页签空状态组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1523" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1527" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDlsiteTabMotion.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 283 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  DLsite 页签动效组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1547" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1551" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDlsiteTabPlaceholders.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 412 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  DLsite 页签占位组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1571" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1575" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DirectoryBrowserModels.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 308 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  目录浏览数据模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1595" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1599" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DirectoryBrowserPanel.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 747 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  目录浏览面板组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1619" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1623" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DirectoryBrowserRows.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 642 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  目录浏览行组件族</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1643" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1647" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DirectoryFileTypeStyling.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 74 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  目录文件类型样式</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1667" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1671" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DirectorySelectionSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 202 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  目录选择文件收集辅助</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1691" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1695" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LocalTreeBrowserSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 247 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  本地目录树浏览辅助</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1715" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1719" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">RemoteTreeBrowserSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 475 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  远端目录树浏览辅助</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<rect x="0" y="1746" width="2420" height="174" fill="#ffffff" stroke="#e3e6ea"/>
+<text x="36" y="1771" font-size="14.5" font-weight="700" fill="#111827">④ 搜索编排重写（C9）</text>
+<text x="556" y="1771" font-size="12" fill="#6a737d">SearchScreen 2186→1516；SearchViewModel 四分支 → 策略层 + 端口 + 手势状态机</text>
+<circle cx="42" cy="1793" r="4.5" fill="#d48806"/>
+<text x="54" y="1797" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SearchScreen.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 2186 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  搜索页主骨架与编排</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="1817" r="4.5" fill="#d48806"/>
+<text x="54" y="1821" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SearchViewModel.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 1447 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  搜索页状态与编排</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1793" r="4.5" fill="#d48806"/>
+<text x="1318" y="1797" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SearchScreen.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 1516 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  搜索页主骨架与编排</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1817" r="4.5" fill="#d48806"/>
+<text x="1318" y="1821" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SearchViewModel.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 1226 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  搜索页状态与编排</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1841" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1845" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SearchPullGesture.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 536 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  搜索下拉刷新手势状态机</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1865" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1869" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SearchQueryStrategy.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 195 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  搜索查询策略层</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1889" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1893" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SearchResultsContent.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 358 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  搜索结果内容区块</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<rect x="0" y="1920" width="2420" height="246" fill="#ffffff" stroke="#e3e6ea"/>
+<text x="36" y="1945" font-size="14.5" font-weight="700" fill="#111827">⑤ NowPlayingScreen 区块化（R2-C2）</text>
+<text x="556" y="1945" font-size="12" fill="#6a737d">~1600 行 → 835 行 + 同包主题文件族</text>
+<circle cx="42" cy="1967" r="4.5" fill="#d48806"/>
+<text x="54" y="1971" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">NowPlayingScreen.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 2885 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  正在播放页主骨架</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1967" r="4.5" fill="#d48806"/>
+<text x="1318" y="1971" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">NowPlayingScreen.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 835 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  正在播放页主骨架</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="1991" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="1995" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">NowPlayingIdentity.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 543 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  播放页歌曲标识区组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2015" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2019" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">NowPlayingLandscapeLayouts.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 468 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  播放页横屏布局族</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2039" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2043" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">NowPlayingLayoutSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 445 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  播放页布局辅助族</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2063" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2067" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">NowPlayingListenTogetherAudience.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 315 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  一起听听众状态展示区</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2087" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2091" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">NowPlayingOverlays.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 414 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  播放页悬浮层集合</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2111" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2115" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">NowPlayingPortraitLayout.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 613 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  播放页竖屏布局</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2135" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2139" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">NowPlayingSurfaceSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 297 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  播放页表面辅助与进度</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<rect x="0" y="2166" width="2420" height="294" fill="#ffffff" stroke="#e3e6ea"/>
+<text x="36" y="2191" font-size="14.5" font-weight="700" fill="#111827">⑥ SettingsScreen / DownloadsScreen 区块化（R2-C3）</text>
+<text x="556" y="2191" font-size="12" fill="#6a737d">1270→613；2281→505</text>
+<circle cx="42" cy="2213" r="4.5" fill="#d48806"/>
+<text x="54" y="2217" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SettingsScreen.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 2673 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  设置页主骨架</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="2237" r="4.5" fill="#d48806"/>
+<text x="54" y="2241" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DownloadsScreen.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 2281 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  下载管理页主骨架</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2213" r="4.5" fill="#d48806"/>
+<text x="1318" y="2217" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SettingsScreen.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 613 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  设置页主骨架</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2237" r="4.5" fill="#d48806"/>
+<text x="1318" y="2241" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DownloadsScreen.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 505 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  下载管理页主骨架</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2261" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2265" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SettingsScreenDetailSections.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 571 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  设置页歌词字幕缓存分区族</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2285" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2289" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SettingsScreenLocalLibrary.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 230 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  设置页本地曲库分区</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2309" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2313" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SettingsScreenScaffold.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 576 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  设置页脚手架框架组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2333" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2337" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SettingsScreenSections.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 1071 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  设置页基础分区组件族</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2357" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2361" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DownloadTaskCards.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 553 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  下载任务卡片组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2381" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2385" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DownloadTaskGroupUi.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 251 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  下载任务分组展示组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2405" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2409" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DownloadTranslationSection.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 783 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  下载页翻译任务列表区块</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2429" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2433" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SwipeRevealActions.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 302 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  滑动展开操作按钮组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<rect x="0" y="2460" width="2420" height="198" fill="#ffffff" stroke="#e3e6ea"/>
+<text x="36" y="2485" font-size="14.5" font-weight="700" fill="#111827">⑦ EqualizerPanel 拆族迁移</text>
+<text x="556" y="2485" font-size="12" fill="#6a737d">ui/common 单文件 1190 行 → ui/common/audio 六文件（主文件 170）</text>
+<circle cx="42" cy="2507" r="4.5" fill="#cf222e"/>
+<text x="54" y="2511" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">EqualizerPanel.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 1188 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  均衡器面板主组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2507" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2511" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">EqualizerPanel.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 170 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  均衡器面板主组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2531" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2535" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">EqualizerPanelEqualizer.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 420 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  均衡器调节区块组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2555" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2559" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">EqualizerPanelPrimitives.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 150 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  均衡器面板基础控件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2579" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2583" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">EqualizerPanelStereoSpeed.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 360 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  声道与倍速调节区块</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2603" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2607" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">EqualizerPanelVolumeScene.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 407 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  音量与场景音效区块</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2627" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2631" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">HardwareVolumeOverlay.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 91 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  硬件音量悬浮提示层</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<rect x="0" y="2658" width="2420" height="222" fill="#ffffff" stroke="#e3e6ea"/>
+<text x="36" y="2683" font-size="14.5" font-weight="700" fill="#111827">⑧ PlaybackService 同包拆族（C7）</text>
+<text x="556" y="2683" font-size="12" fill="#6a737d">1471 行 → 765 行主文件 + 5 个主题文件</text>
+<circle cx="42" cy="2705" r="4.5" fill="#d48806"/>
+<text x="54" y="2709" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">PlaybackService.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 1448 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  前台播放服务</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2705" r="4.5" fill="#d48806"/>
+<text x="1318" y="2709" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">PlaybackService.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 765 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  前台播放服务</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2729" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2733" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LyricsTickScheduler.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 30 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  歌词进度滴答调度</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2753" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2757" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">PlaybackServiceAudioFocus.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 154 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  播放服务音频焦点</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2777" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2781" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">PlaybackServiceEffects.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 60 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  播放服务副作用处理</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2801" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2805" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">PlaybackServiceMediaContent.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 104 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  播放服务媒体装载</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2825" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2829" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">PlaybackServiceSession.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 313 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  播放会话装配</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2849" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2853" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">PlaybackServiceStats.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 123 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  播放服务统计上报</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<rect x="0" y="2880" width="2420" height="174" fill="#ffffff" stroke="#e3e6ea"/>
+<text x="36" y="2905" font-size="14.5" font-weight="700" fill="#111827">⑨ SubtitleTaskService 同包拆族（C7）</text>
+<text x="556" y="2905" font-size="12" fill="#6a737d">1430 行 → 204 行主文件 + 4 个主题文件</text>
+<circle cx="42" cy="2927" r="4.5" fill="#d48806"/>
+<text x="54" y="2931" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SubtitleTaskService.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 1425 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  字幕任务后台服务</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2927" r="4.5" fill="#d48806"/>
+<text x="1318" y="2931" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SubtitleTaskService.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 204 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  字幕任务后台服务</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2951" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2955" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SubtitleTaskEngine.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 885 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  字幕任务执行引擎</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2975" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="2979" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SubtitleTaskModels.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 75 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  字幕任务数据模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="2999" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3003" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SubtitleTaskNotifications.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 117 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  字幕任务通知</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3023" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3027" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SubtitleTaskScriptSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 178 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  字幕任务台本支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<rect x="0" y="3054" width="2420" height="126" fill="#ffffff" stroke="#e3e6ea"/>
+<text x="36" y="3079" font-size="14.5" font-weight="700" fill="#111827">⑩ DownloadManager 迁移 + 拆族（C7）</text>
+<text x="556" y="3079" font-size="12" fill="#6a737d">data/remote/download 1122 行 → data/download 主文件 516 + 2 主题文件</text>
+<circle cx="42" cy="3101" r="4.5" fill="#cf222e"/>
+<text x="54" y="3105" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DownloadManager.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 2019 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  下载管理器</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3101" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3105" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DownloadManager.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 516 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  下载管理器</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3125" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3129" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DownloadArchiveFinalize.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 157 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  下载归档收尾落库</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3149" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3153" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DownloadLibraryUpsert.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 519 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  下载入库更新</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<rect x="0" y="3180" width="2420" height="174" fill="#ffffff" stroke="#e3e6ea"/>
+<text x="36" y="3205" font-size="14.5" font-weight="700" fill="#111827">⑪ LibraryWriteRepository 拆族（C3）</text>
+<text x="556" y="3205" font-size="12" fill="#6a737d">1069 行 → 238 行门面 + TagWrite/DeleteWrite/ScanWrite/OnlineSave 四 support</text>
+<circle cx="1306" cy="3227" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3231" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryWriteRepository.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 238 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库写入仓库</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3251" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3255" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryTagWriteSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 190 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  标签写入支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3275" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3279" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryDeleteWriteSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 125 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库删除写入支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3299" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3303" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryScanWriteSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 560 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  扫描写入支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3323" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3327" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryOnlineSaveSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 154 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  在线保存入库支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<text x="54" y="3234" font-size="12.5" font-style="italic" fill="#6a737d">（重构前不存在该文件——数据访问内联于 libraryviewmodel.kt，R2-B4 才建 Repository）</text>
+<rect x="0" y="3354" width="2420" height="846" fill="#ffffff" stroke="#e3e6ea"/>
+<text x="36" y="3379" font-size="14.5" font-weight="700" fill="#111827">⑫ 纯类型下沉 + 穿透收口（B1/B5）</text>
+<text x="556" y="3379" font-size="12" fill="#6a737d">跨层共享纯类型/常量提到中立包；蓝点行左右一一对应（同源移动改名），绿点为该包其余新增</text>
+<circle cx="42" cy="3401" r="4.5" fill="#0969da"/>
+<text x="54" y="3405" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AppVolume.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 48 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  应用音量模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> → domain/model/AppVolume.kt</tspan></text>
+<circle cx="42" cy="3425" r="4.5" fill="#0969da"/>
+<text x="54" y="3429" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryTrackAlbumHeaderRow.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 15 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲目列表专辑头投影</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> → domain/model/LibraryTrackAlbumHeaderRow.kt</tspan></text>
+<circle cx="42" cy="3449" r="4.5" fill="#0969da"/>
+<text x="54" y="3453" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryTrackRow.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 18 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库曲目查询投影</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> → domain/model/LibraryTrackRow.kt</tspan></text>
+<circle cx="42" cy="3473" r="4.5" fill="#0969da"/>
+<text x="54" y="3477" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">TagSource.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 8 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  标签来源枚举</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> → domain/model/TagSource.kt</tspan></text>
+<circle cx="42" cy="3497" r="4.5" fill="#0969da"/>
+<text x="54" y="3501" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">TagWithCount.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 10 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  标签计数联查投影</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> → domain/model/TagWithCount.kt</tspan></text>
+<circle cx="42" cy="3521" r="4.5" fill="#0969da"/>
+<text x="54" y="3525" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AppCacheLimits.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 25 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  缓存容量上限常量</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> → util/AppCacheLimits.kt</tspan></text>
+<circle cx="42" cy="3545" r="4.5" fill="#0969da"/>
+<text x="54" y="3549" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">CacheImageModel.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 8 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  图片缓存模型封装</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> → util/CacheImageModel.kt</tspan></text>
+<circle cx="42" cy="3569" r="4.5" fill="#0969da"/>
+<text x="54" y="3573" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">CachePolicy.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 17 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  缓存淘汰策略</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> → util/CachePolicy.kt</tspan></text>
+<circle cx="42" cy="3593" r="4.5" fill="#0969da"/>
+<text x="54" y="3597" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">NetworkHeaders.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 28 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  网络请求头常量</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> → util/NetworkHeaders.kt</tspan></text>
+<circle cx="42" cy="3617" r="4.5" fill="#0969da"/>
+<text x="54" y="3621" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">PlayerMediaItemSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 13 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  播放页媒体项辅助工具</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> → util/OnlineMediaSupport.kt</tspan></text>
+<circle cx="42" cy="3641" r="4.5" fill="#8b949e"/>
+<text x="54" y="3645" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SiteLatencyProbe.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  站点延迟探测</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="3665" r="4.5" fill="#8b949e"/>
+<text x="54" y="3669" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">VideoPlaybackSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  视频播放支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="3689" r="4.5" fill="#8b949e"/>
+<text x="54" y="3693" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumListeningRow.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  专辑收听统计行</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="3713" r="4.5" fill="#8b949e"/>
+<text x="54" y="3717" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">CoverUrlSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  封面地址构建支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="3737" r="4.5" fill="#8b949e"/>
+<text x="54" y="3741" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">PreviewImageRemoteStream.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  预览图远程流读取</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="3761" r="4.5" fill="#8b949e"/>
+<text x="54" y="3765" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DeepSeekSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  DeepSeek 辅助支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="3785" r="4.5" fill="#8b949e"/>
+<text x="54" y="3789" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryQuerySpec.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库查询条件模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="3809" r="4.5" fill="#8b949e"/>
+<text x="54" y="3813" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumGroupTrackRow.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  分组曲目行模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="3833" r="4.5" fill="#8b949e"/>
+<text x="54" y="3837" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">KeystoreValueCipher.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  密钥库加解密实现</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="3857" r="4.5" fill="#8b949e"/>
+<text x="54" y="3861" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumGroupStatsRow.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  分组统计行模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="3881" r="4.5" fill="#8b949e"/>
+<text x="54" y="3885" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AppCacheState.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  缓存状态快照类型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="3905" r="4.5" fill="#8b949e"/>
+<text x="54" y="3909" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LocalTreeIndexBuilder.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  本地目录树索引构建</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="3929" r="4.5" fill="#8b949e"/>
+<text x="54" y="3933" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">CoverSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  封面处理支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="3953" r="4.5" fill="#8b949e"/>
+<text x="54" y="3957" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">NetworkTrafficSink.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  网络流量统计汇聚</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="3977" r="4.5" fill="#8b949e"/>
+<text x="54" y="3981" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LocalTreeIndexModels.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  目录树索引数据模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="4001" r="4.5" fill="#8b949e"/>
+<text x="54" y="4005" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">CenterHintColor.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  封面中心加权取色</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="4025" r="4.5" fill="#8b949e"/>
+<text x="54" y="4029" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">ValueCipher.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  值加解密接口</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="4049" r="4.5" fill="#8b949e"/>
+<text x="54" y="4053" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">TreeFileType.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  目录树文件类型枚举</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="4073" r="4.5" fill="#8b949e"/>
+<text x="54" y="4077" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AudioOutputRouteKind.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  音频输出路由类型枚举</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="4097" r="4.5" fill="#8b949e"/>
+<text x="54" y="4101" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">RemoteSubtitleSource.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  远程字幕源模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="4121" r="4.5" fill="#8b949e"/>
+<text x="54" y="4125" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryFilterPreset.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库筛选预设模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="4145" r="4.5" fill="#8b949e"/>
+<text x="54" y="4149" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">PlaylistStatsRow.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  列表统计行模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="4169" r="4.5" fill="#8b949e"/>
+<text x="54" y="4173" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SafTreeSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"></tspan><tspan fill="#6a737d" font-family="Segoe UI">  SAF 目录树操作支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3401" r="4.5" fill="#0969da"/>
+<text x="1318" y="3405" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AppVolume.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 48 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  应用音量模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> ← playback/AppVolume.kt</tspan></text>
+<circle cx="1306" cy="3425" r="4.5" fill="#0969da"/>
+<text x="1318" y="3429" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryTrackAlbumHeaderRow.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 15 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲目专辑头行模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> ← data/local/db/dao/LibraryTrackAlbumHeaderRow.kt</tspan></text>
+<circle cx="1306" cy="3449" r="4.5" fill="#0969da"/>
+<text x="1318" y="3453" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryTrackRow.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 18 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库曲目行模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> ← data/local/db/dao/LibraryTrackRow.kt</tspan></text>
+<circle cx="1306" cy="3473" r="4.5" fill="#0969da"/>
+<text x="1318" y="3477" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">TagSource.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 8 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  标签来源枚举</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> ← data/local/db/entities/TagSource.kt</tspan></text>
+<circle cx="1306" cy="3497" r="4.5" fill="#0969da"/>
+<text x="1318" y="3501" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">TagWithCount.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 10 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  标签计数模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> ← data/local/db/dao/TagWithCount.kt</tspan></text>
+<circle cx="1306" cy="3521" r="4.5" fill="#0969da"/>
+<text x="1318" y="3525" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AppCacheLimits.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 25 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  缓存容量上限常量</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> ← cache/AppCacheLimits.kt</tspan></text>
+<circle cx="1306" cy="3545" r="4.5" fill="#0969da"/>
+<text x="1318" y="3549" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">CacheImageModel.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 8 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  图片缓存模型封装</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> ← cache/CacheImageModel.kt</tspan></text>
+<circle cx="1306" cy="3569" r="4.5" fill="#0969da"/>
+<text x="1318" y="3573" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">CachePolicy.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 17 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  缓存淘汰策略</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> ← cache/CachePolicy.kt</tspan></text>
+<circle cx="1306" cy="3593" r="4.5" fill="#0969da"/>
+<text x="1318" y="3597" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">NetworkHeaders.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 30 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  网络请求头常量</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> ← data/remote/NetworkHeaders.kt</tspan></text>
+<circle cx="1306" cy="3617" r="4.5" fill="#0969da"/>
+<text x="1318" y="3621" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">OnlineMediaSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 14 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  在线媒体辅助支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> ← ui/player/PlayerMediaItemSupport.kt</tspan></text>
+<circle cx="1306" cy="3641" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3645" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SiteLatencyProbe.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 47 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  站点延迟探测</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3665" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3669" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">VideoPlaybackSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 28 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  视频播放支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3689" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3693" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumListeningRow.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 15 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  专辑收听统计行</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3713" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3717" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">CoverUrlSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 34 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  封面地址构建支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3737" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3741" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">PreviewImageRemoteStream.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 35 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  预览图远程流读取</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3761" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3765" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DeepSeekSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 6 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  DeepSeek 辅助支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3785" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3789" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryQuerySpec.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 54 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库查询条件模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3809" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3813" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumGroupTrackRow.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 22 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  分组曲目行模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3833" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3837" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">KeystoreValueCipher.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 78 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  密钥库加解密实现</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3857" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3861" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumGroupStatsRow.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 10 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  分组统计行模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3881" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3885" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AppCacheState.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 12 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  缓存状态快照类型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3905" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3909" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LocalTreeIndexBuilder.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 430 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  本地目录树索引构建</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3929" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3933" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">CoverSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 32 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  封面处理支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3953" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3957" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">NetworkTrafficSink.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 6 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  网络流量统计汇聚</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="3977" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="3981" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LocalTreeIndexModels.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 102 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  目录树索引数据模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="4001" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="4005" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">CenterHintColor.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 84 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  封面中心加权取色</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="4025" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="4029" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">ValueCipher.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 20 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  值加解密接口</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="4049" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="4053" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">TreeFileType.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 154 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  目录树文件类型枚举</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="4073" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="4077" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AudioOutputRouteKind.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 7 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  音频输出路由类型枚举</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="4097" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="4101" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">RemoteSubtitleSource.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 8 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  远程字幕源模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="4121" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="4125" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">LibraryFilterPreset.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 78 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库筛选预设模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="4145" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="4149" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">PlaylistStatsRow.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 11 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  列表统计行模型</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="1306" cy="4169" r="4.5" fill="#1a7f37"/>
+<text x="1318" y="4173" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SafTreeSupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 258 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  SAF 目录树操作支持</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<rect x="0" y="4200" width="2420" height="222" fill="#ffffff" stroke="#e3e6ea"/>
+<text x="36" y="4225" font-size="14.5" font-weight="700" fill="#111827">⑬ 删除 / 被取代文件</text>
+<text x="556" y="4225" font-size="12" fill="#6a737d">共 7 个：API 合并进策略层、域模型删除、旧位置被迁移取代</text>
+<circle cx="42" cy="4247" r="4.5" fill="#cf222e"/>
+<text x="54" y="4251" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">Asmr100Api.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 39 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  Asmr100 镜像站接口</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="4271" r="4.5" fill="#cf222e"/>
+<text x="54" y="4275" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">Asmr300Api.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 39 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  Asmr300 镜像站接口</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="4295" r="4.5" fill="#cf222e"/>
+<text x="54" y="4299" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">DownloadManager.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 2019 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  下载管理器</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="4319" r="4.5" fill="#cf222e"/>
+<text x="54" y="4323" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">SearchSource.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 7 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  搜索来源定义</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="4343" r="4.5" fill="#cf222e"/>
+<text x="54" y="4347" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">EqualizerPanel.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 1188 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  均衡器面板主组件</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="4367" r="4.5" fill="#cf222e"/>
+<text x="54" y="4371" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">AlbumDetailDirectorySupport.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 4189 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  详情页目录浏览辅助</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<circle cx="42" cy="4391" r="4.5" fill="#cf222e"/>
+<text x="54" y="4395" font-size="12.5" fill="#24292f" font-family="Consolas,monospace">libraryviewmodel.kt<tspan fill="#9aa4ad" font-family="Segoe UI"> · 3251 行</tspan><tspan fill="#6a737d" font-family="Segoe UI">  曲库页状态与编排</tspan><tspan fill="#0969da" font-size="11" font-family="Segoe UI"> </tspan></text>
+<rect x="0" y="4422" width="2420" height="414" fill="#fbfcfd" stroke="#e3e6ea"/>
+<text x="36" y="4447" font-size="14.5" font-weight="700" fill="#111827">⑭ 未变存量概览（按顶层包）</text>
+<text x="556" y="4447" font-size="12" fill="#6a737d">两轮重构未触碰的文件数（左侧=重构前，右侧=重构后；增量多为本轮新增的独立文件）</text>
+<text x="54" y="4473" font-size="12.5" fill="#24292f">AsmrApp.kt/</text>
+<text x="396" y="4473" font-size="12.5" fill="#6a737d">1 个未变</text>
+<text x="1318" y="4473" font-size="12.5" fill="#24292f">AsmrApp.kt/</text>
+<text x="1660" y="4473" font-size="12.5" fill="#6a737d">1 个未变</text>
+<text x="54" y="4497" font-size="12.5" fill="#24292f">benchmark/</text>
+<text x="396" y="4497" font-size="12.5" fill="#6a737d">2 个未变</text>
+<text x="1318" y="4497" font-size="12.5" fill="#24292f">benchmark/</text>
+<text x="1660" y="4497" font-size="12.5" fill="#6a737d">2 个未变</text>
+<text x="54" y="4521" font-size="12.5" fill="#24292f">cache/</text>
+<text x="396" y="4521" font-size="12.5" fill="#6a737d">3 个未变</text>
+<text x="1318" y="4521" font-size="12.5" fill="#24292f">cache/</text>
+<text x="1660" y="4521" font-size="12.5" fill="#6a737d">3 个未变</text>
+<text x="54" y="4545" font-size="12.5" fill="#24292f">data/</text>
+<text x="396" y="4545" font-size="12.5" fill="#6a737d">63 个未变</text>
+<text x="1318" y="4545" font-size="12.5" fill="#24292f">data/</text>
+<text x="1660" y="4545" font-size="12.5" fill="#6a737d">63 个未变</text>
+<text x="54" y="4569" font-size="12.5" fill="#24292f">di/</text>
+<text x="396" y="4569" font-size="12.5" fill="#6a737d">2 个未变</text>
+<text x="1318" y="4569" font-size="12.5" fill="#24292f">di/</text>
+<text x="1660" y="4569" font-size="12.5" fill="#6a737d">2 个未变</text>
+<text x="54" y="4593" font-size="12.5" fill="#24292f">domain/</text>
+<text x="396" y="4593" font-size="12.5" fill="#6a737d">2 个未变</text>
+<text x="1318" y="4593" font-size="12.5" fill="#24292f">domain/</text>
+<text x="1660" y="4593" font-size="12.5" fill="#6a737d">2 个未变</text>
+<text x="54" y="4617" font-size="12.5" fill="#24292f">listentogether/</text>
+<text x="396" y="4617" font-size="12.5" fill="#6a737d">4 个未变</text>
+<text x="1318" y="4617" font-size="12.5" fill="#24292f">listentogether/</text>
+<text x="1660" y="4617" font-size="12.5" fill="#6a737d">4 个未变</text>
+<text x="54" y="4641" font-size="12.5" fill="#24292f">performance/</text>
+<text x="396" y="4641" font-size="12.5" fill="#6a737d">1 个未变</text>
+<text x="1318" y="4641" font-size="12.5" fill="#24292f">performance/</text>
+<text x="1660" y="4641" font-size="12.5" fill="#6a737d">1 个未变</text>
+<text x="54" y="4665" font-size="12.5" fill="#24292f">playback/</text>
+<text x="396" y="4665" font-size="12.5" fill="#6a737d">25 个未变</text>
+<text x="1318" y="4665" font-size="12.5" fill="#24292f">playback/</text>
+<text x="1660" y="4665" font-size="12.5" fill="#6a737d">25 个未变</text>
+<text x="54" y="4689" font-size="12.5" fill="#24292f">service/</text>
+<text x="396" y="4689" font-size="12.5" fill="#6a737d">4 个未变</text>
+<text x="1318" y="4689" font-size="12.5" fill="#24292f">service/</text>
+<text x="1660" y="4689" font-size="12.5" fill="#6a737d">4 个未变</text>
+<text x="54" y="4713" font-size="12.5" fill="#24292f">subtitle/</text>
+<text x="396" y="4713" font-size="12.5" fill="#6a737d">23 个未变</text>
+<text x="1318" y="4713" font-size="12.5" fill="#24292f">subtitle/</text>
+<text x="1660" y="4713" font-size="12.5" fill="#6a737d">23 个未变</text>
+<text x="54" y="4737" font-size="12.5" fill="#24292f">translation/</text>
+<text x="396" y="4737" font-size="12.5" fill="#6a737d">1 个未变</text>
+<text x="1318" y="4737" font-size="12.5" fill="#24292f">translation/</text>
+<text x="1660" y="4737" font-size="12.5" fill="#6a737d">1 个未变</text>
+<text x="54" y="4761" font-size="12.5" fill="#24292f">ui/</text>
+<text x="396" y="4761" font-size="12.5" fill="#6a737d">47 个未变</text>
+<text x="1318" y="4761" font-size="12.5" fill="#24292f">ui/</text>
+<text x="1660" y="4761" font-size="12.5" fill="#6a737d">47 个未变</text>
+<text x="54" y="4785" font-size="12.5" fill="#24292f">util/</text>
+<text x="396" y="4785" font-size="12.5" fill="#6a737d">18 个未变</text>
+<text x="1318" y="4785" font-size="12.5" fill="#24292f">util/</text>
+<text x="1660" y="4785" font-size="12.5" fill="#6a737d">18 个未变</text>
+<text x="54" y="4809" font-size="12.5" fill="#24292f">work/</text>
+<text x="396" y="4809" font-size="12.5" fill="#6a737d">1 个未变</text>
+<text x="1318" y="4809" font-size="12.5" fill="#24292f">work/</text>
+<text x="1660" y="4809" font-size="12.5" fill="#6a737d">1 个未变</text>
+<path d="M 1150 288 C 1221.0 288, 1221.0 288, 1292 288" fill="none" stroke="#d48806" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 288 C 1221.0 288, 1221.0 312, 1292 312" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 288 C 1221.0 288, 1221.0 336, 1292 336" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 288 C 1221.0 288, 1221.0 360, 1292 360" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 288 C 1221.0 288, 1221.0 384, 1292 384" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 288 C 1221.0 288, 1221.0 408, 1292 408" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 288 C 1221.0 288, 1221.0 432, 1292 432" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 288 C 1221.0 288, 1221.0 456, 1292 456" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 288 C 1221.0 288, 1221.0 480, 1292 480" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 288 C 1221.0 288, 1221.0 504, 1292 504" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 288 C 1221.0 288, 1221.0 528, 1292 528" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 288 C 1221.0 288, 1221.0 552, 1292 552" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 288 C 1221.0 288, 1221.0 576, 1292 576" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 654, 1292 654" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 678, 1292 678" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 702, 1292 702" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 726, 1292 726" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 750, 1292 750" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 774, 1292 774" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 798, 1292 798" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 822, 1292 822" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 846, 1292 846" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 870, 1292 870" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 894, 1292 894" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 918, 1292 918" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 942, 1292 942" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 966, 1292 966" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 990, 1292 990" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 1014, 1292 1014" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 1038, 1292 1038" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 1062, 1292 1062" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 1086, 1292 1086" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 1110, 1292 1110" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 1134, 1292 1134" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 1158, 1292 1158" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 1182, 1292 1182" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 1206, 1292 1206" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 1230, 1292 1230" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 1254, 1292 1254" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 654 C 1221.0 654, 1221.0 1278, 1292 1278" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1356, 1292 1356" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1380, 1292 1380" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1404, 1292 1404" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1428, 1292 1428" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1452, 1292 1452" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1476, 1292 1476" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1500, 1292 1500" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1524, 1292 1524" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1548, 1292 1548" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1572, 1292 1572" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1596, 1292 1596" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1620, 1292 1620" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1644, 1292 1644" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1668, 1292 1668" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1692, 1292 1692" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1356 C 1221.0 1356, 1221.0 1716, 1292 1716" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1794 C 1221.0 1794, 1221.0 1794, 1292 1794" fill="none" stroke="#d48806" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1818 C 1221.0 1818, 1221.0 1818, 1292 1818" fill="none" stroke="#d48806" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1794 C 1221.0 1794, 1221.0 1842, 1292 1842" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1794 C 1221.0 1794, 1221.0 1866, 1292 1866" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1794 C 1221.0 1794, 1221.0 1890, 1292 1890" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1968 C 1221.0 1968, 1221.0 1968, 1292 1968" fill="none" stroke="#d48806" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1968 C 1221.0 1968, 1221.0 1992, 1292 1992" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1968 C 1221.0 1968, 1221.0 2016, 1292 2016" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1968 C 1221.0 1968, 1221.0 2040, 1292 2040" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1968 C 1221.0 1968, 1221.0 2064, 1292 2064" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1968 C 1221.0 1968, 1221.0 2088, 1292 2088" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1968 C 1221.0 1968, 1221.0 2112, 1292 2112" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 1968 C 1221.0 1968, 1221.0 2136, 1292 2136" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2214 C 1221.0 2214, 1221.0 2214, 1292 2214" fill="none" stroke="#d48806" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2238 C 1221.0 2238, 1221.0 2238, 1292 2238" fill="none" stroke="#d48806" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2214 C 1221.0 2214, 1221.0 2262, 1292 2262" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2214 C 1221.0 2214, 1221.0 2286, 1292 2286" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2214 C 1221.0 2214, 1221.0 2310, 1292 2310" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2214 C 1221.0 2214, 1221.0 2334, 1292 2334" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2214 C 1221.0 2214, 1221.0 2358, 1292 2358" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2214 C 1221.0 2214, 1221.0 2382, 1292 2382" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2214 C 1221.0 2214, 1221.0 2406, 1292 2406" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2214 C 1221.0 2214, 1221.0 2430, 1292 2430" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2508 C 1221.0 2508, 1221.0 2508, 1292 2508" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2508 C 1221.0 2508, 1221.0 2532, 1292 2532" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2508 C 1221.0 2508, 1221.0 2556, 1292 2556" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2508 C 1221.0 2508, 1221.0 2580, 1292 2580" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2508 C 1221.0 2508, 1221.0 2604, 1292 2604" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2508 C 1221.0 2508, 1221.0 2628, 1292 2628" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2706 C 1221.0 2706, 1221.0 2706, 1292 2706" fill="none" stroke="#d48806" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2706 C 1221.0 2706, 1221.0 2730, 1292 2730" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2706 C 1221.0 2706, 1221.0 2754, 1292 2754" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2706 C 1221.0 2706, 1221.0 2778, 1292 2778" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2706 C 1221.0 2706, 1221.0 2802, 1292 2802" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2706 C 1221.0 2706, 1221.0 2826, 1292 2826" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2706 C 1221.0 2706, 1221.0 2850, 1292 2850" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2928 C 1221.0 2928, 1221.0 2928, 1292 2928" fill="none" stroke="#d48806" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2928 C 1221.0 2928, 1221.0 2952, 1292 2952" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2928 C 1221.0 2928, 1221.0 2976, 1292 2976" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2928 C 1221.0 2928, 1221.0 3000, 1292 3000" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 2928 C 1221.0 2928, 1221.0 3024, 1292 3024" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 3102 C 1221.0 3102, 1221.0 3102, 1292 3102" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 3102 C 1221.0 3102, 1221.0 3126, 1292 3126" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 3102 C 1221.0 3102, 1221.0 3150, 1292 3150" fill="none" stroke="#1a7f37" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 3402 C 1221.0 3402, 1221.0 3402, 1292 3402" fill="none" stroke="#0969da" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 3426 C 1221.0 3426, 1221.0 3426, 1292 3426" fill="none" stroke="#0969da" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 3450 C 1221.0 3450, 1221.0 3450, 1292 3450" fill="none" stroke="#0969da" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 3474 C 1221.0 3474, 1221.0 3474, 1292 3474" fill="none" stroke="#0969da" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 3498 C 1221.0 3498, 1221.0 3498, 1292 3498" fill="none" stroke="#0969da" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 3522 C 1221.0 3522, 1221.0 3522, 1292 3522" fill="none" stroke="#0969da" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 3546 C 1221.0 3546, 1221.0 3546, 1292 3546" fill="none" stroke="#0969da" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 3570 C 1221.0 3570, 1221.0 3570, 1292 3570" fill="none" stroke="#0969da" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 3594 C 1221.0 3594, 1221.0 3594, 1292 3594" fill="none" stroke="#0969da" stroke-width="1.1" opacity="0.5"/>
+<path d="M 1150 3618 C 1221.0 3618, 1221.0 3618, 1292 3618" fill="none" stroke="#0969da" stroke-width="1.1" opacity="0.5"/>
+</svg>

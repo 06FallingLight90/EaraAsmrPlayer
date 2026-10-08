@@ -13,7 +13,7 @@
 
 - **现象**：MainContainer/Theme/Room 迁移/下载/翻译等互不相关的测试类同时失败。
 - **根因**：全部为 Robolectric 系测试。Robolectric 的 `MavenDependencyResolver` 每次解析依赖都要在 **`%USERPROFILE%` 根部**创建 `.robolectric-download-lock` 并把 android-all jar 缓存到 `%USERPROFILE%\.m2`——本机受控环境对用户主目录根部无写权限，锁文件创建被拒（`FileNotFoundException: 拒绝访问`）。
-- **解法**：[app/build.gradle.kts](../../app/build.gradle.kts) 的 `testOptions.unitTests.all` 把测试 JVM 的 `user.home` 重定向到构建目录 `test-user-home/`（gitignored、可移植、无本机路径），并在 `doFirst` 中 `mkdirs()`（Robolectric 不会自建目录）。锁文件与 android-all 缓存随之落到构建目录。
+- **解法**：[app/build.gradle.kts](../../../../app/build.gradle.kts) 的 `testOptions.unitTests.all` 把测试 JVM 的 `user.home` 重定向到构建目录 `test-user-home/`（gitignored、可移植、无本机路径），并在 `doFirst` 中 `mkdirs()`（Robolectric 不会自建目录）。锁文件与 android-all 缓存随之落到构建目录。
 
 ### 2. user.home 重定向后仍报「系统找不到指定的路径」
 
@@ -33,7 +33,7 @@
 | `.github/workflows/ci.yml` | push/PR 触发 `testDebugUnitTest`（JDK 17 temurin） | 入库 |
 | `docs/iteration/` | 阶段审查报告落盘处（已加入 .gitignore） | 本机（gitignored） |
 
-[release.yml](../../.github/workflows/release.yml) 在 `assembleRelease` 前插入 `testReleaseUnitTest` 步骤。
+[release.yml](../../../../.github/workflows/release.yml) 在 `assembleRelease` 前插入 `testReleaseUnitTest` 步骤。
 
 ## 待验证
 

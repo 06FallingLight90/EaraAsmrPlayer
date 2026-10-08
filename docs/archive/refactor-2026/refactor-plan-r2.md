@@ -1,6 +1,6 @@
 # 第二轮重构计划（R2）—— 绞杀者局部重写路线
 
-> 依据：`docs/project-quality-review-20261001.md`（总评 C）+ 2026-10-01 全项复核（P0/P1 论断全部实证坐实）。
+> 依据：`project-quality-review-20261001.md`（同目录）（总评 C）+ 2026-10-01 全项复核（P0/P1 论断全部实证坐实）。
 > 与第一轮（`refactor-plan-tdd.md`，S0-S16 已完成）的关系：第一轮完成文件级治理（行数/去重/死代码/拆包/加密/守护框架），本轮解决**依赖级**问题（穿透/环/God 组件/守护失效）。
 > 状态：阶段 A 已完成（tag `refactor-r2/phase-A`）；阶段 B 已完成（tag `refactor-r2/phase-B` @ 9afcccb，测试 906/0/4，实机走查 5/6，2026-10-02 收官，报告 docs/iteration/r2-phase-B-review.md）；**阶段 C 待开工**——开工前先执行 2026-10-02 体检报告的「第一阶段：补闸门与校准」（size ratchet 收紧回收 805 行配额 + 新守卫规则 `ui-to-data-remote`/`data-to-feature`/`feature-to-feature` 存量入 baseline + CI 加 androidTest/baselineprofile 编译门禁 + `onConnect` 包名白名单；ARCHITECTURE.md 数字校准已完成于 2026-10-02）。CI 双绿待用户 push。
 

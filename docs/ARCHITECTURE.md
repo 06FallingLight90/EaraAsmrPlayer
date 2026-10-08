@@ -135,11 +135,11 @@ UI（ui/player/PlayerViewModel.kt 等）
 
 ## 7. 已知问题与重构状态
 
-> 门禁报告索引：各阶段审查/走查报告落 [docs/iteration/](iteration/)（`phase-1/2/3-review.md` 为第一轮，`r2-phase-A/B/C-review.md` 为第二轮，`r3-phase-A-review.md` + `r3-phase-c-gate-walkthrough.md` 为第三轮），含审查发现（P0/P1/P2 分级）与实机走查证据。
+> 门禁报告索引：各阶段审查/走查报告落 [docs/archive/refactor-2026/iteration/](archive/refactor-2026/iteration/)（`phase-1/2/3-review.md` 为第一轮，`r2-phase-A/B/C-review.md` 为第二轮，`r3-phase-A-review.md` + `r3-phase-c-gate-walkthrough.md` 为第三轮），含审查发现（P0/P1/P2 分级）与实机走查证据。
 
 ### 7.1 第一轮重构（阶段 1–3，已完成）
 
-对照 `docs/project-quality-review-20260929.md`（2026-09-29 体检；下述 P0/P1 编号均属该报告，仅作历史索引）：
+对照 `docs/archive/refactor-2026/project-quality-review-20260929.md`（2026-09-29 体检；下述 P0/P1 编号均属该报告，仅作历史索引）：
 
 - P0-1 已偿还：目录面板 V1–V4 死代码已删除，存活组件已去版本号重命名（见第 3 节括注）。
 - P0-2 大幅偿还：DownloadManager 2020→1170（协调器/Worker 外提）；AlbumDetailScreen 4039→1415（Header/Hero/LandscapeArtwork/ScreenSupport 四文件外提，行为经钉测试与实机 smoke 验证；现状 1523）；MainContainer 3251→2631（Support 外提，主函数体路由编排仍在；现状 2702）。剩余超限文件见 `tools/size-guard-baseline.txt`。
@@ -152,18 +152,18 @@ UI（ui/player/PlayerViewModel.kt 等）
 
 ### 7.2 第二、三轮重构 R2/R3（绞杀者局部重写 + 防线/消环/收编，均已完成）
 
-计划 [docs/refactor-plan-r2.md](refactor-plan-r2.md)；依据 [2026-10-01 体检](project-quality-review-20261001.md)（总评 C）用户四决策：用户无感知 / 局部重写 / 隐性行为随改随文档化 / 双兜底（seam 测试先行 + 实机走查）。
+计划 [docs/archive/refactor-2026/refactor-plan-r2.md](archive/refactor-2026/refactor-plan-r2.md)；依据 [2026-10-01 体检](archive/refactor-2026/project-quality-review-20261001.md)（总评 C）用户四决策：用户无感知 / 局部重写 / 隐性行为随改随文档化 / 双兜底（seam 测试先行 + 实机走查）。
 
 - **阶段 A 已完成**（tag `refactor-r2/phase-A`）：目录=包名 22 文件统一；ci_guard 重写（真实包名匹配 + 全仓扫描 + 17 条方向规则 + 反例自检）；`collectSubtitleCandidates` 三份收敛；runBlocking 超时兜底 / OkHttp 显式超时 / DownloadWorker IO 重试 ≤2。
 - **阶段 B 已完成**（tag `refactor-r2/phase-B` @ 9afcccb）：data→上层反向 import 清零（B1 模型下沉）；service 去 `MainActivity` import（B2，含**切片后台循环修复** `awaitFrameCommitOrTimeout`，上游 issue #322，实机验证通过）；`PlaybackController` 接口（B3）；两个 God VM 数据访问收进 `LibraryReadRepository`/`LibraryWriteRepository`（B4/B5，行为档案见 7.3）；ui→DAO 存量 19 处/15 文件入 baseline（B6）。测试 880→**906** 只增不减；门禁实机走查 5/6（下载全链被既有在线树请求取消问题阻塞，`git diff refactor-r2/phase-A..HEAD` 佐证非回归）。
-- **阶段 C 已完成**（tag `refactor-r2/phase-C` @ 814627b；审查报告 [r2-phase-C-review.md](iteration/r2-phase-C-review.md)）：三个 God 组合函数拆分退出 pin（MainContainer 2375→796、NowPlayingScreen 2902→836、SettingsScreen 2675→1270）；消 3 组特征环（ui.player→ui.library、AlbumDetail↔Settings、ui.sidepanel→ui.library）；C 批次 G 补闸门（size ratchet 贴实测、`ui-to-data-remote` 规则入守护、CI 编译门禁）；C4 数据编排下沉 4 类新 repository——`OnlineContentRepository`（ASMR.ONE 解析缓存/云同步/封面补全/预览/文件体积/推荐富化）、`UpdateRepository`、`SearchRepository`、`DownloadQueueRepository`（AlbumDetailViewModel 2996→2510、LibraryViewModel 2641→2521，行为契约见 7.3 档案）；`DownloadManager` 迁 `data/download`、`LibraryQuerySpec` 族迁 `data/local/db/query`。门禁三件套：本机测试 906→**938** 全绿、子代理审查无 P0 且 P1 闭环（缓存并发安全 ConcurrentHashMap+Mutex、ci_guard main 包盲区补夹具）、实机走查通过（ASMR.ONE 解析端到端、云同步链路、DL Play 登录态，受限项如实记录）；CI 双绿。
+- **阶段 C 已完成**（tag `refactor-r2/phase-C` @ 814627b；审查报告 [r2-phase-C-review.md](archive/refactor-2026/iteration/r2-phase-C-review.md)）：三个 God 组合函数拆分退出 pin（MainContainer 2375→796、NowPlayingScreen 2902→836、SettingsScreen 2675→1270）；消 3 组特征环（ui.player→ui.library、AlbumDetail↔Settings、ui.sidepanel→ui.library）；C 批次 G 补闸门（size ratchet 贴实测、`ui-to-data-remote` 规则入守护、CI 编译门禁）；C4 数据编排下沉 4 类新 repository——`OnlineContentRepository`（ASMR.ONE 解析缓存/云同步/封面补全/预览/文件体积/推荐富化）、`UpdateRepository`、`SearchRepository`、`DownloadQueueRepository`（AlbumDetailViewModel 2996→2510、LibraryViewModel 2641→2521，行为契约见 7.3 档案）；`DownloadManager` 迁 `data/download`、`LibraryQuerySpec` 族迁 `data/local/db/query`。门禁三件套：本机测试 906→**938** 全绿、子代理审查无 P0 且 P1 闭环（缓存并发安全 ConcurrentHashMap+Mutex、ci_guard main 包盲区补夹具）、实机走查通过（ASMR.ONE 解析端到端、云同步链路、DL Play 登录态，受限项如实记录）；CI 双绿。
 - **C5 结论（R2 阶段内闭环）**：size ratchet 持续还债后两 VM pin 贴实测（2510/2521）。1500→800 的进一步收紧需先做编排层 state holder 重构——云同步/删除/扫描族是 UI 状态机（`_syncStatus`/选择队列/消息/bulk 进度），直接下沉只是搬运代码+回调透传。列为后续方向，不在阶段 C 强行达成。
 
-**第三轮重构 R3**（计划 [docs/refactor-plan-r3.md](refactor-plan-r3.md)；防线与校准 → import 方向消环 → 状态收编/区块化）：
+**第三轮重构 R3**（计划 [docs/archive/refactor-2026/refactor-plan-r3.md](archive/refactor-2026/refactor-plan-r3.md)；防线与校准 → import 方向消环 → 状态收编/区块化）：
 
-- **阶段 A 已完成**（tag `refactor-r3/phase-A` @ 4cfea2b；审查报告 [r3-phase-A-review.md](iteration/r3-phase-A-review.md)）：防线与校准——ci_guard 扩面至 17 条 import 方向规则（ui→db/datastore/cache/work、translation/hotlistening 反向禁入）+ ui-to-service 规则源含 main；Room schema 导出提交；service 安全网；重复实现收敛（`normalizeRelativePath` 双实现改名消歧，行为档案 [path-normalizer-variants.md](behavior-notes/path-normalizer-variants.md)）；README/landing_zh m3u8 失效声明修订。测试 945 全绿。
-- **阶段 B 已完成**（tag `refactor-r3/phase-B` @ 902bb9b；进度 [r3-phase-b-progress.md](iteration/r3-phase-b-progress.md)）：import 方向消环——B0 包级 SCC ratchet 上线（Tarjan 实测上界冻结 + baseline 失效检测）；B1a-f 纯类型下沉 `domain.model`/`util`（投影 DTO/QuerySpec/TreeFileType 等，**domain.model 出边清零退出连通团**）；B2/B4 四组环消解 + 双倒挂修正（`NetworkHeaders` 迁 util 致 SCC 级联 48→41）；B5 LibraryViewModel 真收口（读/写经 repository 出口，消 ui→datastore 违规路径）+ net-stack 穿透下沉（SearchErrorMessages/SiteLatencyProbe/PreviewImageRemoteStream/ImageCacheBridge 唯一 seam）。**import baseline 344→205、SCC 50→41、2-环 18→13**。测试 945/0/4。
-- **阶段 C 已完成**（tag `refactor-r3/phase-C` @ cba2a04；进度 [r3-phase-c-progress.md](iteration/r3-phase-c-progress.md)；走查报告 [r3-phase-c-gate-walkthrough.md](iteration/r3-phase-c-gate-walkthrough.md)）：八项收官——**C1** LibraryViewModel 六 holder 同包分治（2493→**463**，扫描/云同步/删除/任务协调族）；**C3** LibraryWriteRepository 拆族（1069→**238** 门面 + 4 internal support）；**C4** God 文件区块化 7/7（AlbumDetailDirectorySupport 2698→7 文件、DownloadsScreen、DlsiteTabs、LibraryScreen、AlbumDetailScreen 1518→1102、SettingsScreen、EqualizerPanel）；**C7** service 拆解 3/3（PlaybackService 1471→765、SubtitleTaskService 1430→204、DownloadManager 1184→516，成员函数转同包顶层扩展机制）；**C8** 详情页 VM reducer 收编（`_uiState` 30 处赋值点 → AlbumDetailReducers 纯函数，2508→**2255**；前置 VM 直测安全网 +49 测；分区 sub-state 重写经取证否决维持现状）；**C9** 搜索编排重写（四分支 → `SearchQueryStrategy` + `SearchQueryPort` seam 16 测；15 var → 7；SearchScreen 2186→**1517** 渲染/手势两刀区块化）；**C5** 降级达标（仅第一级）；**C6** 结构收尾 3/3（BottomChrome 归包 main、dao 投影 DTO 归位、扫描函数拆分）。**测试 945→1010/0/4；SCC 41→40；size pin 8→2**。门禁三件套：本机全量全绿 + 子代理审查（phase-B..HEAD 105 文件，P0 无/P1 手势 returnInProgress 门控已修）/ 实机走查通过（小米 14：搜索四态/手势全链/详情页/播放服务，crash 零记录）。
+- **阶段 A 已完成**（tag `refactor-r3/phase-A` @ 4cfea2b；审查报告 [r3-phase-A-review.md](archive/refactor-2026/iteration/r3-phase-A-review.md)）：防线与校准——ci_guard 扩面至 17 条 import 方向规则（ui→db/datastore/cache/work、translation/hotlistening 反向禁入）+ ui-to-service 规则源含 main；Room schema 导出提交；service 安全网；重复实现收敛（`normalizeRelativePath` 双实现改名消歧，行为档案 [path-normalizer-variants.md](behavior-notes/path-normalizer-variants.md)）；README/landing_zh m3u8 失效声明修订。测试 945 全绿。
+- **阶段 B 已完成**（tag `refactor-r3/phase-B` @ 902bb9b；进度 [r3-phase-b-progress.md](archive/refactor-2026/iteration/r3-phase-b-progress.md)）：import 方向消环——B0 包级 SCC ratchet 上线（Tarjan 实测上界冻结 + baseline 失效检测）；B1a-f 纯类型下沉 `domain.model`/`util`（投影 DTO/QuerySpec/TreeFileType 等，**domain.model 出边清零退出连通团**）；B2/B4 四组环消解 + 双倒挂修正（`NetworkHeaders` 迁 util 致 SCC 级联 48→41）；B5 LibraryViewModel 真收口（读/写经 repository 出口，消 ui→datastore 违规路径）+ net-stack 穿透下沉（SearchErrorMessages/SiteLatencyProbe/PreviewImageRemoteStream/ImageCacheBridge 唯一 seam）。**import baseline 344→205、SCC 50→41、2-环 18→13**。测试 945/0/4。
+- **阶段 C 已完成**（tag `refactor-r3/phase-C` @ cba2a04；进度 [r3-phase-c-progress.md](archive/refactor-2026/iteration/r3-phase-c-progress.md)；走查报告 [r3-phase-c-gate-walkthrough.md](archive/refactor-2026/iteration/r3-phase-c-gate-walkthrough.md)）：八项收官——**C1** LibraryViewModel 六 holder 同包分治（2493→**463**，扫描/云同步/删除/任务协调族）；**C3** LibraryWriteRepository 拆族（1069→**238** 门面 + 4 internal support）；**C4** God 文件区块化 7/7（AlbumDetailDirectorySupport 2698→7 文件、DownloadsScreen、DlsiteTabs、LibraryScreen、AlbumDetailScreen 1518→1102、SettingsScreen、EqualizerPanel）；**C7** service 拆解 3/3（PlaybackService 1471→765、SubtitleTaskService 1430→204、DownloadManager 1184→516，成员函数转同包顶层扩展机制）；**C8** 详情页 VM reducer 收编（`_uiState` 30 处赋值点 → AlbumDetailReducers 纯函数，2508→**2255**；前置 VM 直测安全网 +49 测；分区 sub-state 重写经取证否决维持现状）；**C9** 搜索编排重写（四分支 → `SearchQueryStrategy` + `SearchQueryPort` seam 16 测；15 var → 7；SearchScreen 2186→**1517** 渲染/手势两刀区块化）；**C5** 降级达标（仅第一级）；**C6** 结构收尾 3/3（BottomChrome 归包 main、dao 投影 DTO 归位、扫描函数拆分）。**测试 945→1010/0/4；SCC 41→40；size pin 8→2**。门禁三件套：本机全量全绿 + 子代理审查（phase-B..HEAD 105 文件，P0 无/P1 手势 returnInProgress 门控已修）/ 实机走查通过（小米 14：搜索四态/手势全链/详情页/播放服务，crash 零记录）。
 
 ### 7.3 行为档案索引（隐性行为文档化）
 
@@ -174,10 +174,11 @@ UI（ui/player/PlayerViewModel.kt 等）
 ### 7.4 backlog
 
 - 2026-10-02 体检新增（阶段 C 已偿部分见 7.2）：~~特征环 3 组~~（C1/C4b-4 已消）；~~编排层 state holder 重构~~（R3-C1 六 holder 分治已偿）、~~`LibraryWriteRepository` 1050 行拆族~~（R3-C3 已偿）；剩余：根文档三缺（LICENSE/CHANGELOG/CONTRIBUTING）。
-- 已定（R3 用户决策）：`ensureAlbumCoverSaved` 双实现**保留现状、仅记录**（LibraryViewModel 旧版仅网络/2048/ARGB_8888，repo 版支持本地来源/1280/RGB_565——统一属行为变更，见 r2-phase-C-review.md）。
+- 已定（R3 用户决策）：`ensureAlbumCoverSaved` 双实现**保留现状、仅记录**（LibraryViewModel 旧版仅网络/2048/ARGB_8888，repo 版支持本地来源/1280/RGB_565——统一属行为变更，见 archive/refactor-2026/iteration/r2-phase-C-review.md）。
 - R3-B 开工前评估结论（详见 R3 计划 §3.0）：`ui.player↔ui.player.nowplaying` 为**同 feature 合法子包、非违规**，不做；环 `ui.library↔albumdetail`（同 feature 账面环）与 `data.download↔data.remote.download`（需抽共享下载内核）**缓做**，留 backlog。
-- R3-C8 决策（2026-10-07）：详情页分区 sub-state + LoadPhase 重写**维持现状不实施**（跨域事件/跨域身份键/头部共享容器三类内聚是本质的，证据见 devnote 2026-10-07-r3-c8-close.md）；C8 收官于 reducer 收编形态。
+- R3-C8 决策（2026-10-07）：详情页分区 sub-state + LoadPhase 重写**维持现状不实施**（跨域事件/跨域身份键/头部共享容器三类内聚是本质的，证据见 archive/refactor-2026/devnote/2026-10-07-r3-c8-close.md）；C8 收官于 reducer 收编形态。
 - ~~待清死码（R3 门禁审查确认零引用）：`DownloadTaskCards.kt` TaskProgressMeta、`LibraryScreen.kt` LibraryActionItem~~（2026-10-08 已删：LibraryScreen -47 行含 5 个连带孤儿 import、DownloadTaskCards -27 行）。
+- ~~待清死码（2026-09-29 体检确认零引用）：`listentogether/ListenTogetherApi.kt`（Retrofit 接口，Repository 实际直用 OkHttp）~~（2026-10-08 已删，全仓引用零确认；同包 Models/Repository/IdentityResolver 不受影响）。
 - ~~沿用：`LibraryViewModel.walkTree` / `scanFromDocumentTree` 拆函数、Chrome 概念归包（main 与 ui/nav）、dao 包投影 DTO 归位~~（R3-C6 已全部偿还）。
 
 快速读懂本工程的建议顺序：`MainActivity` → `main/MainContainer`（导航骨架）→ `ui/library`（库页与详情家族）→ `playback/PlayerConnection` → `service/PlaybackService`（播放落地）。
