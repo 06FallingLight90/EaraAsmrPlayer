@@ -97,6 +97,10 @@ class MainContainerRouteTest {
                     dlsiteLogin = {
                         record("dlsiteLogin")
                         Marker("dlsiteLogin")
+                    },
+                    purchased = {
+                        record("purchased")
+                        Marker("purchased")
                     }
                 )
             )
@@ -139,6 +143,15 @@ class MainContainerRouteTest {
         composeRule.runOnIdle { navController.navigateSingleTop("dlsite_login") }
         composeRule.waitForIdle()
         assertInvokedOnce("dlsiteLogin")
+    }
+
+    @Test
+    fun purchasedRoute_dispatchToContents() {
+        val navController = setContent()
+        composeRule.runOnIdle { navController.navigateSingleTop(Routes.Purchased) }
+        composeRule.waitForIdle()
+        assertEquals(Routes.Purchased, navController.currentDestination?.route)
+        assertInvokedOnce("purchased")
     }
 
     @Test

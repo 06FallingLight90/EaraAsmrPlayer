@@ -10,6 +10,7 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import com.asmr.player.data.remote.scraper.resolveRecommendedWorkHeroCoverUrl
+import com.asmr.player.data.repository.SearchRepository
 import com.asmr.player.ui.downloads.DownloadsScreen
 import com.asmr.player.ui.downloads.DownloadsViewModel
 import com.asmr.player.ui.dlsite.DlsiteLoginScreen
@@ -24,10 +25,18 @@ import com.asmr.player.ui.player.PlayerViewModel
 import com.asmr.player.ui.playlists.PlaylistDetailScreen
 import com.asmr.player.ui.playlists.PlaylistsViewModel
 import com.asmr.player.ui.playlists.SystemPlaylistScreen
+import com.asmr.player.ui.purchased.PurchasedPageData
+import com.asmr.player.ui.purchased.PurchasedPageSource
+import com.asmr.player.ui.purchased.PurchasedScreen
+import com.asmr.player.ui.purchased.PurchasedViewModel
 import com.asmr.player.ui.search.SearchAssistScreen
 import com.asmr.player.ui.search.SearchAssistSearchRequest
 import com.asmr.player.ui.common.core.SearchBlockedKeywordsViewModel
 import com.asmr.player.util.isVideoPlaybackItem
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.components.ViewModelComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -315,6 +324,42 @@ internal fun buildMainRouteContents(
                 )
             }
         },
+        purchased = {
+            val purchasedViewModel: PurchasedViewModel = hiltViewModel(host.activityViewModelStoreOwner)
+            SecondaryPageBackground(topPadding = host.secondaryPageTopPadding) {
+                PurchasedScreen(
+                    onOpenLogin = { host.navController.navigateSingleTop("dlsite_login") },
+                    onOpenDownloads = { host.navController.navigateSingleTop("downloads") },
+                    // 与搜索"已购"过滤点击行为同约定（MainPrimaryPagerUi.searchAlbumClick）：
+                    // 种入封面 hint 后 preferDlsitePlay=true 打开详情，落 dlsitePlay 页签。
+                    onOpenAlbum = { album ->
+                        val workNo = album.rjCode.ifBlank { album.workId }.trim().uppercase()
+                        AlbumCoverHintStore.record(
+                            albumId = album.id,
+                            rjCode = workNo,
+                            title = album.title,
+                            circle = album.circle,
+                            cv = album.cv,
+                            coverUrl = album.coverUrl,
+                            tags = album.tags,
+                            ratingValue = album.ratingValue,
+                            ratingCount = album.ratingCount,
+                            releaseDate = album.releaseDate,
+                            dlCount = album.dlCount,
+                            priceJpy = album.priceJpy,
+                            hasAsmrOne = album.hasAsmrOne,
+                            description = album.description
+                        )
+                        host.navigator.openAlbumDetail(
+                            albumId = album.id,
+                            rj = workNo,
+                            preferDlsitePlay = true
+                        )
+                    },
+                    viewModel = purchasedViewModel
+                )
+            }
+        },
         dlsiteLogin = {
             val dlsiteLoginViewModel: DlsiteLoginViewModel = hiltViewModel(host.activityViewModelStoreOwner)
             SecondaryPageBackground(topPadding = host.secondaryPageTopPadding) {
@@ -326,4 +371,30 @@ internal fun buildMainRouteContents(
             }
         }
     )
+}
+
+/**
+ * 已购曲库页的端口生产装配。放 main 包而非 ui/purchased：SearchRepository 与
+ * DlsiteAuthStore（经其读 play cookie 登录态，只读）都是 ci_guard 包级 SCC
+ * 大连通团成员，ui/purchased 直接引用会让新包入环（SCC ratchet 禁增）；
+ * main 已在团内，由此委托不新增连通团成员。测试侧用手写 fake 替身，不经此模块。
+ */
+@Module
+@InstallIn(ViewModelComponent::class)
+internal object PurchasedSourceModule {
+    @Provides
+    fun providePurchasedPageSource(searchRepository: SearchRepository): PurchasedPageSource =
+        object : PurchasedPageSource {
+            override suspend fun searchPurchased(
+                keyword: String,
+                page: Int,
+                pageSize: Int
+            ): PurchasedPageData {
+                val resp = searchRepository.searchPurchased(keyword, page, pageSize)
+                return PurchasedPageData(items = resp.items, canGoNext = resp.canGoNext)
+            }
+
+            override fun hasDlsiteStoredCredentials(): Boolean =
+                searchRepository.hasDlsiteStoredCredentials()
+        }
 }
