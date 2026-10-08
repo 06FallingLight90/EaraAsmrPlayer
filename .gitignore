@@ -55,3 +55,6 @@ crash.txt
 Thumbs.db
 .DS_Store
 AGENTS.md
+
+# project-build 迭代中间产物（轮次计划/审查报告），交付时清理
+docs/iteration/
