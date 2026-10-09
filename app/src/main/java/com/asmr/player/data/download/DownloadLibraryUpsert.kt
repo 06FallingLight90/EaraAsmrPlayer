@@ -121,7 +121,9 @@ internal suspend fun upsertDownloadedAlbumToLibrary(
             ?: albumWorkId.trim().ifBlank { rj },
         rjCode = existing?.rjCode?.takeIf { it.isNotBlank() }
             ?: albumRjCode.trim().ifBlank { rj },
-        description = existing?.description?.takeIf { it.isNotBlank() } ?: albumDescription.trim()
+        description = existing?.description?.takeIf { it.isNotBlank() } ?: albumDescription.trim(),
+        // 下载入库路径：新专辑定性 dlsite_download；已有专辑保留原 source（永不覆盖，见 behavior-notes/scan-metadata-sourcing.md）
+        source = existing?.source?.takeIf { it.isNotBlank() } ?: AlbumEntity.SOURCE_DLSITE_DOWNLOAD
     )
 
     val albumId = try {

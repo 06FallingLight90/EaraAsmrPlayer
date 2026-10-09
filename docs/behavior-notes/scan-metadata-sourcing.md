@@ -45,8 +45,8 @@
   pickCoverNode 先行落 coverPath）、内嵌兜底**。音声场景既有封面行为不被破坏。
 - **内嵌图源两级**：优先 `AudioMetadata.embeddedCover`（`decodeEmbeddedCover` 解码 ByteArray），为 null
   回退既有 `EmbeddedMediaExtractor.extractArtwork`。
-  - SAF 路径：首插轨 embeddedCover 经 `DocumentScanResult.firstInsertedCoverBytes` 从事务透出（增量读取的
-    副产品，零额外 MMR 打开）；首轨非新插时该值为 null → 回退 extractArtwork。
+  - SAF 路径：首条**非空**新插轨的 embeddedCover 经 `DocumentScanResult.firstInsertedCoverBytes` 从事务透出
+    （增量读取的副产品，零额外 MMR 打开）；首轨非新插时该值为 null → 回退 extractArtwork。
   - File 路径：封面回填段对首音轨独立调 `readForNewTrack`（该段与原 extractArtwork 同为"coverPath 为空才
     探查"，无增量语义，现状即如此）。已知不对称：新专辑首扫且封面缺失时，首轨会被读两次元数据
     （封面段一次 + 音轨新插一次），量级 1 文件，为保持封面回填先于音轨同步的原时序而接受。

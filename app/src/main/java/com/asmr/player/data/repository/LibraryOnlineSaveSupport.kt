@@ -58,7 +58,9 @@ internal class LibraryOnlineSaveSupport(private val database: AppDatabase) {
                 coverThumbPath = existing?.coverThumbPath.orEmpty(),
                 workId = existing?.workId?.takeIf { it.isNotBlank() } ?: displayAlbum.workId.trim().ifBlank { workKey },
                 rjCode = existing?.rjCode?.takeIf { it.isNotBlank() } ?: displayAlbum.rjCode.trim().ifBlank { rj },
-                description = existing?.description?.takeIf { it.isNotBlank() } ?: displayAlbum.description.trim()
+                description = existing?.description?.takeIf { it.isNotBlank() } ?: displayAlbum.description.trim(),
+                // 在线保存：仅保留既有 source（非 dlsite/扫描两条定性管线，新建留 null 走「其它」兜底归类），永不覆盖
+                source = existing?.source?.takeIf { it.isNotBlank() }
             )
             val insertedId = runCatching { database.albumDao().insertAlbum(entity) }.getOrDefault(0L)
             val albumId = if (insertedId > 0L) insertedId else (existing?.id ?: 0L)
