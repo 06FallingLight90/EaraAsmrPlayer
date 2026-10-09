@@ -101,6 +101,10 @@ class MainContainerRouteTest {
                     purchased = {
                         record("purchased")
                         Marker("purchased")
+                    },
+                    allSongs = {
+                        record("allSongs")
+                        Marker("allSongs")
                     }
                 )
             )

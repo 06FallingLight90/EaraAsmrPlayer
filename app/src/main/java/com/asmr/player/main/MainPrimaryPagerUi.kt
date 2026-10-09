@@ -380,6 +380,7 @@ internal fun MainPrimaryPagerContent(
                                                     setLibraryGroupPickerAlbumId(albumId)
                                                 },
                                                 onOpenFilterScreen = { navController.navigateSingleTop("library_filter") },
+                                                onOpenAllSongs = { navController.navigateSingleTop(Routes.AllSongs) },
                                                 onSearchKeyword = submitMetaSearchKeyword,
                                                 viewModel = libraryViewModel
                                             )

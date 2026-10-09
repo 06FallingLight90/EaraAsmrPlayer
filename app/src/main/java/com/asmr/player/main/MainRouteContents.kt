@@ -6,11 +6,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.paging.PagingSource
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import com.asmr.player.data.remote.scraper.resolveRecommendedWorkHeroCoverUrl
+import com.asmr.player.data.repository.LibraryReadRepository
 import com.asmr.player.data.repository.SearchRepository
+import com.asmr.player.domain.model.AllSongsQuery
+import com.asmr.player.domain.model.AllSongsTrackRow
+import com.asmr.player.playback.MediaItemFactory
 import com.asmr.player.ui.downloads.DownloadsScreen
 import com.asmr.player.ui.downloads.DownloadsViewModel
 import com.asmr.player.ui.dlsite.DlsiteLoginScreen
@@ -19,6 +24,8 @@ import com.asmr.player.ui.groups.AlbumGroupsViewModel
 import com.asmr.player.ui.library.AlbumDetailScreen
 import com.asmr.player.ui.library.LibraryFilterScreen
 import com.asmr.player.ui.library.LibraryViewModel
+import com.asmr.player.ui.library.allsongs.AllSongsPageSource
+import com.asmr.player.ui.library.allsongs.AllSongsScreen
 import com.asmr.player.ui.nav.AlbumCoverHintStore
 import com.asmr.player.ui.nav.AppNavigator
 import com.asmr.player.ui.player.PlayerViewModel
@@ -360,6 +367,29 @@ internal fun buildMainRouteContents(
                 )
             }
         },
+        allSongs = {
+            SecondaryPageBackground(topPadding = host.secondaryPageTopPadding) {
+                AllSongsScreen(
+                    onBack = { host.navController.popBackStack() },
+                    // 单曲播放：平铺行以 trackPath 兼任 mediaId 键（T5 投影约定），
+                    // 经 MediaItemFactory.fromDetails 构造后走 playMediaItems 单曲起播。
+                    onPlayTrack = { row ->
+                        val mediaItem = MediaItemFactory.fromDetails(
+                            mediaId = row.trackPath,
+                            uri = row.trackPath,
+                            title = row.trackTitle,
+                            artist = row.artist.orEmpty(),
+                            albumTitle = row.albumTitle,
+                            artworkUri = row.coverPath,
+                            albumId = row.albumId,
+                            trackId = row.trackId
+                        )
+                        host.playerViewModel.playMediaItems(listOf(mediaItem), 0)
+                        host.requestMiniPlayerPlayFeedback()
+                    }
+                )
+            }
+        },
         dlsiteLogin = {
             val dlsiteLoginViewModel: DlsiteLoginViewModel = hiltViewModel(host.activityViewModelStoreOwner)
             SecondaryPageBackground(topPadding = host.secondaryPageTopPadding) {
@@ -396,5 +426,22 @@ internal object PurchasedSourceModule {
 
             override fun hasDlsiteStoredCredentials(): Boolean =
                 searchRepository.hasDlsiteStoredCredentials()
+        }
+}
+
+/**
+ * 全部歌曲平铺视图的端口生产装配（同 PurchasedSourceModule 的端口模式）。
+ * LibraryReadRepository 在 ci_guard 包级 SCC 大连通团内，ui/library/allsongs 直接
+ * 引用会让新包入环（SCC ratchet 禁增）；main 已在团内，由此委托不新增连通团成员。
+ * 测试侧用手写 fake 替身，不经此模块。
+ */
+@Module
+@InstallIn(ViewModelComponent::class)
+internal object AllSongsSourceModule {
+    @Provides
+    fun provideAllSongsPageSource(readRepository: LibraryReadRepository): AllSongsPageSource =
+        object : AllSongsPageSource {
+            override fun allSongsPaged(query: AllSongsQuery): PagingSource<Int, AllSongsTrackRow> =
+                readRepository.allSongsPaged(query)
         }
 }

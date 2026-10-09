@@ -15,6 +15,9 @@ object Routes {
     /** 已购曲库独立页（阶段一：仅注册路由，不进底部页签）。 */
     const val Purchased = "purchased"
 
+    /** 全部歌曲平铺视图（US-05/T6：库页入口进入的二级页，不进底部页签）。 */
+    const val AllSongs = "allsongs"
+
     const val AlbumDetailByIdPattern = "album_detail/{albumId}?rjCode={rjCode}&initialTab={initialTab}"
 
     const val AlbumDetailByRjPattern = "album_detail_rj/{rj}?initialTab={initialTab}"

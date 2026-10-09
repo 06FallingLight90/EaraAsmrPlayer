@@ -35,7 +35,8 @@ internal class MainNavGraphContents(
     val playlistSystem: @Composable (type: String) -> Unit,
     val downloads: @Composable () -> Unit,
     val dlsiteLogin: @Composable () -> Unit,
-    val purchased: @Composable () -> Unit
+    val purchased: @Composable () -> Unit,
+    val allSongs: @Composable () -> Unit
 )
 
 @Composable
@@ -185,6 +186,9 @@ internal fun MainNavGraph(
         }
         composable(Routes.Purchased) {
             contents.purchased()
+        }
+        composable(Routes.AllSongs) {
+            contents.allSongs()
         }
     }
 }

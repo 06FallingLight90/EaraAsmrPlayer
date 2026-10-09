@@ -146,6 +146,7 @@ fun LibraryScreen(
     onOpenPlaylistPicker: (MediaItem) -> Unit = {},
     onOpenGroupPicker: (albumId: Long) -> Unit = { _ -> },
     onOpenFilterScreen: () -> Unit = {},
+    onOpenAllSongs: () -> Unit = {},
     onSearchKeyword: (String) -> Unit = {},
     scrollToTopSignal: Long = 0L,
     viewModel: LibraryViewModel = hiltViewModel()
@@ -160,6 +161,7 @@ fun LibraryScreen(
             onOpenPlaylistPicker = onOpenPlaylistPicker,
             onOpenGroupPicker = onOpenGroupPicker,
             onOpenFilterScreen = onOpenFilterScreen,
+            onOpenAllSongs = onOpenAllSongs,
             onSearchKeyword = onSearchKeyword,
             scrollToTopSignal = scrollToTopSignal,
             viewModel = viewModel,
@@ -178,6 +180,7 @@ private fun LibraryScreenContent(
     onOpenPlaylistPicker: (MediaItem) -> Unit = {},
     onOpenGroupPicker: (albumId: Long) -> Unit = { _ -> },
     onOpenFilterScreen: () -> Unit = {},
+    onOpenAllSongs: () -> Unit = {},
     onSearchKeyword: (String) -> Unit = {},
     scrollToTopSignal: Long = 0L,
     viewModel: LibraryViewModel = hiltViewModel()
@@ -873,6 +876,7 @@ private fun LibraryScreenContent(
                                     onSortTitle = { viewModel.setSort(LibrarySort.TitleAsc) },
                                     onOpenFilterScreen = onOpenFilterScreen,
                                     filterActive = hasActiveFilters,
+                                    onOpenAllSongs = onOpenAllSongs,
                                     rightPanelToggle = rightPanelToggle,
                                     materialColorScheme = materialColorScheme,
                                     chromeState = chromeState,

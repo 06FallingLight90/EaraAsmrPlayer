@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Search
@@ -50,6 +51,7 @@ internal const val LIBRARY_SORT_LAST_PLAYED_ITEM_TAG = "library_sort_last_played
 internal const val LIBRARY_SORT_ADDED_ITEM_TAG = "library_sort_added_item"
 internal const val LIBRARY_SORT_TITLE_ITEM_TAG = "library_sort_title_item"
 internal const val LIBRARY_FILTER_BUTTON_TAG = "library_filter_button"
+internal const val LIBRARY_ALL_SONGS_BUTTON_TAG = "library_all_songs_button"
 
 private val LibraryChromeCollapseOvershoot = 12.dp
 
@@ -67,6 +69,7 @@ internal fun LibraryChrome(
     onSortTitle: () -> Unit,
     onOpenFilterScreen: () -> Unit,
     filterActive: Boolean = false,
+    onOpenAllSongs: (() -> Unit)? = null,
     rightPanelToggle: (@Composable (Modifier) -> Unit)?,
     materialColorScheme: androidx.compose.material3.ColorScheme,
     chromeState: CollapsibleHeaderState,
@@ -204,6 +207,17 @@ internal fun LibraryChrome(
                 .semantics { stateDescription = if (filterActive) "筛选已启用" else "筛选未启用" },
             active = filterActive
         )
+        // US-05/T6：全部歌曲平铺视图入口（null = 宿主不装配时按钮不渲染）
+        if (onOpenAllSongs != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            ActionButton(
+                icon = Icons.AutoMirrored.Rounded.QueueMusic,
+                onClick = onOpenAllSongs,
+                modifier = Modifier
+                    .testTag(LIBRARY_ALL_SONGS_BUTTON_TAG)
+                    .semantics { stateDescription = "全部歌曲" }
+            )
+        }
         if (rightPanelToggle != null) {
             Spacer(modifier = Modifier.width(8.dp))
             rightPanelToggle(Modifier.size(50.dp))
