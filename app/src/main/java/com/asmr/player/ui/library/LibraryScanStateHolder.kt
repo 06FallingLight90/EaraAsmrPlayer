@@ -280,6 +280,8 @@ internal class LibraryScanStateHolder(
                 asDownloadRoot = !importAll,
                 requireCompletionMarker = !importAll,
                 onAlbumScanned = onAlbumScanned,
+                // T3'：下载目录管线的 SAF 委托分支——被扫描对象仍是 DLsite 作品落盘，来源不随 asDownloadRoot 翻转。
+                pipelineSource = AlbumEntity.SOURCE_DLSITE_DOWNLOAD,
             )
             return
         }
@@ -332,6 +334,10 @@ internal class LibraryScanStateHolder(
                 audioTrackCount = aggregate.trackCount,
                 audioTotalDuration = aggregate.totalDuration,
                 audioTotalSizeBytes = aggregate.totalSizeBytes,
+                // T3'：下载目录管线（DLsite 作品落盘）来源回填；已有非空 source 保留（单点规则见行为档案）。
+                source = writeRepository.scanMetadataSupport.resolveAlbumSource(
+                    existing?.source, AlbumEntity.SOURCE_DLSITE_DOWNLOAD
+                ),
             )
             val albumId = writeRepository.insertAlbum(entity)
             writeRepository.upsertAlbumFtsIndex(albumId, entity.copy(id = albumId))
@@ -341,7 +347,12 @@ internal class LibraryScanStateHolder(
                     .onEnter { directory -> directory == albumDir || isScannableLocalDirectoryName(directory.name) }
                     .firstOrNull { it.isFile && setOf("mp3","flac","wav","m4a","ogg","aac","opus").contains(it.extension.lowercase()) }
                 if (audio != null) {
-                    val bmp = EmbeddedMediaExtractor.extractArtwork(context, audio.absolutePath)
+                    // T3'：封面缺失时内嵌图优先（元数据读取独立于音轨增量链，与原 extractArtwork 同为按需探查），
+                    // 读不到再回退既有 EmbeddedMediaExtractor 提取——触发条件（coverPath 为空）不变。
+                    val embeddedCover = writeRepository.scanMetadataSupport
+                        .readForNewTrack(audio.absolutePath)?.embeddedCover
+                    val bmp = writeRepository.scanMetadataSupport.decodeEmbeddedCover(embeddedCover)
+                        ?: EmbeddedMediaExtractor.extractArtwork(context, audio.absolutePath)
                     if (bmp != null) {
                         val saved = EmbeddedMediaExtractor.saveArtworkToCache(context, albumId, bmp)
                         if (!saved.isNullOrBlank()) {
@@ -470,16 +481,18 @@ internal class LibraryScanStateHolder(
             }
 
             val existingTrack = existingTracks[audioPath]
+            // T3'：仅新插轨读元数据（增量闸门在 LibraryScanMetadataSupport）；已存在轨只覆写 title/group。
+            val scanMetadata = writeRepository.scanMetadataSupport
             val scannedTrack = if (existingTrack == null) {
-                TrackEntity(
+                scanMetadata.newTrackEntity(
                     albumId = albumId,
                     title = trackTitle,
                     path = audioPath,
-                    duration = 0.0,
-                    group = group
+                    group = group,
+                    metadata = scanMetadata.readForNewTrack(audioPath),
                 )
             } else {
-                existingTrack.copy(title = trackTitle, group = group)
+                scanMetadata.updatedTrackEntity(existingTrack, trackTitle, group)
             }
             if (existingTrack == null) tracksToInsert.add(scannedTrack) else tracksToUpdate.add(scannedTrack)
         }
@@ -516,6 +529,10 @@ internal class LibraryScanStateHolder(
         uriString: String,
         asDownloadRoot: Boolean = false,
         requireCompletionMarker: Boolean = asDownloadRoot,
+        // T3'：来源回填按"进入哪条管线"决定——扫描根直扫 = local_scan（默认）；
+        // scanFromDownloadedDir 的 SAF 委托分支（下载根/整体导入）传 dlsite_download。
+        // 注意排位在 onAlbumScanned 之前：既有的尾 lambda 调用点（scanAllRoots/scanSingleRoot）才能继续匹配回调。
+        pipelineSource: String? = AlbumEntity.SOURCE_LOCAL_SCAN,
         onAlbumScanned: ((String) -> Unit)? = null,
     ) {
         val uri = runCatching { Uri.parse(uriString) }.getOrNull() ?: return
@@ -530,7 +547,7 @@ internal class LibraryScanStateHolder(
         children.forEach { albumDir ->
             currentCoroutineContext().ensureActive()
             foundAlbumPaths.add(
-                scanSingleDocumentAlbum(uri, albumDir, asDownloadRoot, onAlbumScanned)
+                scanSingleDocumentAlbum(uri, albumDir, asDownloadRoot, onAlbumScanned, pipelineSource)
             )
         }
         if (asDownloadRoot) {
@@ -546,6 +563,7 @@ internal class LibraryScanStateHolder(
         albumDir: SafDocNode,
         asDownloadRoot: Boolean,
         onAlbumScanned: ((String) -> Unit)?,
+        pipelineSource: String?,
     ): String {
         val albumUri = DocumentsContract.buildDocumentUriUsingTree(uri, albumDir.documentId)
         val albumPath = albumUri.toString()
@@ -582,7 +600,7 @@ internal class LibraryScanStateHolder(
             spec.path to entries
         }
 
-        val entity = buildDocumentAlbumEntity(existing, title, albumPath, asDownloadRoot, rj, coverPath)
+        val entity = buildDocumentAlbumEntity(existing, title, albumPath, asDownloadRoot, rj, coverPath, pipelineSource)
         val leaves = all.asSequence()
             .mapNotNull { node ->
                 val t = treeFileTypeForName(node.displayName)
@@ -606,7 +624,7 @@ internal class LibraryScanStateHolder(
         if (scanResult.wroteAnySubtitles) {
             playerConnection.requestLyricsReload()
         }
-        backfillDocumentAlbumCover(insertedAlbumId, trackSpecs)
+        backfillDocumentAlbumCover(insertedAlbumId, trackSpecs, scanResult.firstInsertedCoverBytes)
         enqueueAlbumCoverThumbWork(insertedAlbumId)
         enqueueTrackDurationWork(insertedAlbumId)
         return albumPath
@@ -650,6 +668,7 @@ internal class LibraryScanStateHolder(
         asDownloadRoot: Boolean,
         rj: String,
         coverPath: String,
+        pipelineSource: String?,
     ): AlbumEntity {
         return AlbumEntity(
             id = existing?.id ?: 0L,
@@ -665,19 +684,28 @@ internal class LibraryScanStateHolder(
             coverThumbPath = existing?.coverThumbPath.orEmpty(),
             workId = existing?.workId?.takeIf { it.isNotBlank() } ?: rj,
             rjCode = existing?.rjCode?.takeIf { it.isNotBlank() } ?: rj,
-            description = existing?.description ?: ""
+            description = existing?.description ?: "",
+            // T3'：SAF 扫描管线来源回填（与 File 分支共用单点解析规则）。
+            source = writeRepository.scanMetadataSupport.resolveAlbumSource(existing?.source, pipelineSource)
         )
     }
 
-    /** C6-1（原 scanFromDocumentTree 内联段逐字随迁）：封面缺失时从首个音轨提取内嵌封面回填。 */
-    private suspend fun backfillDocumentAlbumCover(albumId: Long, trackSpecs: List<ScanTrackSpec>) {
+    /** C6-1（原 scanFromDocumentTree 内联段逐字随迁）：封面缺失时从首个音轨提取内嵌封面回填。
+     *  T3'：内嵌图源优先取本次扫描首插轨的 AudioMetadata.embeddedCover（增量读取的副产品，零额外 MMR 打开），
+     *  为 null 回退既有 EmbeddedMediaExtractor——触发条件（coverPath 为空）不变。 */
+    private suspend fun backfillDocumentAlbumCover(
+        albumId: Long,
+        trackSpecs: List<ScanTrackSpec>,
+        firstInsertedCoverBytes: ByteArray?,
+    ) {
         runCatching {
             val persisted = readRepository.getAlbumById(albumId)
             val needCover = persisted?.coverPath?.trim().orEmpty().isBlank()
             if (needCover) {
                 val firstAudio = trackSpecs.firstOrNull()?.path
                 if (!firstAudio.isNullOrBlank()) {
-                    val bmp = EmbeddedMediaExtractor.extractArtwork(context, firstAudio)
+                    val bmp = writeRepository.scanMetadataSupport.decodeEmbeddedCover(firstInsertedCoverBytes)
+                        ?: EmbeddedMediaExtractor.extractArtwork(context, firstAudio)
                     if (bmp != null) {
                         val saved = EmbeddedMediaExtractor.saveArtworkToCache(context, albumId, bmp)
                         if (!saved.isNullOrBlank()) {

@@ -6,6 +6,7 @@ import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.library.shouldBackfillLegacyOnlineSavedAlbumRoot
+import com.asmr.player.data.local.metadata.AudioMetadataReader
 import com.asmr.player.domain.model.Album
 import com.asmr.player.domain.model.LibraryFilterPreset
 import com.asmr.player.domain.model.LibraryQuerySpec
@@ -33,14 +34,21 @@ import javax.inject.Singleton
 class LibraryWriteRepository @Inject constructor(
     private val database: AppDatabase,
     @ApplicationContext private val context: Context,
+    metadataReader: AudioMetadataReader? = null,
 ) {
     /** R3-B5a：预设/排序/过滤持久化写出口（原 VM 手动构造 LibraryPreferencesStore 的写侧透传）。 */
     private val preferencesStore = LibraryPreferencesStore(context)
 
     private val tagWrite = LibraryTagWriteSupport(database)
     private val deleteWrite = LibraryDeleteWriteSupport(database)
-    private val scanWrite = LibraryScanWriteSupport(database, tagWrite, deleteWrite)
+    // T3'：扫描元数据/来源回填支持（生产经 Hilt 注入 AudioMetadataReader；默认 null 供既有测试构造零改动，
+    // reader 缺席时读取全部退化为 null——字段留空，行为等同"无标签"）。
+    private val scanMetadata = LibraryScanMetadataSupport(metadataReader)
+    private val scanWrite = LibraryScanWriteSupport(database, tagWrite, deleteWrite, scanMetadata)
     private val onlineSave = LibraryOnlineSaveSupport(database)
+
+    /** T3'：扫描管线（LibraryScanStateHolder）取用元数据/来源回填单点。 */
+    internal val scanMetadataSupport: LibraryScanMetadataSupport get() = scanMetadata
 
     // ---------- 过滤/预设持久化 ----------
 
@@ -174,8 +182,12 @@ class LibraryWriteRepository @Inject constructor(
         tracksToUpdate, tracksToInsert, subtitleEntriesByAudioPath, subtitleEntriesByExistingTrackId, removedIds,
     )
 
-    /** 文档树整册扫描入库结果：新专辑 id + 是否写过字幕（供调用方决定歌词重载）。 */
-    internal data class DocumentScanResult(val albumId: Long, val wroteAnySubtitles: Boolean)
+    /** 文档树整册扫描入库结果：新专辑 id + 是否写过字幕（供调用方决定歌词重载）+ 首插轨内嵌封面字节（供封面回填链）。 */
+    internal data class DocumentScanResult(
+        val albumId: Long,
+        val wroteAnySubtitles: Boolean,
+        val firstInsertedCoverBytes: ByteArray? = null,
+    )
 
     internal suspend fun upsertScannedDocumentAlbum(
         entity: AlbumEntity,

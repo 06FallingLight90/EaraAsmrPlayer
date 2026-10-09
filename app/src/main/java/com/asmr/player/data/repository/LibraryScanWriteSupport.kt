@@ -27,6 +27,7 @@ internal class LibraryScanWriteSupport(
     private val database: AppDatabase,
     private val tagWrite: LibraryTagWriteSupport,
     private val deleteWrite: LibraryDeleteWriteSupport,
+    private val scanMetadata: LibraryScanMetadataSupport,
 ) {
     /** 专辑音频聚合三字段（数量/总时长/总字节）。fileSizeQuery 由调用方注入（文件系统探查属平台侧）。 */
     suspend fun computeAlbumAudioAggregate(
@@ -380,6 +381,7 @@ internal class LibraryScanWriteSupport(
         stampProvider: (List<String>) -> Long,
     ): LibraryWriteRepository.DocumentScanResult {
         var wroteAnySubtitles = false
+        var firstInsertedCoverBytes: ByteArray? = null
         val insertedAlbumId = database.withTransaction {
             val id = database.albumDao().insertAlbum(entity)
             tagWrite.upsertAlbumFtsIndex(id, entity.copy(id = id))
@@ -400,18 +402,16 @@ internal class LibraryScanWriteSupport(
 
             val tracksToInsert = mutableListOf<Pair<TrackEntity, LibraryWriteRepository.ScanTrackSpec>>()
             val tracksToUpdate = mutableListOf<Pair<TrackEntity, LibraryWriteRepository.ScanTrackSpec>>()
+            // T3'：元数据仅对本次新插轨读取（增量语义，闸门在 LibraryScanMetadataSupport）；
+            // 已存在轨只覆写 title/group，artist/albumTag 不动。
             trackSpecs.forEach { spec ->
                 val existingTrack = existingUnderRoot[spec.path]
                 if (existingTrack == null) {
-                    tracksToInsert += TrackEntity(
-                        albumId = id,
-                        title = spec.title,
-                        path = spec.path,
-                        duration = 0.0,
-                        group = spec.group,
-                    ) to spec
+                    val metadata = scanMetadata.readForNewTrack(spec.path)
+                    tracksToInsert += scanMetadata.newTrackEntity(id, spec.title, spec.path, spec.group, metadata) to spec
+                    if (firstInsertedCoverBytes == null) firstInsertedCoverBytes = metadata?.embeddedCover
                 } else {
-                    tracksToUpdate += existingTrack.copy(title = spec.title, group = spec.group) to spec
+                    tracksToUpdate += scanMetadata.updatedTrackEntity(existingTrack, spec.title, spec.group) to spec
                 }
             }
 
@@ -492,7 +492,11 @@ internal class LibraryScanWriteSupport(
             upsertLocalTreeCache(albumId = id, albumPaths = paths, leaves = cacheLeaves, stampProvider = stampProvider)
             id
         }
-        return LibraryWriteRepository.DocumentScanResult(albumId = insertedAlbumId, wroteAnySubtitles = wroteAnySubtitles)
+        return LibraryWriteRepository.DocumentScanResult(
+            albumId = insertedAlbumId,
+            wroteAnySubtitles = wroteAnySubtitles,
+            firstInsertedCoverBytes = firstInsertedCoverBytes,
+        )
     }
 
     /** 文档树单册重扫事务（原 scanSingleAlbumFromDocumentUri 事务体逐字下沉）。 */
