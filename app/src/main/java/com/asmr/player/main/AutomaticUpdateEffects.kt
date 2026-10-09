@@ -44,7 +44,7 @@ internal fun AutomaticUpdateEffects(
             }
             AppUpdateInstallResult.PermissionRequired -> {
                 pendingAutomaticInstallPath = apkPath
-                messageManager.showInfo("请允许 Eara 安装未知来源应用后继续安装")
+                messageManager.showInfo("请允许 Eara Player 安装未知来源应用后继续安装")
             }
             AppUpdateInstallResult.FileInvalid -> {
                 pendingAutomaticInstallPath = null
