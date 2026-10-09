@@ -10,6 +10,7 @@ import com.asmr.player.data.local.db.entities.TagEntity
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.db.entities.SubtitleEntity
 import com.asmr.player.data.local.db.entities.TrackTagEntity
+import com.asmr.player.domain.model.AllSongsTrackRow
 import com.asmr.player.domain.model.LibraryTrackAlbumHeaderRow
 import com.asmr.player.domain.model.LibraryTrackRow
 import kotlinx.coroutines.flow.Flow
@@ -188,6 +189,10 @@ interface TrackDao {
         ]
     )
     fun queryLibraryTrackAlbumHeadersPaged(query: SupportSQLiteQuery): PagingSource<Int, LibraryTrackAlbumHeaderRow>
+
+    /** T5：全部歌曲平铺分页（tracks join albums，SQL 由 AllSongsQueryBuilder 构建，仅读两表故只观测两实体）。 */
+    @RawQuery(observedEntities = [TrackEntity::class, AlbumEntity::class])
+    fun queryAllSongsPaged(query: SupportSQLiteQuery): PagingSource<Int, AllSongsTrackRow>
 }
 
 data class AlbumTrackCountRow(

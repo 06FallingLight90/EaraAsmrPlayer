@@ -5,6 +5,7 @@ import androidx.sqlite.db.SupportSQLiteQuery
 import android.content.Context
 import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.projection.AlbumTagsCsv
+import com.asmr.player.data.local.db.query.AllSongsQueryBuilder
 import com.asmr.player.data.local.datastore.LibraryPreferencesStore
 import com.asmr.player.domain.model.LibraryFilterPreset
 import com.asmr.player.domain.model.LibrarySort
@@ -16,6 +17,8 @@ import com.asmr.player.data.local.db.entities.AlbumEntity
 import com.asmr.player.data.local.db.entities.DownloadTaskEntity
 import com.asmr.player.data.local.db.entities.OnlineSavedResourceEntity
 import com.asmr.player.data.local.db.entities.TrackEntity
+import com.asmr.player.domain.model.AllSongsQuery
+import com.asmr.player.domain.model.AllSongsTrackRow
 import com.asmr.player.domain.model.LibraryQuerySpec
 import com.asmr.player.domain.model.PersistedLibraryFilters
 import kotlinx.coroutines.flow.Flow
@@ -80,6 +83,10 @@ class LibraryReadRepository @Inject constructor(
 
     fun observeLibraryTracksForAlbum(spec: LibraryQuerySpec, albumId: Long): Flow<List<LibraryTrackRow>> =
         observeLibraryTracks(LibraryTrackQueryBuilder.buildForAlbum(spec, albumId))
+
+    /** T5：全部歌曲平铺分页出口（US-05）——spec 见 domain/model/AllSongsQuery，行投影 AllSongsTrackRow。 */
+    fun allSongsPaged(query: AllSongsQuery): PagingSource<Int, AllSongsTrackRow> =
+        database.trackDao().queryAllSongsPaged(AllSongsQueryBuilder.build(query))
 
     // ---------- 一次性查询 ----------
 
