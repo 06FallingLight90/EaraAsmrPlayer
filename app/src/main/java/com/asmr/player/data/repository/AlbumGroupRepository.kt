@@ -1,5 +1,6 @@
 package com.asmr.player.data.repository
 
+import com.asmr.player.data.local.db.AppDatabase
 import com.asmr.player.data.local.db.dao.AlbumGroupDao
 import com.asmr.player.data.local.db.dao.AlbumGroupItemDao
 import com.asmr.player.domain.model.AlbumGroupStatsRow
@@ -16,11 +17,18 @@ import javax.inject.Singleton
 
 @Singleton
 class AlbumGroupRepository @Inject constructor(
+    database: AppDatabase,
     private val groupDao: AlbumGroupDao,
     private val groupItemDao: AlbumGroupItemDao,
     private val trackDao: TrackDao
 ) {
     private val addAlbumMutex = Mutex()
+
+    // T7：三类默认合集 seed + 来源自动归类单点（行为契约见 docs/behavior-notes/collection-auto-classify.md）。
+    private val autoClassify = AutoClassifySupport(database)
+
+    /** T7：三类默认合集幂等 seed（首次创建时全量回填存量曲目，AlbumGroupsViewModel init 调用）。 */
+    suspend fun ensureDefaultGroups() = autoClassify.ensureDefaultGroups()
 
     fun observeGroupsWithStats(): Flow<List<AlbumGroupStatsRow>> = groupDao.observeGroupsWithStats()
 

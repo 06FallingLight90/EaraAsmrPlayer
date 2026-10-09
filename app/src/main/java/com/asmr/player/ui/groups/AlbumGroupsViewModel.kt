@@ -23,6 +23,13 @@ class AlbumGroupsViewModel @Inject constructor(
     val groups: StateFlow<List<AlbumGroupStatsRow>> = groupRepository.observeGroupsWithStats()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    init {
+        // T7：三类默认合集幂等 seed（歌曲/音声/其它音频，首建时全量回填存量曲目）。
+        viewModelScope.launch {
+            groupRepository.ensureDefaultGroups()
+        }
+    }
+
     fun createGroup(name: String) {
         val trimmed = name.trim()
         if (trimmed.isBlank()) return

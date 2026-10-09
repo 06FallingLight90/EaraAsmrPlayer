@@ -29,6 +29,7 @@ class AlbumGroupRepositoryOrderTest {
             .allowMainThreadQueries()
             .build()
         repository = AlbumGroupRepository(
+            database = db,
             groupDao = db.albumGroupDao(),
             groupItemDao = db.albumGroupItemDao(),
             trackDao = db.trackDao()

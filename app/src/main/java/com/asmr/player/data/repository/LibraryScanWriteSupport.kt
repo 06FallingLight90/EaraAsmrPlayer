@@ -28,6 +28,7 @@ internal class LibraryScanWriteSupport(
     private val tagWrite: LibraryTagWriteSupport,
     private val deleteWrite: LibraryDeleteWriteSupport,
     private val scanMetadata: LibraryScanMetadataSupport,
+    private val autoClassify: AutoClassifySupport,
 ) {
     /** 专辑音频聚合三字段（数量/总时长/总字节）。fileSizeQuery 由调用方注入（文件系统探查属平台侧）。 */
     suspend fun computeAlbumAudioAggregate(
@@ -339,6 +340,10 @@ internal class LibraryScanWriteSupport(
                         subtitlesByTrackId[trackId] = entriesForTrack
                     }
                 }
+                // T7：新插轨增量挂默认合集（update 分支不挂，二扫不回加；source 取专辑最终定性值）。
+                attachInsertedTracksToDefaultGroups(
+                    insertedTrackIds.zip(tracksToInsert).filter { it.first > 0L }.map { it.second }
+                )
             }
 
             if (subtitlesByTrackId.isNotEmpty()) {
@@ -364,6 +369,28 @@ internal class LibraryScanWriteSupport(
                 database.trackDao().deleteTracksByIds(removedIds)
             }
         }
+    }
+
+    /**
+     * T7：新插轨增量挂默认合集（仅本事务真正插入成功的 track；source 取专辑行最终定性值——
+     * RJ 合并场景下载专辑重扫仍归音声；albumId<=0 或专辑行缺失时退回 fallbackSource）。
+     * 行为契约见 docs/behavior-notes/collection-auto-classify.md。
+     */
+    private suspend fun attachInsertedTracksToDefaultGroups(
+        insertedTracks: List<TrackEntity>,
+        fallbackSource: String? = null,
+    ) {
+        if (insertedTracks.isEmpty()) return
+        insertedTracks
+            .groupBy { it.albumId }
+            .forEach { (albumId, tracks) ->
+                val source = if (albumId > 0L) {
+                    database.albumDao().getAlbumById(albumId)?.source ?: fallbackSource
+                } else {
+                    fallbackSource
+                }
+                autoClassify.attachTracksToDefaultGroups(albumId, tracks.map { it.path }, source)
+            }
     }
 
     /**
@@ -455,6 +482,11 @@ internal class LibraryScanWriteSupport(
                     database.trackDao().insertSubtitles(subtitlesToInsert)
                     wroteAnySubtitles = true
                 }
+                // T7：新插轨增量挂默认合集（entity.source 已在调用方经 resolveAlbumSource 定性）。
+                attachInsertedTracksToDefaultGroups(
+                    insertedTrackIds.zip(tracksToInsert).filter { it.first > 0L }.map { it.second.first },
+                    fallbackSource = entity.source,
+                )
             }
 
             val allAfterInsert = database.trackDao().getTracksForAlbumOnce(id)

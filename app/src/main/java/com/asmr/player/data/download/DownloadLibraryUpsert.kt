@@ -12,6 +12,7 @@ import com.asmr.player.data.local.db.entities.RemoteSubtitleSourceEntity
 import com.asmr.player.data.local.db.entities.SubtitleEntity
 import com.asmr.player.data.local.db.entities.TrackEntity
 import com.asmr.player.data.local.library.LocalAlbumMergeService
+import com.asmr.player.data.repository.AutoClassifySupport
 import com.asmr.player.util.DlsiteWorkNo
 import com.asmr.player.util.SubtitleEntry
 import com.asmr.player.util.SubtitleMatchSupport
@@ -68,6 +69,8 @@ internal suspend fun upsertDownloadedAlbumToLibrary(
     val albumDao = db.albumDao()
     val trackDao = db.trackDao()
     val albumFtsDao = db.albumFtsDao()
+    // T7：新插轨挂默认合集单点（见 behavior-notes/collection-auto-classify.md）。
+    val autoClassify = AutoClassifySupport(db)
 
     val mergeService = LocalAlbumMergeService(db, DownloadStorageGateway(appContext))
     val existing = mergeService.resolveAndMerge(
@@ -225,7 +228,13 @@ internal suspend fun upsertDownloadedAlbumToLibrary(
             group = group
         )
     }
-    if (newTracks.isNotEmpty()) runCatching { trackDao.insertTracks(newTracks) }
+    if (newTracks.isNotEmpty()) {
+        runCatching { trackDao.insertTracks(newTracks) }
+        // T7：下载入库新插轨挂默认合集（entity.source：新专辑 dlsite_download → 音声；已有专辑保留原 source）。
+        runCatching {
+            autoClassify.attachTracksToDefaultGroups(albumId, newTracks.map { it.path }, entity.source)
+        }
+    }
 
     val indexedTracksByIdentity = trackDao.getTracksForAlbumOnce(albumId).associateBy { track ->
         runCatching { File(track.path).canonicalPath }.getOrDefault(track.path)
@@ -275,6 +284,8 @@ private suspend fun upsertDownloadedDocumentAlbumToLibrary(
     val trackDao = db.trackDao()
     val albumFtsDao = db.albumFtsDao()
     val mergeService = LocalAlbumMergeService(db, storage)
+    // T7：新插轨挂默认合集单点（见 behavior-notes/collection-auto-classify.md）。
+    val autoClassify = AutoClassifySupport(db)
     val existing = mergeService.resolveAndMerge(
         rj = rj,
         fallbackPath = rootDir,
@@ -356,7 +367,13 @@ private suspend fun upsertDownloadedDocumentAlbumToLibrary(
         }
     }
     if (tracksToUpdate.isNotEmpty()) trackDao.updateTracks(tracksToUpdate)
-    if (tracksToInsert.isNotEmpty()) trackDao.insertTracks(tracksToInsert)
+    if (tracksToInsert.isNotEmpty()) {
+        trackDao.insertTracks(tracksToInsert)
+        // T7：SAF 下载入库新插轨挂默认合集（新专辑 source 定性原状留 null → 其它音频，本处不改 source 定性行为）。
+        runCatching {
+            autoClassify.attachTracksToDefaultGroups(albumId, tracksToInsert.map { it.path }, entity.source)
+        }
+    }
 
     val indexedTracksByIdentity = trackDao.getTracksForAlbumOnce(albumId)
         .associateBy { track -> storage.stableIdentity(track.path) }

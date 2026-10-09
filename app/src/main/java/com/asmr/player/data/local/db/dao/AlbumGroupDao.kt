@@ -46,6 +46,10 @@ interface AlbumGroupDao {
     @Query("SELECT * FROM album_groups WHERE name = :name COLLATE NOCASE LIMIT 1")
     suspend fun getGroupByNameOnce(name: String): AlbumGroupEntity?
 
+    /** T7：全部合集一次性读取（seed 幂等校验/诊断用）。 */
+    @Query("SELECT * FROM album_groups")
+    suspend fun getAllGroupsOnce(): List<AlbumGroupEntity>
+
     @Query("SELECT * FROM album_groups WHERE id = :id LIMIT 1")
     suspend fun getGroupByIdOnce(id: Long): AlbumGroupEntity?
 

@@ -73,6 +73,25 @@ interface AlbumGroupItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertItems(items: List<AlbumGroupItemEntity>)
 
+    /** T7：自动归类批量挂载用——冲突（(groupId, mediaId) 已存在）时静默跳过，不覆写既有 itemOrder。 */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertItemsIgnoringConflicts(items: List<AlbumGroupItemEntity>)
+
+    /** T7：组内已挂 mediaId 全集（增量挂载去重读取）。 */
+    @Query("SELECT mediaId FROM album_group_items WHERE groupId = :groupId")
+    suspend fun getGroupMediaIdsOnce(groupId: Long): List<String>
+
+    /** T7：存量回填投影——全部曲目 path × 所属专辑 source（见 behavior-notes/collection-auto-classify.md）。 */
+    @Query(
+        """
+        SELECT t.path AS path, a.source AS source
+        FROM tracks t
+        INNER JOIN albums a ON a.id = t.albumId
+        WHERE t.path != ''
+        """
+    )
+    suspend fun getAllTrackSourceRowsOnce(): List<TrackSourceRow>
+
     @Query("DELETE FROM album_group_items WHERE groupId = :groupId AND mediaId = :mediaId")
     suspend fun deleteItem(groupId: Long, mediaId: String)
 

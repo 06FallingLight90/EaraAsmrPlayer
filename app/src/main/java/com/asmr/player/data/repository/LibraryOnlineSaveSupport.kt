@@ -13,7 +13,10 @@ import com.asmr.player.domain.model.Album
  * R3-C3：在线保存写族实现（自 LibraryWriteRepository 逐字搬移，逻辑未改）。
  * 门面 [LibraryWriteRepository] 保留全部签名委托至此；调用方零改动。
  */
-internal class LibraryOnlineSaveSupport(private val database: AppDatabase) {
+internal class LibraryOnlineSaveSupport(
+    private val database: AppDatabase,
+    private val autoClassify: AutoClassifySupport,
+) {
     /**
      * 在线选择保存到本地库事务（原 AlbumDetailViewModel saveOnlineSelectedToLibrary 事务体逐字下沉）。
      * existing 按 targetLocalAlbumId 优先、workKey 兜底读取；专辑行/FTS/音轨/远程字幕源/在线资源逐段 runCatching。
@@ -111,6 +114,15 @@ internal class LibraryOnlineSaveSupport(private val database: AppDatabase) {
             if (newTracks.isNotEmpty()) {
                 val insertedTrackIds = runCatching { database.trackDao().insertTracks(newTracks) }.getOrDefault(emptyList())
                 insertedCount = insertedTrackIds.count { it > 0L }
+                // T7：在线保存新插轨挂默认合集（新专辑 source 留 null → 其它音频；仅挂真正插入成功的轨，
+                // 见 behavior-notes/collection-auto-classify.md）。
+                runCatching {
+                    autoClassify.attachTracksToDefaultGroups(
+                        albumId,
+                        insertedTrackIds.zip(newTracks).filter { it.first > 0L }.map { it.second.path },
+                        entity.source,
+                    )
+                }
                 val sources = insertedTrackIds.zip(newLeaves).flatMap { (trackId, leaf) ->
                     leaf.subtitleSources.mapNotNull { src ->
                         val url = src.url.trim()

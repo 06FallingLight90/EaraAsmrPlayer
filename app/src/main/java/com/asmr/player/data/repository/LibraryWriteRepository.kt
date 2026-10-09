@@ -44,8 +44,10 @@ class LibraryWriteRepository @Inject constructor(
     // T3'：扫描元数据/来源回填支持（生产经 Hilt 注入 AudioMetadataReader；默认 null 供既有测试构造零改动，
     // reader 缺席时读取全部退化为 null——字段留空，行为等同"无标签"）。
     private val scanMetadata = LibraryScanMetadataSupport(metadataReader)
-    private val scanWrite = LibraryScanWriteSupport(database, tagWrite, deleteWrite, scanMetadata)
-    private val onlineSave = LibraryOnlineSaveSupport(database)
+    // T7：合集自动归类单点（扫描/在线保存入库新插轨增量挂默认合集，见 behavior-notes/collection-auto-classify.md）。
+    private val autoClassify = AutoClassifySupport(database)
+    private val scanWrite = LibraryScanWriteSupport(database, tagWrite, deleteWrite, scanMetadata, autoClassify)
+    private val onlineSave = LibraryOnlineSaveSupport(database, autoClassify)
 
     /** T3'：扫描管线（LibraryScanStateHolder）取用元数据/来源回填单点。 */
     internal val scanMetadataSupport: LibraryScanMetadataSupport get() = scanMetadata
