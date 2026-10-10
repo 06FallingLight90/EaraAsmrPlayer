@@ -61,6 +61,7 @@ import kotlinx.coroutines.flow.first
 import androidx.compose.foundation.border
 import androidx.media3.common.MediaItem
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.asmr.player.domain.model.BatchAddTarget
 
 
 
@@ -72,8 +73,13 @@ internal data class PlaylistPickerRequest(
     val items: List<MediaItem>
 )
 
+/**
+ * T8：批量加入选择器请求。defaultTarget 指定双目标选择器的初始 tab
+ * （歌单为缺省，存量调用点语义保持「加入歌单」优先、合集 tab 顺带可用）。
+ */
 internal data class BatchPlaylistPickerRequest(
-    val items: List<MediaItem>
+    val items: List<MediaItem>,
+    val defaultTarget: BatchAddTarget = BatchAddTarget.PLAYLIST
 )
 
 internal const val SecondaryPageEnterDurationMs = 440

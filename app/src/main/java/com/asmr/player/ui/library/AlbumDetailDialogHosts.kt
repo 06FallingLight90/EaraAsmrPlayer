@@ -156,11 +156,13 @@ internal fun AlbumDetailDialogHosts(
             color = MaterialTheme.colorScheme.background,
             contentColor = colorScheme.textPrimary
         ) {
+            // T8：专辑详情批量入口顺势升级双目标（歌单 | 合集）；初始 tab 保持歌单。
             PlaylistPickerScreen(
                 windowSizeClass = windowSizeClass,
                 items = items,
                 onBack = { batchPlaylistItems = null },
-                embeddedInDialog = true
+                embeddedInDialog = true,
+                groupTarget = albumGroupsViewModel.asBatchAddGroupTarget()
             )
         }
     }

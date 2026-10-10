@@ -132,6 +132,33 @@ class PlaylistRepositoryOrderTest {
         assertTrue(restoredItem.localConfiguration?.uri.toString().contains("primary%3AAlbum%2F01.mp3"))
     }
 
+    @Test
+    fun addItemsToPlaylist_dedupsAndReportsSummary() = runBlocking {
+        // T8 钉测：批量走 addItemsToPlaylist 的 summary 语义（歌单批量加入的反馈依据）。
+        val playlistId = db.playlistDao().insertPlaylist(
+            PlaylistEntity(name = "我的列表", category = PlaylistRepository.CATEGORY_USER)
+        )
+        db.playlistItemDao().upsertItems(
+            listOf(playlistItem(playlistId, "a", order = 0))
+        )
+
+        val summary = repository.addItemsToPlaylist(
+            playlistId,
+            listOf(
+                mediaItem(mediaId = "a", title = "Track A"),
+                mediaItem(mediaId = "b", title = "Track B"),
+                mediaItem(mediaId = "b", title = "Track B"),
+                mediaItem(mediaId = "c", title = "Track C")
+            )
+        )
+
+        assertEquals(2, summary.addedCount)
+        assertEquals(2, summary.skippedCount)
+        assertEquals(4, summary.totalCount)
+        val items = db.playlistItemDao().getItemsOnce(playlistId)
+        assertEquals(listOf("a", "b", "c"), items.map { it.mediaId })
+    }
+
     private fun playlistItem(playlistId: Long, mediaId: String, order: Int): PlaylistItemEntity {
         return PlaylistItemEntity(
             playlistId = playlistId,

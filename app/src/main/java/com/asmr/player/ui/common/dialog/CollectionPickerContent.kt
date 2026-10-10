@@ -61,6 +61,7 @@ internal fun CollectionPickerContent(
     isEmpty: Boolean,
     emptyText: String,
     selectionSummary: String? = null,
+    extraHeader: (@Composable () -> Unit)? = null,
     content: LazyListScope.() -> Unit
 ) {
     val colorScheme = AsmrTheme.colorScheme
@@ -104,6 +105,9 @@ internal fun CollectionPickerContent(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                }
+                if (extraHeader != null) {
+                    extraHeader()
                 }
                 if (selectionSummary != null) {
                     Text(

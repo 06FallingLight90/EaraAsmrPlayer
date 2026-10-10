@@ -160,4 +160,93 @@ class AllSongsViewModelTest {
         val viewModel = AllSongsViewModel(RecordingAllSongsSource())
         assertTrue(viewModel.sort.value == AllSongsSort.AddedDesc)
     }
+
+    // ---- T8/US-05：多选状态机钉测 ----
+
+    @Test
+    fun selection_toggleIgnoredWhenNotActive_enterToggleExitClears() = runBlocking {
+        val viewModel = AllSongsViewModel(RecordingAllSongsSource())
+
+        // 非多选模式：toggle 忽略、全选/反选忽略
+        viewModel.toggleSelection("/a/1.mp3")
+        viewModel.selectAllVisible(listOf("/a/1.mp3"))
+        viewModel.invertVisibleSelection(listOf("/a/1.mp3"))
+        assertEquals(emptySet<String>(), viewModel.selectedPaths.value)
+        assertEquals(false, viewModel.selectionActive.value)
+
+        // 长按行进入：模式开启且首行入选
+        viewModel.enterSelectionMode("/a/1.mp3")
+        assertEquals(true, viewModel.selectionActive.value)
+        assertEquals(setOf("/a/1.mp3"), viewModel.selectedPaths.value)
+
+        // 行点击勾选切换
+        viewModel.toggleSelection("/a/2.mp3")
+        viewModel.toggleSelection("/a/1.mp3")
+        assertEquals(setOf("/a/2.mp3"), viewModel.selectedPaths.value)
+
+        // 退出多选：勾选清空
+        viewModel.exitSelectionMode()
+        assertEquals(false, viewModel.selectionActive.value)
+        assertEquals(emptySet<String>(), viewModel.selectedPaths.value)
+    }
+
+    @Test
+    fun selection_selectAllUnions_invertXorsVisibleKeepsHidden() {
+        val viewModel = AllSongsViewModel(RecordingAllSongsSource())
+        viewModel.enterSelectionMode("/hidden/9.mp3")
+
+        // 全选（并集；空白路径丢弃；不可见项保留）
+        viewModel.selectAllVisible(listOf("/a/1.mp3", "  ", "/a/2.mp3"))
+        assertEquals(
+            setOf("/hidden/9.mp3", "/a/1.mp3", "/a/2.mp3"),
+            viewModel.selectedPaths.value
+        )
+
+        // 反选（可见项 XOR：a/1 取消、a/3 选中；不可见项与未在可见集内的 a/2 保留）
+        viewModel.invertVisibleSelection(listOf("/a/1.mp3", "/a/3.mp3"))
+        assertEquals(
+            setOf("/hidden/9.mp3", "/a/2.mp3", "/a/3.mp3"),
+            viewModel.selectedPaths.value
+        )
+    }
+
+    @Test
+    fun selection_queryChangeClearsSelectionButKeepsMode() = runBlocking {
+        val viewModel = AllSongsViewModel(RecordingAllSongsSource())
+        val firstQuery = CompletableDeferred<AllSongsQuery>()
+        val settled = CompletableDeferred<AllSongsQuery>()
+        val collector = launch {
+            var isFirst = true
+            viewModel.queryFlow.collect { query ->
+                if (isFirst) {
+                    isFirst = false
+                    firstQuery.complete(query)
+                } else {
+                    settled.complete(query)
+                }
+            }
+        }
+
+        withTimeout(2_000) { firstQuery.await() }
+
+        viewModel.enterSelectionMode()
+        viewModel.selectAllVisible(listOf("/a/1.mp3"))
+        assertEquals(setOf("/a/1.mp3"), viewModel.selectedPaths.value)
+
+        // 查询内容变化（去抖落地）→ 勾选清空，多选模式保持
+        viewModel.setTextFilter("ab")
+        withTimeout(3_000) { settled.await() }
+        assertEquals(emptySet<String>(), viewModel.selectedPaths.value)
+        assertEquals(true, viewModel.selectionActive.value)
+        collector.cancelAndJoin()
+    }
+
+    @Test
+    fun selection_clearSelectionKeepsMode() {
+        val viewModel = AllSongsViewModel(RecordingAllSongsSource())
+        viewModel.enterSelectionMode("/a/1.mp3")
+        viewModel.clearSelection()
+        assertEquals(emptySet<String>(), viewModel.selectedPaths.value)
+        assertEquals(true, viewModel.selectionActive.value)
+    }
 }

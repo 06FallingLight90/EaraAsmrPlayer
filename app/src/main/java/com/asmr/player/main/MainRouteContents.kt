@@ -3,6 +3,10 @@ package com.asmr.player.main
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -267,6 +271,8 @@ internal fun buildMainRouteContents(
             }
         },
         groupDetail = { groupId, groupName ->
+            val albumGroupsViewModel: AlbumGroupsViewModel = hiltViewModel(host.activityViewModelStoreOwner)
+            var showAddAudioSheet by remember { mutableStateOf(false) }
             SecondaryPageBackground(topPadding = host.secondaryPageTopPadding) {
                 com.asmr.player.ui.groups.AlbumGroupDetailScreen(
                     windowSizeClass = host.windowSizeClass,
@@ -280,11 +286,26 @@ internal fun buildMainRouteContents(
                         } else if (startItem != null) {
                             host.requestMiniPlayerPlayFeedback()
                         }
-                    }
+                    },
+                    onAddAudio = { showAddAudioSheet = true }
                 )
+                if (showAddAudioSheet) {
+                    BatchAddSourceSheet(
+                        onDismiss = { showAddAudioSheet = false },
+                        onConfirm = { rows ->
+                            showAddAudioSheet = false
+                            albumGroupsViewModel.addTracksToGroupInBackground(
+                                groupId = groupId,
+                                mediaIds = rows.map { it.trackPath }
+                            )
+                        }
+                    )
+                }
             }
         },
         playlistDetail = { playlistId, playlistName ->
+            val playlistsViewModel: PlaylistsViewModel = hiltViewModel(host.activityViewModelStoreOwner)
+            var showAddAudioSheet by remember { mutableStateOf(false) }
             SecondaryPageBackground(topPadding = host.secondaryPageTopPadding) {
                 PlaylistDetailScreen(
                     windowSizeClass = host.windowSizeClass,
@@ -297,8 +318,21 @@ internal fun buildMainRouteContents(
                         } else {
                             host.requestMiniPlayerPlayFeedback()
                         }
-                    }
+                    },
+                    onAddAudio = { showAddAudioSheet = true }
                 )
+                if (showAddAudioSheet) {
+                    BatchAddSourceSheet(
+                        onDismiss = { showAddAudioSheet = false },
+                        onConfirm = { rows ->
+                            showAddAudioSheet = false
+                            playlistsViewModel.addItemsToPlaylistInBackground(
+                                playlistId = playlistId,
+                                items = rows.toBatchAddMediaItems()
+                            )
+                        }
+                    )
+                }
             }
         },
         playlistSystem = { type ->
@@ -386,6 +420,15 @@ internal fun buildMainRouteContents(
                         )
                         host.playerViewModel.playMediaItems(listOf(mediaItem), 0)
                         host.requestMiniPlayerPlayFeedback()
+                    },
+                    // T8/US-05：多选工具条 → 双目标批量选择器（歌单 | 合集）。
+                    onOpenBatchPicker = { target, rows ->
+                        host.setAlbumBatchPlaylistPickerRequest(
+                            BatchPlaylistPickerRequest(
+                                items = rows.toBatchAddMediaItems(),
+                                defaultTarget = target
+                            )
+                        )
                     }
                 )
             }

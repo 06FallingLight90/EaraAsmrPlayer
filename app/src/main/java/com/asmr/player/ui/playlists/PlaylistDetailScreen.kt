@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,6 +27,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.DropdownMenu
@@ -36,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import com.asmr.player.ui.common.core.isCompactWidth
 import androidx.compose.runtime.Composable
@@ -102,6 +105,7 @@ fun PlaylistDetailScreen(
     title: String,
     onPlayAll: (List<PlaylistItemEntity>, PlaylistItemEntity) -> Unit,
     scrollToTopSignal: Long = 0L,
+    onAddAudio: () -> Unit = {},
     viewModel: PlaylistDetailViewModel = hiltViewModel()
 ) {
     LaunchedEffect(playlistId) {
@@ -119,6 +123,7 @@ fun PlaylistDetailScreen(
         onMoveItemToBottom = viewModel::moveItemToBottom,
         onSaveManualOrder = viewModel::saveManualOrder,
         scrollToTopSignal = scrollToTopSignal,
+        onAddAudio = onAddAudio,
     )
 }
 
@@ -134,6 +139,7 @@ internal fun PlaylistDetailContent(
     onMoveItemToBottom: (String) -> Unit,
     onSaveManualOrder: (List<String>) -> Unit,
     scrollToTopSignal: Long = 0L,
+    onAddAudio: () -> Unit = {},
 ) {
     val listState = rememberLazyListState()
     val localItems = remember { mutableStateListOf<PlaylistItemWithSubtitles>() }
@@ -205,22 +211,40 @@ internal fun PlaylistDetailContent(
                     .widthIn(max = 760.dp)
                     .fillMaxWidth()
             }
-            if (localItems.isEmpty()) {
-                EaraBrandedEmptyState(
-                    sectionTitle = emptySectionTitle,
-                    headline = emptyHeadline,
-                    sectionIcon = if (isFavorites) Icons.Rounded.Favorite else Icons.AutoMirrored.Rounded.QueueMusic,
-                    modifier = contentModifier,
-                    contentPadding = PaddingValues(bottom = LocalBottomOverlayPadding.current + 88.dp)
-                )
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = contentModifier
-                        .reorderable(reorderState),
-                    flingBehavior = rememberCalmScrollableFlingBehavior(),
-                    contentPadding = PaddingValues(top = 6.dp, bottom = LocalBottomOverlayPadding.current)
+            // T8/US-04：列表内部「添加音频」入口（选源 sheet 由宿主装配，见 MainRouteContents）。
+            Column(modifier = contentModifier) {
+                TextButton(
+                    onClick = onAddAudio,
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(start = 12.dp, end = 4.dp)
+                        .testTag("playlistDetailAddAudio")
                 ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("添加音频", style = MaterialTheme.typography.labelLarge)
+                }
+                if (localItems.isEmpty()) {
+                    EaraBrandedEmptyState(
+                        sectionTitle = emptySectionTitle,
+                        headline = emptyHeadline,
+                        sectionIcon = if (isFavorites) Icons.Rounded.Favorite else Icons.AutoMirrored.Rounded.QueueMusic,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = LocalBottomOverlayPadding.current + 88.dp)
+                    )
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .reorderable(reorderState),
+                        flingBehavior = rememberCalmScrollableFlingBehavior(),
+                        contentPadding = PaddingValues(top = 6.dp, bottom = LocalBottomOverlayPadding.current)
+                    ) {
                     item(key = PLAYLIST_DETAIL_REORDER_SENTINEL_KEY) {
                         Spacer(modifier = Modifier.height(1.dp))
                     }
@@ -255,6 +279,7 @@ internal fun PlaylistDetailContent(
                             )
                         }
                     }
+                }
                 }
             }
         }

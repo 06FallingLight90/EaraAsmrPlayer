@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.take
 
 /**
@@ -58,6 +59,63 @@ class AllSongsViewModel @Inject constructor(
     /** 当前排序（供屏上排序菜单回显当前选中项）。 */
     val sort: StateFlow<AllSongsSort> = _sort.asStateFlow()
 
+    // ---- 多选（US-05/T8：批量加入歌单/合集）----
+    // 勾选以 trackPath 为键（mediaId 约定键，双目标写入共用）；「全选/反选」作用于
+    // 屏侧传入的当前已加载可见行（分页流无全量缓存，薄实现取舍同 DirectoryBrowserPanel）。
+
+    private val _selectionActive = MutableStateFlow(false)
+
+    /** 多选模式开关（长按行进入；工具条关闭/返回时退出并清空勾选）。 */
+    val selectionActive: StateFlow<Boolean> = _selectionActive.asStateFlow()
+
+    private val _selectedPaths = MutableStateFlow<Set<String>>(emptySet())
+
+    /** 当前勾选的 trackPath 集合（保序交给屏侧按列表序投影，见 AllSongsScreen）。 */
+    val selectedPaths: StateFlow<Set<String>> = _selectedPaths.asStateFlow()
+
+    /** 进入多选模式；可选携带首个勾选项（长按行进入的语义）。 */
+    fun enterSelectionMode(initialTrackPath: String? = null) {
+        _selectionActive.value = true
+        if (!initialTrackPath.isNullOrBlank()) {
+            _selectedPaths.value = _selectedPaths.value + initialTrackPath
+        }
+    }
+
+    /** 退出多选模式并清空勾选。 */
+    fun exitSelectionMode() {
+        _selectionActive.value = false
+        _selectedPaths.value = emptySet()
+    }
+
+    /** 仅清空勾选，不退出多选模式（查询内容变化由 queryFlow onEach 复用）。 */
+    fun clearSelection() {
+        _selectedPaths.value = emptySet()
+    }
+
+    /** 行勾选切换（多选模式下行点击；非多选模式忽略）。 */
+    fun toggleSelection(trackPath: String) {
+        if (!_selectionActive.value || trackPath.isBlank()) return
+        _selectedPaths.value = if (trackPath in _selectedPaths.value) {
+            _selectedPaths.value - trackPath
+        } else {
+            _selectedPaths.value + trackPath
+        }
+    }
+
+    /** 全选可见行（并集；已选的不可见项保留）。 */
+    fun selectAllVisible(visibleTrackPaths: List<String>) {
+        if (!_selectionActive.value) return
+        _selectedPaths.value = _selectedPaths.value + visibleTrackPaths.filter { it.isNotBlank() }
+    }
+
+    /** 反选可见行（对可见项取 XOR；不可见项保留）。 */
+    fun invertVisibleSelection(visibleTrackPaths: List<String>) {
+        if (!_selectionActive.value) return
+        val visible = visibleTrackPaths.filter { it.isNotBlank() }.toSet()
+        val selected = _selectedPaths.value
+        _selectedPaths.value = selected + visible - selected.intersect(visible)
+    }
+
     /**
      * 框内文本输入流：首值立即生效（进入页面即可见列表，不等去抖），
      * 其后每次击键去抖 [FILTER_DEBOUNCE_MS]。take/drop 分支订阅均在收集启动的同一
@@ -69,13 +127,16 @@ class AllSongsViewModel @Inject constructor(
 
     /**
      * 生效查询流：过滤去抖 + 排序即时 → AllSongsQuery，distinctUntilChanged 保证
-     * 相同查询不重启 Pager。internal 供纯 JVM 钉测直收（验证去抖后查询参数与流切换驱动）。
+     * 相同查询不重启 Pager。查询内容变化时清空多选勾选（内容已替换，沿用旧勾选会
+     * 误选不可见项；多选模式本身保持，DirectoryBrowserPanel 的换目录清选同构）。
+     * internal 供纯 JVM 钉测直收（验证去抖后查询参数与流切换驱动）。
      */
     internal val queryFlow: Flow<AllSongsQuery> = combine(
         debouncedFilterInput.map(::normalizedFilter),
         _sort
     ) { filter, sort -> AllSongsQuery(textFilter = filter, sort = sort) }
         .distinctUntilChanged()
+        .onEach { _selectedPaths.value = emptySet() }
 
     /** 平铺分页流（PagingData；屏侧 collectAsLazyPagingItems 消费）。 */
     @OptIn(ExperimentalCoroutinesApi::class)

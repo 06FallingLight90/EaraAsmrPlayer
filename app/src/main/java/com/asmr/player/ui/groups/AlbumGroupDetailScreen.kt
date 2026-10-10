@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.MoreVert
@@ -34,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import com.asmr.player.ui.common.core.isCompactWidth
 import androidx.compose.runtime.Composable
@@ -136,6 +138,7 @@ fun AlbumGroupDetailScreen(
     title: String,
     onPlayMediaItems: (List<MediaItem>, Int) -> Unit,
     scrollToTopSignal: Long = 0L,
+    onAddAudio: () -> Unit = {},
     viewModel: AlbumGroupDetailViewModel = hiltViewModel()
 ) {
     LaunchedEffect(groupId) {
@@ -153,6 +156,7 @@ fun AlbumGroupDetailScreen(
         onMoveTrackToBottom = viewModel::moveTrackToBottom,
         onSaveAlbumTrackOrder = viewModel::saveAlbumTrackOrder,
         scrollToTopSignal = scrollToTopSignal,
+        onAddAudio = onAddAudio,
     )
 }
 
@@ -168,6 +172,7 @@ internal fun AlbumGroupDetailContent(
     onMoveTrackToBottom: (Long, String) -> Unit,
     onSaveAlbumTrackOrder: (Long, List<String>) -> Unit,
     scrollToTopSignal: Long = 0L,
+    onAddAudio: () -> Unit = {},
 ) {
     val colorScheme = AsmrTheme.colorScheme
     val isCompact = windowSizeClass.widthSizeClass.isCompactWidth
@@ -228,6 +233,22 @@ internal fun AlbumGroupDetailContent(
                     .fillMaxWidth()
             }
         ) {
+            // T8/US-04：合集详情「添加音频」入口（选源 sheet 由宿主装配，见 MainRouteContents）。
+            TextButton(
+                onClick = onAddAudio,
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .padding(start = 12.dp, end = 4.dp)
+                    .testTag("groupDetailAddAudio")
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("添加音频", style = MaterialTheme.typography.labelLarge)
+            }
             if (tracks.isEmpty()) {
                 EaraBrandedEmptyState(
                     sectionTitle = title.ifBlank { "我的分组" },

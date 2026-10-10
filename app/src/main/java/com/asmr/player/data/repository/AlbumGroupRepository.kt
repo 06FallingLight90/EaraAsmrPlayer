@@ -82,6 +82,30 @@ class AlbumGroupRepository @Inject constructor(
         groupItemDao.upsertItems(items)
     }
 
+    /**
+     * T8/US-04：按 track 粒度批量挂载到合集（mediaId=trackPath，对齐 album_group_items
+     * 主键语义）。幂等：已在组内的 mediaId 跳过、请求内去重、空白路径过滤；
+     * itemOrder 接组内全局最大序号连续递增（与 addAlbumToGroup 的专辑内续序并存不冲突，
+     * observeGroupTracks 的展示序以专辑分区为主）。返回实际新增条数。
+     */
+    suspend fun addTracksToGroup(groupId: Long, mediaIds: List<String>): Int = addAlbumMutex.withLock {
+        if (groupId <= 0L || mediaIds.isEmpty()) return 0
+        val existingMediaIds = groupItemDao.getGroupMediaIdsOnce(groupId).toHashSet()
+        val nextOrder = groupItemDao.getMaxItemOrderInGroup(groupId) + 1
+        val items = mediaIds
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .filterNot { it in existingMediaIds }
+            .mapIndexed { index, mediaId ->
+                AlbumGroupItemEntity(groupId = groupId, mediaId = mediaId, itemOrder = nextOrder + index)
+            }
+        if (items.isEmpty()) return 0
+        // IGNORE 兜底并发重复：主键 (groupId, mediaId) 冲突时静默跳过，不覆写既有 itemOrder。
+        groupItemDao.insertItemsIgnoringConflicts(items)
+        return items.size
+    }
+
     suspend fun reorderAlbumTracks(
         groupId: Long,
         albumId: Long,

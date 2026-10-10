@@ -70,6 +70,10 @@ interface AlbumGroupItemDao {
     )
     suspend fun getMaxItemOrderInAlbum(groupId: Long, albumId: Long): Int
 
+    /** T8：track 粒度批量挂载（addTracksToGroup）的组内全局序号读取。 */
+    @Query("SELECT COALESCE(MAX(i.itemOrder), -1) FROM album_group_items i WHERE i.groupId = :groupId")
+    suspend fun getMaxItemOrderInGroup(groupId: Long): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertItems(items: List<AlbumGroupItemEntity>)
 
