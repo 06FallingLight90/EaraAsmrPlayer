@@ -1,6 +1,8 @@
 package com.asmr.player.ui.library
 
-import android.os.SystemClock
+import com.asmr.player.util.BulkProgress
+import com.asmr.player.util.BulkProgressStore
+import com.asmr.player.util.BulkPhase
 import com.asmr.player.util.MessageManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,21 +14,23 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * R3-C1b-ii：LibraryViewModel 任务协调 State Holder（自 VM 逐字搬移，逻辑未改）。
  * - 承接单专辑任务注册表（albumJobs）、批量任务门（bulkStartMutex/bulkJob）、
- *   单专辑同步状态（syncStatus）、批量进度（bulkProgress）与云同步选择队列。
- * - 扫描/删除/云同步三族共享：批量入口（scanAllRoots 等五处 bulkStartMutex 模式）、
- *   删除族（deleteAlbum 的 isBulkTaskRunning/取消路径）与单专辑同步（tryRegisterAlbumJob）都依赖它。
+ *   单专辑同步状态（syncStatus）与云同步选择队列。
+ * - 批量进度状态自 T11 起改挂应用级 [BulkProgressStore]（扫描已下沉 CoroutineWorker，
+ *   Worker 无法触达 VM 实例）：本类保留原方法签名委托至此，VM 侧调用面（删除/云同步族）
+ *   与 VM 观察面（bulkProgress/uiState）零改动。
  * - syncStatus/albumJobs/bulkJob/cloudSyncSelectionQueue 以可变状态直接暴露，
  *   供迁移中的调用族逐字保持原操作（value += / map.remove(key, owner) 等）。
  */
-internal class LibraryTaskCoordinator(private val messageManager: MessageManager) {
+internal class LibraryTaskCoordinator(
+    private val messageManager: MessageManager,
+    private val bulkProgressStore: BulkProgressStore,
+) {
     val bulkStartMutex = Mutex()
     var bulkJob: Job? = null
     val albumJobs = ConcurrentHashMap<Long, Job>()
     val syncStatus = MutableStateFlow<Map<Long, SyncStatus>>(emptyMap())
-    private val _bulkProgress = MutableStateFlow<BulkProgress?>(null)
-    val bulkProgress: StateFlow<BulkProgress?> = _bulkProgress.asStateFlow()
+    val bulkProgress: StateFlow<BulkProgress?> = bulkProgressStore.bulkProgress
     val cloudSyncSelectionQueue = CloudSyncSelectionRequestQueue()
-    private var lastFileUpdateElapsedMs: Long = 0L
 
     val syncingAlbums: StateFlow<Map<Long, SyncStatus>> = syncStatus.asStateFlow()
 
@@ -35,7 +39,7 @@ internal class LibraryTaskCoordinator(private val messageManager: MessageManager
         job?.cancel()
         bulkJob = null
         cloudSyncSelectionQueue.cancelAll()
-        _bulkProgress.value = null
+        bulkProgressStore.finishBulkProgress()
     }
 
     fun isBulkTaskRunning(): Boolean {
@@ -85,35 +89,14 @@ internal class LibraryTaskCoordinator(private val messageManager: MessageManager
         messageManager.showInfo("已忽略本轮剩余待确认项")
     }
 
-    fun startBulkProgress(phase: BulkPhase, total: Int, current: Int = 0, currentAlbumTitle: String = "") {
-        _bulkProgress.value = BulkProgress(
-            phase = phase,
-            current = current.coerceAtLeast(0),
-            total = total.coerceAtLeast(0),
-            currentAlbumTitle = currentAlbumTitle,
-            currentFile = ""
-        )
-        lastFileUpdateElapsedMs = 0L
-    }
+    fun startBulkProgress(phase: BulkPhase, total: Int, current: Int = 0, currentAlbumTitle: String = "") =
+        bulkProgressStore.startBulkProgress(phase, total, current, currentAlbumTitle)
 
-    fun updateBulkAlbumProgress(current: Int, currentAlbumTitle: String) {
-        val p = _bulkProgress.value ?: return
-        _bulkProgress.value = p.copy(
-            current = current.coerceAtLeast(0),
-            currentAlbumTitle = currentAlbumTitle
-        )
-    }
+    fun updateBulkAlbumProgress(current: Int, currentAlbumTitle: String) =
+        bulkProgressStore.updateBulkAlbumProgress(current, currentAlbumTitle)
 
-    fun maybeUpdateBulkCurrentFile(currentFile: String) {
-        val p = _bulkProgress.value ?: return
-        val now = SystemClock.elapsedRealtime()
-        if (now - lastFileUpdateElapsedMs < 120L) return
-        lastFileUpdateElapsedMs = now
-        _bulkProgress.value = p.copy(currentFile = currentFile)
-    }
+    fun maybeUpdateBulkCurrentFile(currentFile: String) =
+        bulkProgressStore.maybeUpdateBulkCurrentFile(currentFile)
 
-    fun finishBulkProgress() {
-        _bulkProgress.value = null
-        lastFileUpdateElapsedMs = 0L
-    }
+    fun finishBulkProgress() = bulkProgressStore.finishBulkProgress()
 }

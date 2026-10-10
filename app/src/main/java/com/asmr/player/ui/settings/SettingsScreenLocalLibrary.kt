@@ -18,8 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.asmr.player.data.download.DownloadDestination
-import com.asmr.player.ui.library.BulkPhase
-import com.asmr.player.ui.library.BulkProgress
+import com.asmr.player.util.BulkPhase
+import com.asmr.player.util.BulkProgress
 import com.asmr.player.ui.library.LibraryViewModel
 import com.asmr.player.ui.theme.AsmrColorScheme
 import com.asmr.player.ui.theme.AsmrTheme

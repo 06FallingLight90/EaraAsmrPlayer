@@ -1,7 +1,6 @@
 package com.asmr.player.ui.library
 
 import android.content.Context
-import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -24,6 +23,9 @@ import com.asmr.player.data.repository.OnlineContentRepository
 import com.asmr.player.data.settings.SettingsRepository
 import com.asmr.player.playback.PlayerConnection
 import com.asmr.player.util.GlobalSyncState
+import com.asmr.player.util.BulkPhase
+import com.asmr.player.util.BulkProgress
+import com.asmr.player.util.BulkProgressStore
 import com.asmr.player.util.MessageManager
 import com.asmr.player.util.SyncCoordinator
 import com.asmr.player.util.isScannableLocalDirectoryName
@@ -54,21 +56,7 @@ sealed class SyncStatus {
     data class Error(val message: String) : SyncStatus()
 }
 
-enum class BulkPhase {
-    ScanningLocal,
-    SyncingCloud
-}
-
-data class BulkProgress(
-    val phase: BulkPhase,
-    val current: Int,
-    val total: Int,
-    val currentAlbumTitle: String = "",
-    val currentFile: String = "",
-    val startedAtElapsedMs: Long = SystemClock.elapsedRealtime()
-) {
-    val fraction: Float = if (total <= 0) 0f else (current.toFloat() / total.toFloat()).coerceIn(0f, 1f)
-}
+// T11：BulkPhase/BulkProgress 迁至 util（应用级进度通道 BulkProgressStore 与扫描 Worker 共用），import 见文件头。
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
@@ -80,6 +68,8 @@ class LibraryViewModel @Inject constructor(
     private val onlineContentRepository: OnlineContentRepository,
     private val localAlbumMergeService: LocalAlbumMergeService,
     private val syncCoordinator: SyncCoordinator,
+    private val bulkProgressStore: BulkProgressStore,
+    private val scanPipeline: LibraryScanPipeline,
     @Named("image") private val imageOkHttpClient: OkHttpClient,
     val messageManager: MessageManager,
     private val playerConnection: PlayerConnection,
@@ -90,20 +80,18 @@ class LibraryViewModel @Inject constructor(
     }
 
     /** R3-C1b-ii：任务协调 State Holder（单专辑任务注册表/批量任务门/同步状态/批量进度/云同步选择队列）。 */
-    private val taskCoordinator = LibraryTaskCoordinator(messageManager)
+    private val taskCoordinator = LibraryTaskCoordinator(messageManager, bulkProgressStore)
 
-    /** R3-C1c：扫描族 State Holder（封面/树缓存/SAF 遍历/字幕/下载目录与文档树扫描/孤儿清理 + 批量入口）。 */
+    /** R3-C1c：扫描族 State Holder（扫描根管理 + 批量入口调度；扫描底层已下沉 scan.LibraryScanPipeline）。 */
     private val scanHolder = LibraryScanStateHolder(
         scope = viewModelScope,
         context = context,
         readRepository = libraryReadRepository,
         writeRepository = libraryWriteRepository,
-        downloadDestinationStore = downloadDestinationStore,
-        localAlbumMergeService = localAlbumMergeService,
-        playerConnection = playerConnection,
-        taskCoordinator = taskCoordinator,
         syncCoordinator = syncCoordinator,
+        taskCoordinator = taskCoordinator,
         messageManager = messageManager,
+        pipeline = scanPipeline,
     )
 
     /** R3-C1b-ii：删除族 State Holder（rescanAlbum/deleteAlbum/deleteAlbumTreeEntry/removeTrackFromAlbum）。 */
@@ -394,8 +382,13 @@ class LibraryViewModel @Inject constructor(
     fun deleteUserTag(tagId: Long) = tagHolder.deleteUserTag(tagId)
 
     // R3-C1b-ii：任务协调函数实现迁入 LibraryTaskCoordinator，VM 保留 UI 转发。
+    // T11：批量扫描已下沉 CoroutineWorker——取消时先撤销 unique work（运行中/排队中的扫描），
+    // 再走原任务协调取消（VM 侧批量任务如云同步不受影响）。
 
-    fun cancelBulkTask() = taskCoordinator.cancelBulkTask()
+    fun cancelBulkTask() {
+        scanHolder.cancelScheduledScanWork()
+        taskCoordinator.cancelBulkTask()
+    }
 
     fun cancelAlbumTask(albumId: Long) = taskCoordinator.cancelAlbumTask(albumId)
 

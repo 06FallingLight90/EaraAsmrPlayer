@@ -394,9 +394,40 @@ internal class LibraryScanWriteSupport(
     }
 
     /**
+     * T11-P2：事务前预读文档树扫描的新插轨元数据（round-1 P2：MMR 文件 IO 原在
+     * [upsertScannedDocumentAlbum] 写事务内逐轨执行，大专辑首扫拉长持锁；现移到事务前，
+     * 与 File 分支（读取本就在事务外）一致化）。
+     * - 新专辑（entity.id<=0）全部规格均为新插，逐一预读；已有专辑按 scanRootPath 内
+     *   path-diff 只对新插轨预读——「仅新插轨读取」增量闸门语义不变（fake 计数钉测照旧）。
+     * - 事务内 diff 与预读之间存在竞态窗口：预读判"已存在"、进事务前被删的轨会以
+     *   map 缺失（null 元数据）落库，不再事务内补读（单册极端并发场景，量级可忽略，接受）。
+     */
+    suspend fun prepareDocumentTrackMetadata(
+        entity: AlbumEntity,
+        scanRootPath: String,
+        trackSpecs: List<LibraryWriteRepository.ScanTrackSpec>,
+    ): Map<String, LibraryScanMetadataSupport.ScannedTrackMetadata?> {
+        if (trackSpecs.isEmpty()) return emptyMap()
+        val existingUnderRoot = if (entity.id > 0L) {
+            database.trackDao().getTracksForAlbumOnce(entity.id)
+                .filter { it.path.startsWith(scanRootPath) }
+                .associateBy { it.path }
+        } else {
+            emptyMap()
+        }
+        return trackSpecs.associate { spec ->
+            // 已存在轨不读取（映射值为 null）；仅 path-diff 判定的新插轨在事务前读元数据。
+            val metadata = if (existingUnderRoot.containsKey(spec.path)) null else scanMetadata.readForNewTrack(spec.path)
+            spec.path to metadata
+        }
+    }
+
+    /**
      * 文档树整册扫描入库事务（原 scanFromDocumentTree 事务体逐字下沉）。
      * entity/trackSpecs/subtitlesByAudioPath/cacheLeaves 均为调用方预计算的纯数据；
      * fileSizeQuery/stampProvider 注入平台探查（原实现于事务内同步调用）。
+     * T11-P2：新插轨元数据由 [prepareDocumentTrackMetadata] 在事务前批量读出，经
+     * [metadataByPath] 传入——事务内不再做 MMR 文件 IO，纯写。
      */
     internal suspend fun upsertScannedDocumentAlbum(
         entity: AlbumEntity,
@@ -406,6 +437,7 @@ internal class LibraryScanWriteSupport(
         cacheLeaves: List<LibraryWriteRepository.ScanCacheLeaf>,
         fileSizeQuery: suspend (String) -> Long?,
         stampProvider: (List<String>) -> Long,
+        metadataByPath: Map<String, LibraryScanMetadataSupport.ScannedTrackMetadata?>,
     ): LibraryWriteRepository.DocumentScanResult {
         var wroteAnySubtitles = false
         var firstInsertedCoverBytes: ByteArray? = null
@@ -431,10 +463,11 @@ internal class LibraryScanWriteSupport(
             val tracksToUpdate = mutableListOf<Pair<TrackEntity, LibraryWriteRepository.ScanTrackSpec>>()
             // T3'：元数据仅对本次新插轨读取（增量语义，闸门在 LibraryScanMetadataSupport）；
             // 已存在轨只覆写 title/group，artist/albumTag 不动。
+            // T11-P2：元数据已在事务前经 prepareDocumentTrackMetadata 读出，此处查表，不再 MMR 文件 IO。
             trackSpecs.forEach { spec ->
                 val existingTrack = existingUnderRoot[spec.path]
                 if (existingTrack == null) {
-                    val metadata = scanMetadata.readForNewTrack(spec.path)
+                    val metadata = metadataByPath[spec.path]
                     tracksToInsert += scanMetadata.newTrackEntity(id, spec.title, spec.path, spec.group, metadata) to spec
                     if (firstInsertedCoverBytes == null) firstInsertedCoverBytes = metadata?.embeddedCover
                 } else {

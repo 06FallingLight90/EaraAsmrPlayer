@@ -131,8 +131,6 @@ app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt com.asmr.player.ui.s
 app/src/main/java/com/asmr/player/ui/search/SearchScreen.kt com.asmr.player.ui.sidepanel.RecentAlbumsPanel
 app/src/main/java/com/asmr/player/ui/settings/SettingsScreen.kt com.asmr.player.ui.library.LibraryViewModel
 app/src/main/java/com/asmr/player/ui/settings/SettingsScreenDetailSections.kt com.asmr.player.ui.update.launchDownloadedApkInstall
-app/src/main/java/com/asmr/player/ui/settings/SettingsScreenLocalLibrary.kt com.asmr.player.ui.library.BulkPhase
-app/src/main/java/com/asmr/player/ui/settings/SettingsScreenLocalLibrary.kt com.asmr.player.ui.library.BulkProgress
 app/src/main/java/com/asmr/player/ui/settings/SettingsScreenLocalLibrary.kt com.asmr.player.ui.library.LibraryViewModel
 app/src/main/java/com/asmr/player/ui/sidepanel/RecentAlbumsPanel.kt com.asmr.player.ui.player.PlayerViewModel
 app/src/main/java/com/asmr/player/main/MainPrimaryPagerUi.kt com.asmr.player.data.remote.scraper.resolveRecommendedWorkHeroCoverUrl
@@ -158,9 +156,10 @@ app/src/main/java/com/asmr/player/ui/library/LibraryScreen.kt com.asmr.player.da
 app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt com.asmr.player.data.local.db.entities.AlbumEntity
 app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt com.asmr.player.data.local.db.entities.TrackEntity
 app/src/main/java/com/asmr/player/ui/library/LibraryViewModel.kt com.asmr.player.data.local.db.entities.titleForDisplay
-app/src/main/java/com/asmr/player/ui/library/LibraryScanStateHolder.kt com.asmr.player.work.AlbumCoverThumbWorker
-app/src/main/java/com/asmr/player/ui/library/LibraryScanStateHolder.kt com.asmr.player.work.TrackDurationWorker
-app/src/main/java/com/asmr/player/ui/library/LibraryScanStateHolder.kt com.asmr.player.data.local.db.entities.TrackEntity
+app/src/main/java/com/asmr/player/ui/library/LibraryScanPipeline.kt com.asmr.player.data.local.db.entities.TrackEntity
+app/src/main/java/com/asmr/player/ui/library/LibraryScanPipeline.kt com.asmr.player.data.local.db.entities.AlbumEntity
+app/src/main/java/com/asmr/player/ui/library/LibraryScanPipeline.kt com.asmr.player.work.AlbumCoverThumbWorker
+app/src/main/java/com/asmr/player/ui/library/LibraryScanPipeline.kt com.asmr.player.work.TrackDurationWorker
 app/src/main/java/com/asmr/player/ui/library/LibraryScanStateHolder.kt com.asmr.player.data.local.db.entities.AlbumEntity
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailDialogs.kt com.asmr.player.data.local.db.entities.LocalTreeCacheEntity
 app/src/main/java/com/asmr/player/ui/library/albumdetail/AlbumDetailHero.kt com.asmr.player.data.local.db.entities.LocalTreeCacheEntity

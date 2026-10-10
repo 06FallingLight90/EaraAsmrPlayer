@@ -178,15 +178,19 @@ class LibraryScanMetadataSupportTest {
         LibraryWriteRepository.ScanTrackSpec(title = "t2", path = "content://tree/album/2.flac", group = "disc2"),
     )
 
+    /** T11-P2：与生产管线同序——先事务前预读，再入库（metadataByPath 原样透传）。 */
     private fun scanDocAlbum(entity: AlbumEntity): LibraryWriteRepository.DocumentScanResult = runBlocking {
+        val specs = docSpecs()
+        val metadataByPath = repo.prepareDocumentTrackMetadata(entity, "content://tree/album", specs)
         repo.upsertScannedDocumentAlbum(
             entity = entity,
             scanRootPath = "content://tree/album",
-            trackSpecs = docSpecs(),
+            trackSpecs = specs,
             subtitlesByAudioPath = emptyMap(),
             cacheLeaves = emptyList(),
             fileSizeQuery = { null },
             stampProvider = { 0L },
+            metadataByPath = metadataByPath,
         )
     }
 
@@ -233,5 +237,69 @@ class LibraryScanMetadataSupportTest {
         assertEquals(2, tracks.size)
         assertTrue(tracks.all { it.artist == null && it.albumTag == null })
         assertEquals(AlbumEntity.SOURCE_DLSITE_DOWNLOAD, db.albumDao().getAlbumById(result.albumId)!!.source)
+    }
+
+    // ---------- T11-P2：readForNewTrack 移出写事务（事务前预读，事务内零 MMR 打开） ----------
+
+    @Test
+    fun prepareDocumentTrackMetadata_newAlbumReadsEverySpecExactlyOnce() = runBlocking {
+        fakeReader.result = AudioMetadata(title = "t", artist = "a1", album = "al1", embeddedCover = null)
+
+        val source = AlbumEntity(title = "C", path = "content://tree/album", source = AlbumEntity.SOURCE_LOCAL_SCAN)
+        val metadata = repo.prepareDocumentTrackMetadata(source, "content://tree/album", docSpecs())
+
+        // 新专辑（id<=0）全部规格均为新插：每条恰好读一次，map 按 path 全覆盖
+        assertEquals(2, fakeReader.calls.size)
+        assertEquals(setOf("content://tree/album/1.mp3", "content://tree/album/2.flac"), metadata.keys)
+        assertEquals("a1", metadata["content://tree/album/1.mp3"]!!.artist)
+    }
+
+    @Test
+    fun prepareDocumentTrackMetadata_existingAlbumReadsOnlyNewPaths() = runBlocking {
+        fakeReader.result = AudioMetadata(title = "t", artist = "a1", album = "al1", embeddedCover = null)
+
+        val source = AlbumEntity(title = "D", path = "content://tree/album", source = AlbumEntity.SOURCE_LOCAL_SCAN)
+        val first = scanDocAlbum(source)
+        assertEquals(2, fakeReader.calls.size)
+
+        // 二次预读：一条已存在（零读取）+ 一条新 path（读取一次）
+        fakeReader.calls.clear()
+        val specs = docSpecs() + LibraryWriteRepository.ScanTrackSpec(title = "t3", path = "content://tree/album/3.opus", group = "")
+        val metadata = repo.prepareDocumentTrackMetadata(source.copy(id = first.albumId), "content://tree/album", specs)
+
+        assertEquals(1, fakeReader.calls.size)
+        assertEquals(Uri.parse("content://tree/album/3.opus"), fakeReader.calls.single())
+        assertNull(metadata["content://tree/album/1.mp3"]) // 已存在轨不读取，映射值为 null
+        assertEquals("a1", metadata["content://tree/album/3.opus"]!!.artist)
+    }
+
+    @Test
+    fun upsertScannedDocumentAlbum_transactionPerformsNoMetadataRead() = runBlocking {
+        fakeReader.result = AudioMetadata(title = "t", artist = "artist1", album = "album1", embeddedCover = byteArrayOf(7, 7))
+
+        val source = AlbumEntity(title = "E", path = "content://tree/album", source = AlbumEntity.SOURCE_LOCAL_SCAN)
+        val specs = docSpecs()
+        // 预读发生在事务前
+        val metadataByPath = repo.prepareDocumentTrackMetadata(source, "content://tree/album", specs)
+        assertEquals(2, fakeReader.calls.size)
+
+        // 入库（写事务）零读取：fake 计数不变；字段/封面字节仍经 map 正常落库
+        fakeReader.calls.clear()
+        val result = repo.upsertScannedDocumentAlbum(
+            entity = source,
+            scanRootPath = "content://tree/album",
+            trackSpecs = specs,
+            subtitlesByAudioPath = emptyMap(),
+            cacheLeaves = emptyList(),
+            fileSizeQuery = { null },
+            stampProvider = { 0L },
+            metadataByPath = metadataByPath,
+        )
+
+        assertEquals(0, fakeReader.calls.size)
+        val tracks = db.trackDao().getTracksForAlbumOnce(result.albumId).sortedBy { it.title }
+        assertEquals(listOf("artist1", "artist1"), tracks.map { it.artist })
+        assertEquals(listOf("album1", "album1"), tracks.map { it.albumTag })
+        assertArrayEquals(byteArrayOf(7, 7), result.firstInsertedCoverBytes)
     }
 }

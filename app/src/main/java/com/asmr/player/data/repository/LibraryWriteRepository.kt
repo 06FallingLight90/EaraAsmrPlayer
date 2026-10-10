@@ -191,6 +191,17 @@ class LibraryWriteRepository @Inject constructor(
         val firstInsertedCoverBytes: ByteArray? = null,
     )
 
+    /**
+     * T11-P2：事务前预读新插轨元数据（MMR 文件 IO 移出写事务；增量闸门语义不变，
+     * 与 [upsertScannedDocumentAlbum] 成对调用，返回 map 原样传入其 metadataByPath）。
+     */
+    internal suspend fun prepareDocumentTrackMetadata(
+        entity: AlbumEntity,
+        scanRootPath: String,
+        trackSpecs: List<ScanTrackSpec>,
+    ): Map<String, LibraryScanMetadataSupport.ScannedTrackMetadata?> =
+        scanWrite.prepareDocumentTrackMetadata(entity, scanRootPath, trackSpecs)
+
     internal suspend fun upsertScannedDocumentAlbum(
         entity: AlbumEntity,
         scanRootPath: String,
@@ -199,8 +210,9 @@ class LibraryWriteRepository @Inject constructor(
         cacheLeaves: List<ScanCacheLeaf>,
         fileSizeQuery: suspend (String) -> Long?,
         stampProvider: (List<String>) -> Long,
+        metadataByPath: Map<String, LibraryScanMetadataSupport.ScannedTrackMetadata?>,
     ): DocumentScanResult = scanWrite.upsertScannedDocumentAlbum(
-        entity, scanRootPath, trackSpecs, subtitlesByAudioPath, cacheLeaves, fileSizeQuery, stampProvider,
+        entity, scanRootPath, trackSpecs, subtitlesByAudioPath, cacheLeaves, fileSizeQuery, stampProvider, metadataByPath,
     )
 
     /** 文档树单册重扫结果：是否写过字幕 + 持久化路径（供调用方写缓存）。 */

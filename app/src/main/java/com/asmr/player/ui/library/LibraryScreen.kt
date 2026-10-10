@@ -400,8 +400,8 @@ private fun LibraryScreenContent(
                         ) {
                             Text(
                                 text = when (progress.phase) {
-                                    com.asmr.player.ui.library.BulkPhase.ScanningLocal -> "正在扫描本地库"
-                                    com.asmr.player.ui.library.BulkPhase.SyncingCloud -> "正在云同步"
+                                    com.asmr.player.util.BulkPhase.ScanningLocal -> "正在扫描本地库"
+                                    com.asmr.player.util.BulkPhase.SyncingCloud -> "正在云同步"
                                 },
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = colorScheme.textPrimary

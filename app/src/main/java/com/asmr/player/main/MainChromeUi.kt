@@ -60,7 +60,7 @@ import com.asmr.player.ui.library.CloudSyncSelectionDialog
 import com.asmr.player.ui.library.LibraryFilterScreen
 import com.asmr.player.ui.library.LibraryScreen
 import com.asmr.player.ui.library.LibraryViewModel
-import com.asmr.player.ui.library.BulkPhase
+import com.asmr.player.util.BulkPhase
 import com.asmr.player.ui.player.MiniPlayer
 import com.asmr.player.ui.player.NowPlayingMotionLayout
 import com.asmr.player.ui.player.NowPlayingMotionSpec

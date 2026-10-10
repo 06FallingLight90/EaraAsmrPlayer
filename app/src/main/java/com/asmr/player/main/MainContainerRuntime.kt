@@ -35,7 +35,7 @@ import com.asmr.player.domain.model.AppVolume
 import com.asmr.player.hotlistening.ListeningTracker
 import com.asmr.player.service.PlaybackService
 import com.asmr.player.ui.library.AlbumDetailViewModel
-import com.asmr.player.ui.library.BulkProgress
+import com.asmr.player.util.BulkProgress
 import com.asmr.player.ui.library.CloudSyncSelectionDialog
 import com.asmr.player.ui.library.CloudSyncSelectionDialogState
 import com.asmr.player.ui.library.LibraryViewModel
