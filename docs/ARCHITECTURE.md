@@ -130,7 +130,7 @@ UI（ui/player/PlayerViewModel.kt 等）
 
 - 环境：JDK 17；Windows 本机可用仓库自带的 `gradlew-local.bat` 辅助脚本（重定向 Gradle 本地缓存）。
 - 构建：`./gradlew :app:assembleDebug`
-- 测试：`./gradlew :app:testDebugUnitTest`（当前基线 **1061** 个用例，改动后应保持全绿且只增不减）
+- 测试：`./gradlew :app:testDebugUnitTest`（当前基线 **1083** 个用例，改动后应保持全绿且只增不减）
 - CI：`.github/workflows/ci.yml`（push/PR）：架构守护（`tools/ci_guard.py`：单文件行数 ratchet「路径:行数」pin + 17 条 import 方向规则 + 包级 SCC ratchet + baseline 失效检测 + 反例夹具自检）→ `:app:testDebugUnitTest`；`.github/workflows/release.yml` 由 `v*` tag 触发，先运行 `:app:testReleaseUnitTest` 再构建 Release 签名 APK。
 - 签名配置与字幕模型按需下载说明见 README「Getting Started」一节。
 
