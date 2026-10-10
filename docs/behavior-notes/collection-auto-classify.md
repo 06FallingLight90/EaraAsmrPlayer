@@ -13,14 +13,15 @@
 - **名称冲突语义**：用户已自建同名合集（含大小写差异）时视作默认合集已存在，不重建也不再回填该类
   （判存与回填绑定在同一次判定上）。
 - **用户删除默认合集**：删除后增量挂载查不到目标组 → 静默跳过（不即时重建）；下次合集列表 VM init 的
-  seed 按名称判存会**重建该合集并触发一次全量回填**（见 §二），自愈但意味着"删掉的默认合集会复活"。
+  seed 按名称判存会**重建该合集并触发一次该类回填**（见 §二），自愈但意味着"删掉的默认合集会复活"。
 - 触发条件：合集列表 VM（AlbumGroupsViewModel）每次 init；钉测试 `AutoClassifySupportTest`（seed 幂等：两次
   ensureDefaultGroups 只建一次、名称集合不变）。
 
 ## 二、存量回填（仅首次创建时一次性）
 
-- **触发条件**：本次 `ensureDefaultGroups` 中**任一**默认合集是新创建的 → 对全部存量曲目做一次回填
-  （join tracks→albums：`dlsite_download`→音声、`local_scan`→歌曲、source null/空白→其它音频）。
+- **触发条件**：本次 `ensureDefaultGroups` 中**有**默认合集是新创建的 → 仅对**本次新建的类别**做一次存量回填
+  （join tracks→albums：`dlsite_download`→音声、`local_scan`→歌曲、source null/空白→其它音频；
+  判存与回填绑定同一次判定，未新建的类别——含同名自建——不回填）。
   三类都已存在 → 不回填（后续新入库轨走增量，不在 seed 时补）。
 - **去重与插入**：`(groupId, mediaId)` 为主键，批量 `insertItemsIgnoringConflicts`（OnConflictStrategy.IGNORE）
   既有条目不重复插入、不覆写 itemOrder/createdAt；回填条目 itemOrder 取组内 0..n-1（按 path 排序，默认合集

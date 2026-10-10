@@ -109,6 +109,43 @@ class AutoClassifySupportTest {
     }
 
     @Test
+    fun ensureDefaultGroups_recreatedKindBackfillsOnlyItsOwnKind_siblingRemovedItemsStayRemoved() = runBlocking {
+        val dlAlbum = insertAlbum("DL 作品", "/dl/a", AlbumEntity.SOURCE_DLSITE_DOWNLOAD)
+        val scanAlbum = insertAlbum("扫描专辑", "/scan/b", AlbumEntity.SOURCE_LOCAL_SCAN)
+        insertTrack(dlAlbum, "/dl/a/1.mp3")
+        insertTrack(scanAlbum, "/scan/b/1.mp3")
+        support.ensureDefaultGroups()
+
+        // 用户移除「歌曲」内条目，随后删除「音声」默认合集。
+        db.albumGroupItemDao().deleteItem(defaultGroupNamesToIds().getValue("歌曲"), "/scan/b/1.mp3")
+        db.albumGroupDao().deleteGroup(db.albumGroupDao().getGroupByNameOnce("音声")!!)
+
+        // 下次 seed：「音声」重建并只回填本类；兄弟「歌曲」被移除的条目不因回填复活。
+        support.ensureDefaultGroups()
+
+        assertEquals(listOf("/dl/a/1.mp3"), itemsOf("音声"))
+        assertTrue(itemsOf("歌曲").isEmpty())
+    }
+
+    @Test
+    fun ensureDefaultGroups_sameNameUserGroupDoesNotReceiveStockBackfill() = runBlocking {
+        val dlAlbum = insertAlbum("DL 作品", "/dl/a", AlbumEntity.SOURCE_DLSITE_DOWNLOAD)
+        val scanAlbum = insertAlbum("扫描专辑", "/scan/b", AlbumEntity.SOURCE_LOCAL_SCAN)
+        insertTrack(dlAlbum, "/dl/a/1.mp3")
+        insertTrack(scanAlbum, "/scan/b/1.mp3")
+        // 用户自建了与默认合集同名的「歌曲」。
+        db.albumGroupDao().insertGroup(AlbumGroupEntity(name = "歌曲"))
+
+        support.ensureDefaultGroups()
+
+        // 同名判存：「歌曲」不新建也不回填（存量轨不灌入用户合集）；其余新建类正常回填。
+        assertTrue(itemsOf("歌曲").isEmpty())
+        assertEquals(listOf("/dl/a/1.mp3"), itemsOf("音声"))
+        // 不重建出重复同名组。
+        assertEquals(1, db.albumGroupDao().getAllGroupsOnce().count { it.name == "歌曲" })
+    }
+
+    @Test
     fun attachTracks_isIdempotentAndPreservesExistingOrder() = runBlocking {
         val dlAlbum = insertAlbum("DL 作品", "/dl/a", AlbumEntity.SOURCE_DLSITE_DOWNLOAD)
         insertTrack(dlAlbum, "/dl/a/1.mp3")

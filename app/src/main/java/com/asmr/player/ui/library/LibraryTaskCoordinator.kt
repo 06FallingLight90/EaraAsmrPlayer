@@ -42,8 +42,13 @@ internal class LibraryTaskCoordinator(
         bulkProgressStore.finishBulkProgress()
     }
 
+    /**
+     * 批量任务进行中：VM 级 bulkJob 活跃，或应用级 bulkProgress 非空——
+     * T11 扫描下沉 CoroutineWorker 后不再经 bulkJob，扫描运行期以 BulkProgressStore 持批量信号
+     * （LibraryScanWorker start/finish 成对），消费方（deleteAlbum/tryRegisterAlbumJob 预检）据此拒绝。
+     */
     fun isBulkTaskRunning(): Boolean {
-        return bulkJob?.isActive == true
+        return bulkJob?.isActive == true || bulkProgress.value != null
     }
 
     fun showSyncBusy(nextAction: String) {

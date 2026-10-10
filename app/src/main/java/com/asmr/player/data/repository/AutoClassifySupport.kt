@@ -10,7 +10,8 @@ import com.asmr.player.data.local.db.entities.AlbumGroupItemEntity
 /**
  * T7：合集三类默认 seed + 来源自动归类单点（行为契约见 docs/behavior-notes/collection-auto-classify.md）。
  * - [classify]：albums.source → 默认合集类型（dlsite_download→音声、local_scan→歌曲、null/空白/未知→其它音频）。
- * - [ensureDefaultGroups]：按固定名称判存幂等 seed；任一默认合集首次创建时对存量曲目一次性回填。
+ * - [ensureDefaultGroups]：按固定名称判存幂等 seed；仅对本次新建的类别一次性回填存量曲目
+ *   （判存与回填绑定同一次判定，已存在类别——含同名自建——不回填）。
  * - [attachTrackToDefaultGroup] / [attachTracksToDefaultGroups]：新入库轨增量挂载（幂等，IGNORE 去重，
  *   用户移除过的不回加——增量只对 tracks 新插轨调用）；source 由调用方传专辑最终定性值，
  *   本类不读写 albums.source（来源定性"永不覆盖"规则不受影响）。
@@ -30,21 +31,21 @@ internal class AutoClassifySupport(private val database: AppDatabase) {
         else -> DefaultGroupKind.OTHER
     }
 
-    /** 三类默认合集幂等 seed（固定名称判存，已存在不重建不改名）；任一首次创建则全量回填存量曲目。 */
+    /** 三类默认合集幂等 seed（固定名称判存，已存在不重建不改名）；仅对本次新建的类别回填存量曲目。 */
     suspend fun ensureDefaultGroups() {
         val groupDao = database.albumGroupDao()
         val groupItemDao = database.albumGroupItemDao()
         database.withTransaction {
-            var createdAny = false
+            val createdKinds = mutableSetOf<DefaultGroupKind>()
             DefaultGroupKind.entries.forEach { kind ->
                 val existing = groupDao.getGroupByNameOnce(kind.fixedName)
                 if (existing == null) {
                     groupDao.insertGroup(AlbumGroupEntity(name = kind.fixedName))
-                    createdAny = true
+                    createdKinds.add(kind)
                 }
             }
-            if (createdAny) {
-                backfillStockTracks(groupItemDao)
+            if (createdKinds.isNotEmpty()) {
+                backfillStockTracks(groupItemDao, createdKinds)
             }
         }
     }
@@ -79,11 +80,17 @@ internal class AutoClassifySupport(private val database: AppDatabase) {
         if (toInsert.isNotEmpty()) groupItemDao.insertItemsIgnoringConflicts(toInsert)
     }
 
-    /** 存量回填（仅 seed 首建时调用一次）：join tracks→albums 按来源分组批量 IGNORE 插入，组内 itemOrder 0..n-1。 */
-    private suspend fun backfillStockTracks(groupItemDao: AlbumGroupItemDao) {
+    /**
+     * 存量回填（仅 seed 有新建类别时调用，只回填 [kinds] 这些类别）：join tracks→albums 按来源分组
+     * 批量 IGNORE 插入，组内 itemOrder 0..n-1。
+     */
+    private suspend fun backfillStockTracks(
+        groupItemDao: AlbumGroupItemDao,
+        kinds: Set<DefaultGroupKind>,
+    ) {
         val rows = groupItemDao.getAllTrackSourceRowsOnce()
         val groupDao = database.albumGroupDao()
-        DefaultGroupKind.entries.forEach { kind ->
+        kinds.forEach { kind ->
             val group = groupDao.getGroupByNameOnce(kind.fixedName) ?: return@forEach
             val paths = rows.asSequence()
                 .filter { classify(it.source) == kind }
