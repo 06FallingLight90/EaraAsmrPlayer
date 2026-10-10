@@ -30,6 +30,7 @@ import com.asmr.player.ui.library.LibraryFilterScreen
 import com.asmr.player.ui.library.LibraryViewModel
 import com.asmr.player.ui.library.allsongs.AllSongsPageSource
 import com.asmr.player.ui.library.allsongs.AllSongsScreen
+import com.asmr.player.ui.library.allsongs.AllSongsViewModel
 import com.asmr.player.ui.nav.AlbumCoverHintStore
 import com.asmr.player.ui.nav.AppNavigator
 import com.asmr.player.ui.player.PlayerViewModel
@@ -288,7 +289,10 @@ internal fun buildMainRouteContents(
                     onAddAudio = { showAddAudioSheet = true }
                 )
                 if (showAddAudioSheet) {
+                    val batchAddSourceViewModel: BatchAddSourceViewModel =
+                        hiltViewModel(host.activityViewModelStoreOwner)
                     BatchAddSourceSheet(
+                        viewModel = batchAddSourceViewModel,
                         onDismiss = { showAddAudioSheet = false },
                         onConfirm = { rows ->
                             showAddAudioSheet = false
@@ -320,7 +324,10 @@ internal fun buildMainRouteContents(
                     onAddAudio = { showAddAudioSheet = true }
                 )
                 if (showAddAudioSheet) {
+                    val batchAddSourceViewModel: BatchAddSourceViewModel =
+                        hiltViewModel(host.activityViewModelStoreOwner)
                     BatchAddSourceSheet(
+                        viewModel = batchAddSourceViewModel,
                         onDismiss = { showAddAudioSheet = false },
                         onConfirm = { rows ->
                             showAddAudioSheet = false
@@ -367,7 +374,12 @@ internal fun buildMainRouteContents(
         // HorizontalPager（原二级装配已删，路由注册改为占位见 MainNavGraph）。
         allSongs = {
             SecondaryPageBackground(topPadding = host.secondaryPageTopPadding) {
+                // VM 经 activity owner 显式装配（本仓约定，dlsiteLogin 同款）：裸
+                // hiltViewModel() 在 NavHost 目的地内不落 Hilt 工厂，会走反射无参
+                // 构造崩溃（实机走查 P0 实证）。
+                val allSongsViewModel: AllSongsViewModel = hiltViewModel(host.activityViewModelStoreOwner)
                 AllSongsScreen(
+                    viewModel = allSongsViewModel,
                     onBack = { host.navController.popBackStack() },
                     // 单曲播放：平铺行以 trackPath 兼任 mediaId 键（T5 投影约定），
                     // 经 MediaItemFactory.fromDetails 构造后走 playMediaItems 单曲起播。

@@ -24,7 +24,6 @@ import com.asmr.player.domain.model.Track
 import com.asmr.player.util.MessageManager
 import com.asmr.player.domain.model.AppVolume
 import dagger.hilt.android.qualifiers.ApplicationContext
-import com.asmr.player.util.NetworkMeteredChecker
 import com.asmr.player.domain.model.RemoteSubtitleSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -74,7 +73,6 @@ class PlayerConnection @Inject constructor(
     private val trackSliceRepository: TrackSliceRepository,
     private val slicePlaybackController: SlicePlaybackController,
     private val messageManager: MessageManager,
-    private val networkMeteredChecker: NetworkMeteredChecker,
     private val playbackController: PlaybackController,
     private val playbackStateStore: PlaybackStateStore,
     private val trackDao: TrackDao,
@@ -96,8 +94,6 @@ class PlayerConnection @Inject constructor(
     private val currentSlices = MutableStateFlow<List<Slice>>(emptyList())
     private var didRestorePlaybackState: Boolean = false
     private var restoreAttemptResolved: Boolean = false
-    private val meteredWarnedMediaIds = LinkedHashSet<String>()
-    private var lastMeteredWarnAtMs: Long = 0L
     private val connectMutex = Mutex()
     private val mainHandler = Handler(Looper.getMainLooper())
     private var videoOutputEnabled: Boolean = false
@@ -118,28 +114,6 @@ class PlayerConnection @Inject constructor(
                     if (mediaId == null) flowOf(emptyList()) else trackSliceRepository.observeSlices(mediaId)
                 }
                 .collect { slices -> currentSlices.value = slices }
-        }
-        scope.launch {
-            snapshot
-                .map { it.currentMediaItem }
-                .map { item ->
-                    val id = item?.mediaId?.takeIf { it.isNotBlank() }.orEmpty()
-                    val uri = item?.localConfiguration?.uri?.toString().orEmpty()
-                    id to uri
-                }
-                .distinctUntilChanged()
-                .collect { (mediaId, uriText) ->
-                    if (mediaId.isBlank()) return@collect
-                    if (!uriText.startsWith("http", ignoreCase = true)) return@collect
-                    if (!networkMeteredChecker.isActiveNetworkMetered()) return@collect
-
-                    val now = SystemClock.elapsedRealtime()
-                    if (now - lastMeteredWarnAtMs < 2_000) return@collect
-                    if (!meteredWarnedMediaIds.add(mediaId)) return@collect
-
-                    lastMeteredWarnAtMs = now
-                    messageManager.showWarning("正在使用流量播放")
-                }
         }
         scope.launch {
             while (isActive) {

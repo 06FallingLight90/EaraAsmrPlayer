@@ -486,7 +486,9 @@ private fun AllSongsRow(
             )
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = onLongClick.takeIf { selectionMode }
+                // 屏级 onRowLongClick 自带守卫（未进多选→进入并勾选首项；多选中→无操作），
+                // 必须无条件注册，否则长按入口永不可达（实机走查发现）。
+                onLongClick = onLongClick
             ),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -567,6 +569,11 @@ private fun AllSongsRow(
     }
 }
 
-internal fun fileNameForDisplay(trackPath: String): String =
-    trackPath.substringAfterLast('/').substringAfterLast('\\')
+internal fun fileNameForDisplay(trackPath: String): String {
+    // SAF 扫描入库的 track.path 是编码后的 document URI（primary%3AMusic%2F...），
+    // 文件名展示前先解码再取末段（实机走查发现：不解码时整条 URI 原样入列）。
+    // 仅对确为 document URI（':' 被编码为 %3A）的路径解码，避免误伤含 % 的普通文件路径。
+    val decoded = if (trackPath.contains("%3A")) android.net.Uri.decode(trackPath) else trackPath
+    return decoded.substringAfterLast('/').substringAfterLast('\\')
         .ifBlank { trackPath }
+}
