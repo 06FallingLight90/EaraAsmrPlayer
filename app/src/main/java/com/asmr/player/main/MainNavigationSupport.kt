@@ -280,19 +280,15 @@ internal fun resolvePrimaryPagerBeyondBoundsPageCount(pageCount: Int): Int {
     return (pageCount - 1).coerceIn(0, 1)
 }
 
-internal fun resolveCurrentPrimaryDestinationRoute(
-    currentRoute: String?,
-    playlistSystemType: String? = null
-): String? {
+// T13 阶段二：与 isPrimaryRoute 同步的五页签集合；旧页签路由（search 等）一律返回
+// null（按二级覆盖层呈现），favorites 的 pattern+type 特判已随页签摘除。
+internal fun resolveCurrentPrimaryDestinationRoute(currentRoute: String?): String? {
     return when {
         currentRoute == Routes.Library -> Routes.Library
-        currentRoute == Routes.Search -> Routes.Search
-        currentRoute == Routes.HotListening -> Routes.HotListening
+        currentRoute == Routes.Purchased -> Routes.Purchased
         currentRoute == "playlists" -> "playlists"
         currentRoute == "groups" -> "groups"
         currentRoute == "settings" -> "settings"
-        currentRoute == "listening_calendar" -> "listening_calendar"
-        currentRoute == "playlist_system/{type}" && playlistSystemType == "favorites" -> "playlist_system/favorites"
         else -> null
     }
 }

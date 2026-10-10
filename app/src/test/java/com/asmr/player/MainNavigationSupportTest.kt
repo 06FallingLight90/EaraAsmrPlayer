@@ -270,38 +270,49 @@ class MainNavigationSupportTest {
     }
 
     @Test
-    fun resolveCurrentPrimaryDestinationRoute_handlesFavoritesSystemPlaylist() {
-        assertEquals(
-            "playlist_system/favorites",
-            resolveCurrentPrimaryDestinationRoute(
-                currentRoute = "playlist_system/{type}",
-                playlistSystemType = "favorites"
-            )
-        )
+    fun resolveCurrentPrimaryDestinationRoute_fiveTabsAndDemotedLegacyTabs() {
+        // T13 阶段二：五页签集合；favorites 的 pattern+type 特判随页签摘除。
+        assertEquals("library", resolveCurrentPrimaryDestinationRoute("library"))
+        assertEquals("playlists", resolveCurrentPrimaryDestinationRoute("playlists"))
+        assertEquals("groups", resolveCurrentPrimaryDestinationRoute("groups"))
+        assertEquals("purchased", resolveCurrentPrimaryDestinationRoute("purchased"))
         assertEquals("settings", resolveCurrentPrimaryDestinationRoute("settings"))
-        assertEquals(null, resolveCurrentPrimaryDestinationRoute("playlist_system/{type}", "recent"))
+        // 旧页签及其宿主路由：不再归属 primary，按二级覆盖层呈现
+        assertEquals(null, resolveCurrentPrimaryDestinationRoute("search"))
+        assertEquals(null, resolveCurrentPrimaryDestinationRoute("hot_listening"))
+        assertEquals(null, resolveCurrentPrimaryDestinationRoute("listening_calendar"))
+        assertEquals(null, resolveCurrentPrimaryDestinationRoute("playlist_system/{type}"))
     }
 
     @Test
-    fun bottomChromeNavItems_useListeningCalendarAsPrimaryEntry() {
+    fun bottomChromeNavItems_matchFiveTabContract() {
+        // T13 阶段二（US-06）：库/歌单/合集/已购/设置，顺序固定。
         val items = bottomChromeNavItems()
-        val routes = items.map { it.route }
 
-        assertEquals("ASMR 看板", items[items.lastIndex - 1].label)
-        assertEquals("listening_calendar", items[items.lastIndex - 1].route)
-        assertEquals("设置", items.last().label)
-        assertEquals("settings", items.last().route)
-        assertEquals(true, routes.contains("listening_calendar"))
-        assertEquals(false, routes.contains("dlsite_login"))
+        assertEquals(listOf("库", "歌单", "合集", "已购", "设置"), items.map { it.label })
+        assertEquals(
+            listOf("library", "playlists", "groups", "purchased", "settings"),
+            items.map { it.route }
+        )
     }
 
     @Test
-    fun primaryRouteResolution_treatsCalendarAsPrimaryAndDlsiteLoginAsSecondary() {
-        assertEquals(true, isPrimaryRoute("listening_calendar"))
+    fun primaryRouteResolution_purchasedPrimaryLegacyTabsDemoted() {
+        assertEquals(true, isPrimaryRoute("purchased"))
         assertEquals(false, isPrimaryRoute("dlsite_login"))
-        assertEquals("listening_calendar", resolvePrimaryRoute("listening_calendar", "library"))
-        assertEquals("library", resolvePrimaryRoute("dlsite_login", "library"))
-        assertEquals("listening_calendar", resolveCurrentPrimaryDestinationRoute("listening_calendar"))
+        // allsongs 保持二级，归属映射到「库」
+        assertEquals(false, isPrimaryRoute("allsongs"))
+        assertEquals("purchased", resolvePrimaryRoute("purchased", "library"))
+        assertEquals("library", resolvePrimaryRoute("allsongs", "settings"))
+        assertEquals("library", resolvePrimaryRoute("library_filter", "settings"))
+        assertEquals("playlists", resolvePrimaryRoute("playlist/{playlistId}/{playlistName}", "library"))
+        assertEquals("groups", resolvePrimaryRoute("group/{groupId}/{groupName}", "library"))
+        // 旧页签深链不再归属页签：回落 lastPrimaryRoute
+        assertEquals("library", resolvePrimaryRoute("search", "library"))
+        assertEquals("settings", resolvePrimaryRoute("hot_listening", "settings"))
+        assertEquals("library", resolvePrimaryRoute("search_assist", "library"))
+        assertEquals("library", resolvePrimaryRoute("playlist_system/{type}", "library"))
+        assertEquals("library", resolvePrimaryRoute("listening_calendar", "library"))
         assertEquals(null, resolveCurrentPrimaryDestinationRoute("dlsite_login"))
     }
 

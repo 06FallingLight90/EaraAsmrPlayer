@@ -94,10 +94,10 @@ class BottomChromeTest {
             }
         }
 
-        composeRule.onNodeWithTag("bottomNavItem:search").performClick()
+        composeRule.onNodeWithTag("bottomNavItem:${Routes.Purchased}").performClick()
 
         composeRule.runOnIdle {
-            assertEquals(Routes.Search, lastRoute)
+            assertEquals(Routes.Purchased, lastRoute)
         }
     }
 
@@ -503,21 +503,25 @@ class BottomChromeTest {
         }
 
         val navBounds = composeRule.onNodeWithTag(BottomNavBarTag).getUnclippedBoundsInRoot()
-        val overflowBounds = composeRule.onNodeWithTag(BottomNavOverflowTag).getUnclippedBoundsInRoot()
         val miniBounds = composeRule.onNodeWithTag(BottomChromeMiniPlayerTag).getUnclippedBoundsInRoot()
-        composeRule.onNodeWithTag("bottomNavItem:playlist_system/favorites").getUnclippedBoundsInRoot()
 
-        assertTrue(
-            "Expected compact overflow toggle to stay inside the nav bar",
-            overflowBounds.right.value <= navBounds.right.value + 0.5f
-        )
+        // T13 阶段二：5 页签单组平铺，分组切换（overflow）不再出现。
+        composeRule.onNodeWithTag(BottomNavOverflowTag).assertDoesNotExist()
+
         assertTrue(
             "Expected compact nav bar and mini player not to overlap",
             navBounds.right.value <= miniBounds.left.value + 0.5f
         )
 
-        composeRule.onNodeWithTag(BottomNavOverflowTag).performClick()
-        composeRule.onNodeWithTag("bottomNavItem:playlists").getUnclippedBoundsInRoot()
+        listOf(
+            Routes.Library,
+            "playlists",
+            "groups",
+            Routes.Purchased,
+            "settings"
+        ).forEach { route ->
+            composeRule.onNodeWithTag("bottomNavItem:$route").getUnclippedBoundsInRoot()
+        }
     }
 
     private fun activeItemCenterX(route: String): Float {

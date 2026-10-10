@@ -146,22 +146,19 @@ fun MainContainer(
         }
     }
     val hasPreviousBackStackEntry = navController.previousBackStackEntry != null
-    val currentPlaylistSystemType = navBackStackEntry?.arguments?.getString("type")
     val startRoute = remember(startRouteFromIntent) {
         startRouteFromIntent?.trim().orEmpty()
     }
-    val initialDestination = remember(startRoute) {
-        if (startRoute == Routes.Search) Routes.Search else Routes.Library
-    }
+    // T13 阶段二：search 不再是 primary 页签，初始目的地恒为 library；
+    // start_route=search 等旧路由经 MainStartupEffects 走既有二级通道分发。
+    val initialDestination = Routes.Library
     var lastPrimaryRoute by rememberSaveable { mutableStateOf(initialDestination) }
     val currentPrimaryRoute = resolveCurrentPrimaryDestinationRoute(
-        currentRoute = currentRoute,
-        playlistSystemType = currentPlaylistSystemType
+        currentRoute = currentRoute
     )
     val activePrimaryRoute = resolvePrimaryRoute(
         currentRoute = currentRoute,
-        lastPrimaryRoute = lastPrimaryRoute,
-        playlistSystemType = currentPlaylistSystemType
+        lastPrimaryRoute = lastPrimaryRoute
     )
     LaunchedEffect(currentRoute) {
         UiFrameWorkCoordinator.markFrameCritical(

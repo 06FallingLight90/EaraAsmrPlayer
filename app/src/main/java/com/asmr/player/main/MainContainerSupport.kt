@@ -118,8 +118,7 @@ internal class HorizontalRectClipShape(
 internal fun NavBackStackEntry.usesSecondaryPageSlideTransition(): Boolean {
     if (isAlbumDetailRoute(destination.route)) return false
     return resolveCurrentPrimaryDestinationRoute(
-        currentRoute = destination.route,
-        playlistSystemType = arguments?.getString("type")
+        currentRoute = destination.route
     ) == null
 }
 

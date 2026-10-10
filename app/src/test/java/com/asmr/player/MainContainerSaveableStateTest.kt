@@ -23,6 +23,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.asmr.player.main.PRIMARY_PAGER_SAVEABLE_KEY
 import com.asmr.player.main.primaryRouteSaveableKey
 import com.asmr.player.main.bottomChromeNavItems
+import com.asmr.player.ui.nav.Routes
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -50,8 +51,12 @@ class MainContainerSaveableStateTest {
 
     @Test
     fun primaryChromeRoutes_areAllCoveredBySaveableScheme() {
+        // T13 阶段二：五页签固定集合，顺序与 bottomChromeNavItems 一致。
         val routes = bottomChromeNavItems().map { it.route }
-        assertTrue(routes.size >= 8)
+        assertEquals(
+            listOf(Routes.Library, "playlists", "groups", Routes.Purchased, "settings"),
+            routes
+        )
         routes.forEach { route ->
             assertTrue(
                 "route key must be prefixed scheme: $route",

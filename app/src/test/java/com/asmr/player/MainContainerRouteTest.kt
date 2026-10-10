@@ -98,10 +98,6 @@ class MainContainerRouteTest {
                         record("dlsiteLogin")
                         Marker("dlsiteLogin")
                     },
-                    purchased = {
-                        record("purchased")
-                        Marker("purchased")
-                    },
                     allSongs = {
                         record("allSongs")
                         Marker("allSongs")
@@ -150,12 +146,17 @@ class MainContainerRouteTest {
     }
 
     @Test
-    fun purchasedRoute_dispatchToContents() {
+    fun purchasedRoute_rendersPrimaryPlaceholderWithoutContents() {
+        // T13 阶段二：purchased 升为 primary 页签，NavHost 仅注册占位，
+        // 内容由 HorizontalPager 渲染（MainPrimaryPagerUi），不再触发 contents 装配。
         val navController = setContent()
         composeRule.runOnIdle { navController.navigateSingleTop(Routes.Purchased) }
         composeRule.waitForIdle()
         assertEquals(Routes.Purchased, navController.currentDestination?.route)
-        assertInvokedOnce("purchased")
+        assertTrue(
+            "purchased must render as primary placeholder without contents, got $invocations",
+            invocations.isEmpty()
+        )
     }
 
     @Test
@@ -234,15 +235,18 @@ class MainContainerRouteTest {
     @Test
     fun primaryRoutes_renderPlaceholdersWithoutSecondaryContents() {
         val navController = setContent()
-        val primaryRoutes = listOf(
+        // 五页签（含 purchased）+ 旧页签占位路由（hot_listening / listening_calendar
+        // 仍注册占位，深链可达但不再进入 pagerRoutes）。
+        val placeholderRoutes = listOf(
             Routes.Library,
             "playlists",
             "groups",
+            Routes.Purchased,
             "settings",
-            "listening_calendar",
-            Routes.HotListening
+            Routes.HotListening,
+            "listening_calendar"
         )
-        primaryRoutes.forEach { route ->
+        placeholderRoutes.forEach { route ->
             composeRule.runOnIdle { navController.navigateSingleTop(route) }
             composeRule.waitForIdle()
             assertEquals(route, navController.currentDestination?.route)
@@ -261,20 +265,27 @@ class MainContainerRouteTest {
 
     @Test
     fun startRouteDispatch_primaryVsSecondaryClassification() {
+        // T13 阶段二：五页签 = 库/歌单(playlists)/合集/已购/设置；旧页签降为非 primary，
+        // start_route 深链走 navigateSingleTop 二级通道。
         val primary = listOf(
             Routes.Library,
-            Routes.Search,
-            Routes.HotListening,
-            "playlist_system/favorites",
             "playlists",
             "groups",
-            "settings",
-            "listening_calendar"
+            Routes.Purchased,
+            "settings"
         )
         primary.forEach { route ->
             assertTrue("'$route' must be primary", isPrimaryRoute(route))
         }
         listOf(
+            // 旧页签：入口已摘除，保留路由注册
+            Routes.Search,
+            Routes.HotListening,
+            "playlist_system/favorites",
+            "listening_calendar",
+            // 库页二级入口
+            Routes.AllSongs,
+            // 既有二级路由
             "library_filter",
             Routes.SearchAssist,
             Routes.AlbumDetailByIdPattern,

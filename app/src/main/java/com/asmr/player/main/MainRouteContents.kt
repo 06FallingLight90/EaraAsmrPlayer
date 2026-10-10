@@ -38,8 +38,6 @@ import com.asmr.player.ui.playlists.PlaylistsViewModel
 import com.asmr.player.ui.playlists.SystemPlaylistScreen
 import com.asmr.player.ui.purchased.PurchasedPageData
 import com.asmr.player.ui.purchased.PurchasedPageSource
-import com.asmr.player.ui.purchased.PurchasedScreen
-import com.asmr.player.ui.purchased.PurchasedViewModel
 import com.asmr.player.ui.search.SearchAssistScreen
 import com.asmr.player.ui.search.SearchAssistSearchRequest
 import com.asmr.player.ui.common.core.SearchBlockedKeywordsViewModel
@@ -365,42 +363,8 @@ internal fun buildMainRouteContents(
                 )
             }
         },
-        purchased = {
-            val purchasedViewModel: PurchasedViewModel = hiltViewModel(host.activityViewModelStoreOwner)
-            SecondaryPageBackground(topPadding = host.secondaryPageTopPadding) {
-                PurchasedScreen(
-                    onOpenLogin = { host.navController.navigateSingleTop("dlsite_login") },
-                    onOpenDownloads = { host.navController.navigateSingleTop("downloads") },
-                    // 与搜索"已购"过滤点击行为同约定（MainPrimaryPagerUi.searchAlbumClick）：
-                    // 种入封面 hint 后 preferDlsitePlay=true 打开详情，落 dlsitePlay 页签。
-                    onOpenAlbum = { album ->
-                        val workNo = album.rjCode.ifBlank { album.workId }.trim().uppercase()
-                        AlbumCoverHintStore.record(
-                            albumId = album.id,
-                            rjCode = workNo,
-                            title = album.title,
-                            circle = album.circle,
-                            cv = album.cv,
-                            coverUrl = album.coverUrl,
-                            tags = album.tags,
-                            ratingValue = album.ratingValue,
-                            ratingCount = album.ratingCount,
-                            releaseDate = album.releaseDate,
-                            dlCount = album.dlCount,
-                            priceJpy = album.priceJpy,
-                            hasAsmrOne = album.hasAsmrOne,
-                            description = album.description
-                        )
-                        host.navigator.openAlbumDetail(
-                            albumId = album.id,
-                            rj = workNo,
-                            preferDlsitePlay = true
-                        )
-                    },
-                    viewModel = purchasedViewModel
-                )
-            }
-        },
+        // T13 阶段二：purchased 升为五页签之一，装配随迁至 MainPrimaryPagerUi 的
+        // HorizontalPager（原二级装配已删，路由注册改为占位见 MainNavGraph）。
         allSongs = {
             SecondaryPageBackground(topPadding = host.secondaryPageTopPadding) {
                 AllSongsScreen(

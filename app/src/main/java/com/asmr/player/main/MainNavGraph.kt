@@ -35,7 +35,6 @@ internal class MainNavGraphContents(
     val playlistSystem: @Composable (type: String) -> Unit,
     val downloads: @Composable () -> Unit,
     val dlsiteLogin: @Composable () -> Unit,
-    val purchased: @Composable () -> Unit,
     val allSongs: @Composable () -> Unit
 )
 
@@ -77,6 +76,11 @@ internal fun MainNavGraph(
     ) {
         // ---- 主页面（primary）路由：内容由 HorizontalPager 渲染，NavHost 仅注册占位 ----
         composable(Routes.Library) {
+            PrimaryRoutePlaceholder()
+        }
+        composable(Routes.Purchased) {
+            // T13 阶段二：purchased 升为 primary 页签，内容由 HorizontalPager 渲染
+            // （MainPrimaryPagerUi），此处仅注册占位承载返回栈。
             PrimaryRoutePlaceholder()
         }
         composable(Routes.Search) { entry ->
@@ -183,9 +187,6 @@ internal fun MainNavGraph(
         }
         composable("dlsite_login") {
             contents.dlsiteLogin()
-        }
-        composable(Routes.Purchased) {
-            contents.purchased()
         }
         composable(Routes.AllSongs) {
             contents.allSongs()

@@ -30,16 +30,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.Route
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material.icons.rounded.SwapHoriz
-import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -138,7 +133,8 @@ private val BottomNavGlowExpandedSize = 44.dp
 private val BottomNavGlowExpandedSizeLarge = 50.dp
 private val BottomNavGlowCollapsedSize = 46.dp
 private val BottomNavGlowCollapsedSizeLarge = 52.dp
-private const val BottomNavPageToggleGroupSize = BottomNavExpandedSlotCount - 1
+// T13 阶段二：页签收敛到 5（US-06），单组即可全部平铺，分组切换（overflow）无剩余组可切。
+private const val BottomNavPageToggleGroupSize = BottomNavExpandedSlotCount
 private const val BottomChromeMinCompactScale = 0.72f
 internal val BottomChromeMaxGroupWidthCompact = 560.dp
 internal val BottomChromeMaxGroupWidthLarge = 680.dp
@@ -306,14 +302,14 @@ private fun bottomChromeMetrics(largeLayout: Boolean): BottomChromeMetrics =
         )
     }
 
+// T13 阶段二（US-06）：底部导航五页签 = 库/歌单/合集/已购/设置。
+// 旧页签（在线搜索/热门收听/我的收藏/ASMR 看板）仅摘除入口，Screen/路由注册保留，
+// 删除统一留待阶段三 DEL；语义见 docs/behavior-notes/maincontainer-routes.md。
 fun bottomChromeNavItems(): List<BottomChromeNavItem> = listOf(
-    BottomChromeNavItem(Icons.Rounded.Home, "本地库", Routes.Library),
-    BottomChromeNavItem(Icons.Rounded.Search, "在线搜索", Routes.Search),
-    BottomChromeNavItem(Icons.Rounded.Whatshot, "热门收听", Routes.HotListening),
-    BottomChromeNavItem(Icons.Rounded.Favorite, "我的收藏", "playlist_system/favorites"),
-    BottomChromeNavItem(Icons.AutoMirrored.Rounded.QueueMusic, "我的列表", "playlists"),
-    BottomChromeNavItem(Icons.Rounded.Folder, "我的分组", "groups"),
-    BottomChromeNavItem(Icons.Rounded.Route, "ASMR 看板", "listening_calendar"),
+    BottomChromeNavItem(Icons.Rounded.Home, "库", Routes.Library),
+    BottomChromeNavItem(Icons.AutoMirrored.Rounded.QueueMusic, "歌单", "playlists"),
+    BottomChromeNavItem(Icons.Rounded.Folder, "合集", "groups"),
+    BottomChromeNavItem(Icons.Rounded.ShoppingBag, "已购", Routes.Purchased),
     BottomChromeNavItem(Icons.Rounded.Settings, "设置", "settings")
 )
 
@@ -321,36 +317,32 @@ fun isPrimaryRoute(route: String?): Boolean {
     if (route.isNullOrBlank()) return false
     return route in setOf(
         Routes.Library,
-        Routes.Search,
-        Routes.HotListening,
-        "playlist_system/favorites",
+        Routes.Purchased,
         "playlists",
         "groups",
-        "settings",
-        "listening_calendar"
+        "settings"
     )
 }
 
 fun resolvePrimaryRoute(
     currentRoute: String?,
-    lastPrimaryRoute: String?,
-    playlistSystemType: String? = null
+    lastPrimaryRoute: String?
 ): String {
     return when {
         currentRoute == Routes.Library -> Routes.Library
-        currentRoute == Routes.Search -> Routes.Search
-        currentRoute == Routes.SearchAssist -> Routes.Search
-        currentRoute == Routes.SearchAssistPattern -> Routes.Search
-        currentRoute == Routes.HotListening -> Routes.HotListening
+        currentRoute == Routes.Purchased -> Routes.Purchased
         currentRoute == "playlists" -> "playlists"
         currentRoute == "groups" -> "groups"
         currentRoute == "settings" -> "settings"
-        currentRoute == "listening_calendar" -> "listening_calendar"
-        currentRoute == "playlist_system/{type}" && playlistSystemType == "favorites" -> "playlist_system/favorites"
+        // 库页顶栏入口（T5/批次 A），保持二级路由，归属映射到「库」。
+        currentRoute == Routes.AllSongs -> Routes.Library
+        currentRoute == "library_filter" -> Routes.Library
         currentRoute == "playlist/{playlistId}/{playlistName}" -> "playlists"
         currentRoute == "group/{groupId}/{groupName}" -> "groups"
-        currentRoute == "library_filter" -> Routes.Library
         currentRoute?.startsWith("album_detail") == true -> lastPrimaryRoute ?: Routes.Library
+        // 旧页签（search / hot_listening / favorites / listening_calendar）及其二级路由
+        // （search_assist* / playlist_system favorites）已从归属映射摘除：深链经既有
+        // 二级通道可达，视觉路由回落 lastPrimaryRoute，阶段三统一删除。
         else -> lastPrimaryRoute ?: Routes.Library
     }
 }

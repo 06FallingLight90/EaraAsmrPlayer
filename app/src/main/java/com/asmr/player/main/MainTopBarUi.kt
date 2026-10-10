@@ -317,6 +317,7 @@ internal fun MainTopBarContent(
                                                     resolvedTitleRoute == "group/{groupId}/{groupName}" ->
                                                         groupName.ifBlank { "我的分组" }
                                                     resolvedTitleRoute == "settings" -> "设置"
+                                                    resolvedTitleRoute == Routes.Purchased -> "已购"
                                                     resolvedTitleRoute == "downloads" -> "任务管理"
                                                     resolvedTitleRoute == "listening_calendar" -> "ASMR 看板"
                                                     resolvedTitleRoute == "dlsite_login" -> "DLsite 登录"

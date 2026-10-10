@@ -126,6 +126,8 @@ import com.asmr.player.ui.search.SEARCH_ASSIST_RESULT_PRESALE_ONLY_KEY
 import com.asmr.player.ui.search.SEARCH_ASSIST_RESULT_PURCHASED_ONLY_KEY
 import com.asmr.player.ui.search.SEARCH_ASSIST_RESULT_SIGNAL_KEY
 import com.asmr.player.ui.search.SearchAssistSearchRequest
+import com.asmr.player.ui.purchased.PurchasedScreen
+import com.asmr.player.ui.purchased.PurchasedViewModel
 import com.asmr.player.ui.search.SearchAssistScreen
 import com.asmr.player.ui.search.SearchScreen
 import com.asmr.player.ui.search.SearchViewModel
@@ -252,9 +254,11 @@ import com.asmr.player.domain.model.AppVolume
 import com.asmr.player.ui.common.audio.AppVolumeVerticalSlider
 import kotlinx.coroutines.flow.MutableStateFlow
 
-// Primary pager host: Library / Search / HotListening / playlists / groups /
-// settings / listening_calendar assembly. Extracted from MainContainer (R2-C1b),
+// Primary pager host: 五页签（T13 阶段二 US-06）= Library / playlists / groups /
+// Purchased / settings assembly. Extracted from MainContainer (R2-C1b),
 // behavior preserved. Cross-surface state flows only through these parameters.
+// search / hot_listening / favorites / listening_calendar 分支保留但不再进入
+// pagerRoutes（旧页签入口已摘除，阶段三统一删除）。
 @Composable
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
@@ -519,6 +523,44 @@ internal fun MainPrimaryPagerContent(
                                                     navController.navigateSingleTop("group/${group.id}/$encoded")
                                                 },
                                                 viewModel = albumGroupsViewModel
+                                            )
+                                        }
+
+                                        Routes.Purchased -> {
+                                            // T13 阶段二：已购从二级路由升为五页签之一，装配自
+                                            // MainRouteContents 原样随迁（复用 PurchasedScreen/VM，
+                                            // 不改其内部逻辑）。登录/下载管理入口走既有二级路由通道。
+                                            val purchasedViewModel: PurchasedViewModel = hiltViewModel(activityViewModelStoreOwner)
+                                            PurchasedScreen(
+                                                onOpenLogin = { navController.navigateSingleTop("dlsite_login") },
+                                                onOpenDownloads = { navController.navigateSingleTop("downloads") },
+                                                // 与搜索"已购"过滤点击行为同约定（MainPrimaryPagerUi.searchAlbumClick）：
+                                                // 种入封面 hint 后 preferDlsitePlay=true 打开详情，落 dlsitePlay 页签。
+                                                onOpenAlbum = { album ->
+                                                    val workNo = album.rjCode.ifBlank { album.workId }.trim().uppercase()
+                                                    AlbumCoverHintStore.record(
+                                                        albumId = album.id,
+                                                        rjCode = workNo,
+                                                        title = album.title,
+                                                        circle = album.circle,
+                                                        cv = album.cv,
+                                                        coverUrl = album.coverUrl,
+                                                        tags = album.tags,
+                                                        ratingValue = album.ratingValue,
+                                                        ratingCount = album.ratingCount,
+                                                        releaseDate = album.releaseDate,
+                                                        dlCount = album.dlCount,
+                                                        priceJpy = album.priceJpy,
+                                                        hasAsmrOne = album.hasAsmrOne,
+                                                        description = album.description
+                                                    )
+                                                    navigator.openAlbumDetail(
+                                                        albumId = album.id,
+                                                        rj = workNo,
+                                                        preferDlsitePlay = true
+                                                    )
+                                                },
+                                                viewModel = purchasedViewModel
                                             )
                                         }
 
